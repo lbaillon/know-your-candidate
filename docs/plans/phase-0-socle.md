@@ -54,9 +54,11 @@ validés côté Python par Pydantic et côté Rust par serde, avec les mêmes ca
 3. `db/migrations/0001_init.sql` : extensions (`btree_gist`, `pg_trgm`), tables `job`, `worker_heartbeat`,
    `ingestion_run`, fonction + trigger émettant `NOTIFY kyc_jobs`.
 4. `compose.yaml` (Podman) : PostgreSQL local uniquement (l'application tourne en natif, itération plus
-   rapide). Choix du mainteneur : Podman plutôt que Docker Desktop, piloté via `podman-compose` — le
-   fichier suit le compose-spec standard et n'est pas nommé `docker-compose.yml` pour ne pas laisser
-   croire qu'il dépend de Docker.
+   rapide). Choix du mainteneur : Podman plutôt que Docker Desktop, piloté via `podman compose` (le
+   sous-commande intégrée qui délègue à `podman-compose`, installé séparément) — le fichier suit le
+   compose-spec standard et n'est pas nommé `docker-compose.yml` pour ne pas laisser croire qu'il dépend
+   de Docker. Nécessite Podman ≥ 4.0 (packagé nativement à partir d'Ubuntu 24.04 ; sur des distributions
+   plus anciennes, `podman-compose <cmd>` avec le tiret fonctionne identiquement).
 5. `Makefile` (ou `justfile`) : `make dev`, `make lint`, `make test`, `make migrate`.
 6. `.github/workflows/ci.yml` : lint + typage + tests Python, `clippy` + tests Rust, migrations rejouées
    sur une base vierge.
@@ -75,7 +77,7 @@ suffit à rendre la prise de job triviale à l'échelle du projet.
 
 ## Étapes
 
-1. **Base et migration.** PostgreSQL via `podman-compose`, migration `0001`, `sqlx migrate`. Vérifier
+1. **Base et migration.** PostgreSQL via `podman compose`, migration `0001`, `sqlx migrate`. Vérifier
    que `NOTIFY` part bien à l'insertion d'un job.
 2. **Worker minimal.** Connexion sqlx, boucle : `LISTEN` → réveil → `SELECT … FOR UPDATE SKIP LOCKED` →
    exécution d'un job factice `noop` → passage à `done`. Poll de secours toutes les 30 s. Battement de
@@ -390,7 +392,7 @@ Pas d'objectif chiffré de couverture, ni maintenant ni plus tard : on teste ce 
 
 | Cible | Effet |
 | --- | --- |
-| `make dev` | démarre PostgreSQL (`podman-compose`), joue les migrations, lance worker et backend |
+| `make dev` | démarre PostgreSQL (`podman compose`), joue les migrations, lance worker et backend |
 | `make lint` | `ruff check`, `ruff format --check`, `cargo clippy -- -D warnings`, `cargo fmt --check` |
 | `make typecheck` | `uv run ty check` |
 | `make test` | `uv run pytest`, `cargo test` |
