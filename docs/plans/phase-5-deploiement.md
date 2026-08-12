@@ -16,7 +16,7 @@ C'était une des cibles envisagées, il faut trancher tôt car cela conditionne 
 | Worker Rust permanent | ❌ pas de processus long | ✅ *background worker* |
 | Connexion `LISTEN` maintenue | ❌ incompatible avec le serverless | ✅ |
 | PostgreSQL managé | ❌ base externe requise | ✅ intégré |
-| gRPC vers le worker | ❌ | ✅ réseau privé interne |
+| Deux processus partageant une base | ❌ base externe, latence | ✅ réseau privé interne |
 
 **Proposition : Render.com** — un service web (FastAPI), un *background worker* (Rust) et une base
 PostgreSQL managée, dans le même réseau privé. C'est l'agencement qui correspond exactement à

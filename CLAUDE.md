@@ -34,7 +34,6 @@ explication cliquable est un bug, pas une fonctionnalité.
 ```
 backend/    API FastAPI + templates Jinja/HTMX. Lecture seule sur la BDD (sauf tables admin).
 worker/     Worker Rust : fetch open data, parsing, calcul des scores, écritures lourdes.
-proto/      Contrats gRPC partagés (.proto), source unique pour Python et Rust.
 db/         Migrations SQL versionnées, seeds, fonctions PL/pgSQL.
 docs/       Architecture, sources de données, méthodologie.
 docs/plans/ Un plan par phase. C'est là que se fait la conception.
@@ -54,18 +53,20 @@ docs/plans/ Un plan par phase. C'est là que se fait la conception.
   catégorisation vivent dans des tables séparées ; les catégorisations sont historisées, pas remplacées.
 - **Pas de Redis, pas de RabbitMQ, pas de Celery.** File de jobs = table PostgreSQL + `LISTEN`/`NOTIFY` +
   `FOR UPDATE SKIP LOCKED`.
+- **Le backend et le worker ne se parlent jamais directement.** Pas de gRPC, pas de HTTP interne : tout
+  passe par PostgreSQL — création de job, progression, annulation, battement de cœur. Si un besoin semble
+  exiger un appel direct, c'est presque toujours une colonne qui manque.
 - **Pas de framework JS, pas de build front.** HTMX + Jinja, rendu serveur. Si une interaction semble
   exiger du JS, on cherche d'abord la solution HTMX.
 
 ## Conventions techniques
 
-**Python** — 3.13+, géré par `uv` (jamais `pip` ni `poetry` directement). Typage complet et vérifié par
+**Python** — 3.14, géré par `uv` (jamais `pip` ni `poetry` directement). Typage complet et vérifié par
 **`ty`** — c'est un choix assumé, ne propose pas mypy en remplacement. Pydantic v2 pour les schémas. Ruff
 pour lint + format, configuré dans `backend/pyproject.toml`. Pas de `Any` sans commentaire justifiant.
 
-**Rust** — édition 2024, `tokio` pour l'async, `sqlx` en mode requêtes vérifiées à la compilation,
-`tonic` pour gRPC. `cargo clippy -- -D warnings` doit passer. Pas de `unwrap()` hors tests et hors
-démarrage.
+**Rust** — édition 2024, `tokio` pour l'async, `sqlx` en mode requêtes vérifiées à la compilation.
+`cargo clippy -- -D warnings` doit passer. Pas de `unwrap()` hors tests et hors démarrage.
 
 **SQL** — migrations numérotées et immuables une fois mergées (`db/migrations/NNNN_description.sql`).
 Toute migration doit être rejouable sur une base existante. On exploite volontairement Postgres :

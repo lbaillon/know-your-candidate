@@ -20,19 +20,19 @@ job du worker. Jamais une boucle Python.
 ## 2. Composants
 
 ```
-┌────────────────────┐        gRPC (commandes, statut)       ┌────────────────────┐
-│  backend FastAPI   │ ────────────────────────────────────► │    worker Rust     │
-│                    │                                        │                    │
-│  • pages HTMX      │                                        │  • fetch open data │
-│  • API JSON        │                                        │  • parsing         │
-│  • back-office     │                                        │  • scoring         │
-│    catégorisation  │                                        │  • LISTEN kyc_jobs │
-└─────────┬──────────┘                                        └─────────┬──────────┘
-          │ SELECT (+ INSERT admin/job)                                 │ INSERT/UPDATE
-          ▼                                                             ▼
+┌────────────────────┐                                        ┌────────────────────┐
+│  backend FastAPI   │   les deux ne se parlent jamais         │    worker Rust     │
+│                    │        directement                      │                    │
+│  • pages HTMX      │                                         │  • fetch open data │
+│  • API JSON        │                                         │  • parsing         │
+│  • back-office     │                                         │  • scoring         │
+│    catégorisation  │                                         │  • LISTEN kyc_jobs │
+└─────────┬──────────┘                                         └─────────┬──────────┘
+          │ SELECT (+ INSERT job / saisie admin)                         │ INSERT/UPDATE
+          ▼                                                              ▼
     ┌──────────────────────────────────────────────────────────────────────────┐
     │                              PostgreSQL                                   │
-    │  données brutes · données normalisées · catégorisations · scores · jobs    │
+    │  données brutes · normalisées · catégorisations · scores · jobs · heartbeat│
     └──────────────────────────────────────────────────────────────────────────┘
                                        ▲
                                        │ HTTP
@@ -50,36 +50,44 @@ données métier, parce qu'elle est pilotée par un humain et que le volume est 
 
 ### Worker Rust
 
-Un binaire, deux façons de le déclencher :
+Un binaire, deux tâches tokio :
 
-- **file de jobs** : il écoute `LISTEN kyc_jobs`, se réveille sur `NOTIFY`, prend un job disponible avec
-  `SELECT … FOR UPDATE SKIP LOCKED` et l'exécute. Un `poll` de secours toutes les N secondes couvre les
+- **la boucle de jobs** : il écoute `LISTEN kyc_jobs`, se réveille sur `NOTIFY`, prend un job disponible
+  avec `SELECT … FOR UPDATE SKIP LOCKED` et l'exécute. Un `poll` de secours toutes les 30 s couvre les
   notifications perdues (une `NOTIFY` émise pendant une déconnexion est perdue — la table de jobs, elle,
   ne l'est pas) ;
-- **serveur gRPC** : pour les demandes synchrones du backend (« crée ce job », « où en est ce job »,
-  « es-tu vivant »).
+- **le battement de cœur** : il met à jour `worker_heartbeat` toutes les 5 s (identifiant, version, job en
+  cours). C'est ce que lit le backend pour savoir si un worker tourne.
 
 Plusieurs instances du worker peuvent tourner en parallèle sans coordination externe : `SKIP LOCKED` fait
 office de verrou distribué.
 
-### Pourquoi gRPC *et* `LISTEN`/`NOTIFY`
+### PostgreSQL est le seul canal entre les deux processus
 
-Ce sont deux besoins différents, et le mélange des deux est une source classique de confusion :
+Décision arbitrée en [phase 0](plans/phase-0-socle.md) : **le backend et le worker ne communiquent jamais
+directement**. Pas de gRPC, pas de HTTP interne, pas de broker.
 
-| | gRPC | `LISTEN` / `NOTIFY` |
-| --- | --- | --- |
-| Nature | requête/réponse synchrone | signal asynchrone |
-| Usage | déclencher, interroger, annuler | réveiller un worker qui dort |
-| Durabilité | aucune | la table de jobs est durable, le signal ne l'est pas |
-| Si indisponible | l'admin voit une erreur immédiate | le job part quand même, exécuté au prochain poll |
+| Besoin | Mécanisme |
+| --- | --- |
+| Créer un job | `INSERT INTO job` + trigger `pg_notify` |
+| Réveiller le worker | `LISTEN` / `NOTIFY`, poll de secours en filet |
+| Suivre la progression | colonnes `progress` / `progress_message`, lues en `SELECT` |
+| Annuler | colonne `cancel_requested`, consultée entre deux lots |
+| Vérifier que le worker est vivant | table `worker_heartbeat` |
 
-Le job est **toujours** créé en base d'abord ; gRPC ne transporte jamais de charge de travail, seulement
-des ordres et des états. Conséquence assumée : si le worker est éteint, l'application continue de
-fonctionner et les jobs s'exécutent au redémarrage.
+Conséquences structurantes :
 
-> À arbitrer en phase 0 : gRPC est-il justifié dès le début ? Un simple statut lu en base couvrirait 90 %
-> du besoin. Le maintien du choix gRPC se défend surtout pour le streaming de progression et pour garder
-> un contrat typé entre les deux langages.
+- **le backend ne dépend que de PostgreSQL.** Worker éteint : les pages publiques fonctionnent, les jobs
+  s'empilent et partent au redémarrage ;
+- l'état d'un job est durable et interrogeable en SQL, y compris longtemps après ;
+- aucun port interne, aucune découverte de service, aucune génération de code à maintenir en double.
+
+Ce qu'on accepte de perdre : la réponse strictement synchrone à « le worker est-il vivant à cet
+instant ? ». Le battement de cœur répond avec quelques secondes de retard, sans conséquence pour un écran
+d'administration.
+
+Le contrat entre les deux langages est donc le **schéma SQL et la forme des payloads JSON de job**,
+validés par Pydantic côté Python et serde côté Rust, avec les mêmes cas de test des deux côtés.
 
 ## 3. Modèle de données (esquisse)
 
@@ -118,7 +126,8 @@ verdict sans preuve, ce que le projet refuse.
 
 | Table | Contenu |
 | --- | --- |
-| `job` | file de travaux : type, paramètres JSONB, état, tentatives, `locked_at`, erreur |
+| `job` | file de travaux : type, paramètres JSONB, état, tentatives, `locked_at`, progression, annulation, erreur |
+| `worker_heartbeat` | présence des workers : identifiant, version, `last_seen_at`, job en cours |
 | `ingestion_run` | trace d'une exécution d'ingestion : source, périmètre, compteurs, durée, résultat |
 
 ## 4. Flux de données
@@ -155,6 +164,7 @@ verdict sans preuve, ce que le projet refuse.
 | # | Décision | Raison | Ce qu'on accepte de perdre |
 | --- | --- | --- | --- |
 | 1 | PostgreSQL comme unique dépendance d'infra | Un seul système à héberger, sauvegarder, comprendre. Le volume attendu (~10⁵ votes) ne justifie pas plus. | Le débit d'une vraie file de messages, dont on n'a pas besoin. |
+| 1 bis | Aucun canal direct entre backend et worker (gRPC abandonné) | Chaque besoin réel — créer, suivre, annuler, vérifier la présence — se traite en SQL. Le backend ne dépend plus que de la base. | La réponse strictement synchrone sur l'état du worker, remplacée par un battement de cœur de 5 s. |
 | 2 | Worker en Rust | Parsing et agrégation sur gros volumes, à coût mémoire prévisible sur des hébergements modestes. | Deux langages à maintenir. |
 | 3 | HTMX plutôt qu'un SPA | Pages publiques majoritairement en lecture, SEO utile, pas de build. | Les interactions très riches côté client. |
 | 4 | Données brutes archivées en JSONB | Pouvoir rejouer le parsing quand le format évolue, sans retélécharger. | De l'espace disque. |

@@ -36,21 +36,23 @@ Voir [docs/methodology.md](docs/methodology.md) pour les règles de neutralité 
     AMO, Wikidata)       parsing,         vérité +         rapide, rendu       serveur)
                          calculs)         file de jobs)    de templates)
                               ▲                                  │
-                              └──────── gRPC (commandes/statut) ──┘
+                              └───── création de job (INSERT) ────┘
 ```
 
-Pas de Redis ni de RabbitMQ : la file de jobs utilise `LISTEN`/`NOTIFY` + `SELECT … FOR UPDATE SKIP
-LOCKED` de PostgreSQL. Détails et justifications dans [docs/architecture.md](docs/architecture.md).
+Pas de Redis ni de RabbitMQ, et pas non plus de canal direct entre les deux processus : le backend et le
+worker communiquent **uniquement par PostgreSQL** — file de jobs en `LISTEN`/`NOTIFY` + `SELECT … FOR
+UPDATE SKIP LOCKED`, progression et présence lues en SQL. Le backend ne dépend donc que de la base.
+Détails et justifications dans [docs/architecture.md](docs/architecture.md).
 
 ## Stack
 
 | Brique | Choix |
 | --- | --- |
-| Backend web | Python 3.13+, FastAPI, [uv](https://docs.astral.sh/uv/) |
+| Backend web | Python 3.14, FastAPI, [uv](https://docs.astral.sh/uv/) |
 | Qualité Python | [Ruff](https://docs.astral.sh/ruff/) (lint + format), [ty](https://github.com/astral-sh/ty) (typage) |
 | Frontend | HTMX + Jinja2, rendu serveur, CSS minimal (pas de bundler) |
-| Worker de données | Rust (tokio, sqlx, tonic) |
-| Communication | gRPC (backend → worker) + `LISTEN`/`NOTIFY` (file de jobs) |
+| Worker de données | Rust (tokio, sqlx) |
+| Communication | PostgreSQL uniquement : `LISTEN`/`NOTIFY`, `FOR UPDATE SKIP LOCKED`, battement de cœur |
 | Stockage | PostgreSQL 16+ (JSONB, `daterange`, vues matérialisées, FTS français) |
 | Observabilité | [Logfire](https://logfire.pydantic.dev/) (offre gratuite), OpenTelemetry côté Rust |
 | Hébergement | Render.com (cible principale) — voir [la note sur Vercel](docs/plans/phase-5-deploiement.md) |
