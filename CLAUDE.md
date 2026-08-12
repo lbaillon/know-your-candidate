@@ -99,11 +99,11 @@ En cas de doute sur ce qu'on a le droit d'afficher ou de déduire : demande, ne 
 
 ## Commandes
 
-Prérequis : `uv`, Rust (édition 2024) + `sqlx-cli`, Docker, `make`. Copier `.env.example` en `.env` avant
-de lancer quoi que ce soit.
+Prérequis : `uv`, Rust (édition 2024) + `sqlx-cli`, Podman + `podman-compose`, `make`. Copier
+`.env.example` en `.env` avant de lancer quoi que ce soit.
 
 ```
-make dev          # docker compose up (Postgres), migrations, worker + backend
+make dev          # podman-compose up (Postgres), migrations, worker + backend
 make lint         # ruff check/format --check + cargo fmt --check + clippy -D warnings
 make typecheck    # ty check (backend)
 make test         # pytest (backend) + cargo test (worker)

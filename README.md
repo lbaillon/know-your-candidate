@@ -60,16 +60,16 @@ Détails et justifications dans [docs/architecture.md](docs/architecture.md).
 ## Démarrage rapide
 
 Prérequis : [uv](https://docs.astral.sh/uv/), Rust (édition 2024) avec `sqlx-cli`
-(`cargo install sqlx-cli --no-default-features --features postgres,rustls`), Docker (pour PostgreSQL
-local), `make`.
+(`cargo install sqlx-cli --no-default-features --features postgres,rustls`), [Podman](https://podman.io/)
++ `podman-compose` (pour PostgreSQL local), `make`.
 
 ```
 cp .env.example .env
 make dev
 ```
 
-`make dev` démarre PostgreSQL (docker compose), joue les migrations, puis lance le worker et le backend.
-Le backend écoute sur <http://localhost:8000>.
+`make dev` démarre PostgreSQL (`podman-compose`, voir [compose.yaml](compose.yaml)), joue les migrations,
+puis lance le worker et le backend. Le backend écoute sur <http://localhost:8000>.
 
 Autres commandes utiles, voir aussi le [Makefile](Makefile) :
 

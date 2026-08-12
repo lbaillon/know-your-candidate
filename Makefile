@@ -3,7 +3,7 @@
 DATABASE_URL ?= postgresql://kyc:kyc@localhost:5432/kyc
 
 dev:
-	docker compose up -d
+	podman-compose up -d
 	$(MAKE) migrate
 	@trap 'kill 0' EXIT; \
 	(cd worker && cargo run) & \
