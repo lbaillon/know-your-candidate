@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE job\n        SET status      = 'done',\n            progress    = 1.0,\n            finished_at = now(),\n            locked_at   = NULL,\n            locked_by   = NULL\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2ff94cc85c032f4242bef545b909fc56877308e93b13e1cb30c4c52da0a5a90f"
+}

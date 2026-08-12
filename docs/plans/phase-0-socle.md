@@ -278,7 +278,7 @@ Un worker tué brutalement laisse un job en `running`. Au démarrage puis toutes
 
 ```sql
 UPDATE job
-SET status    = CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END,
+SET status    = (CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END)::job_status,
     locked_at = NULL,
     locked_by = NULL,
     error     = COALESCE(error, 'reclaimed: worker heartbeat expired')
@@ -293,6 +293,12 @@ WHERE status = 'running'
 
 Le seuil d'expiration (1 min) doit être largement supérieur à la période du battement de cœur (5 s), sans
 quoi un worker occupé se ferait voler ses jobs.
+
+Le cast `::job_status` sur le `CASE` est nécessaire : sqlx (`query!`, en mode vérifié à la
+compilation) rejette l'affectation sinon avec « column "status" is of type job_status but
+expression is of type text » — contrairement à un `UPDATE` exécuté tel quel dans `psql`, où
+Postgres résout l'ambiguïté depuis le contexte d'affectation. Repéré à la compilation du worker,
+pas en le devinant : ne pas retirer ce cast.
 
 ### Arrêt propre
 

@@ -38,7 +38,12 @@ async fn main() -> anyhow::Result<()> {
         current_job.clone(),
         shutdown_rx.clone(),
     );
-    let jobs_handle = jobs::spawn(pool.clone(), config.worker_id.clone(), current_job, shutdown_rx);
+    let jobs_handle = jobs::spawn(
+        pool.clone(),
+        config.worker_id.clone(),
+        current_job,
+        shutdown_rx,
+    );
 
     let (heartbeat_result, jobs_result) = tokio::join!(heartbeat_handle, jobs_handle);
     heartbeat_result?;

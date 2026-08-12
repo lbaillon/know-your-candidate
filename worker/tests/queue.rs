@@ -2,6 +2,9 @@
 //! section « Stratégie de test »). `#[sqlx::test]` crée une base fraîche par test et joue les
 //! migrations : pas besoin d'isolation manuelle ici.
 
+// Fichier entièrement composé de tests : `unwrap()` y est autorisé (voir CLAUDE.md).
+#![allow(clippy::unwrap_used)]
+
 use kyc_worker::jobs::queue;
 use sqlx::PgPool;
 
@@ -86,11 +89,10 @@ async fn concurrent_claims_never_take_the_same_job(pool: PgPool) -> sqlx::Result
     assert_eq!(all_claimed.len(), 20, "les 20 jobs doivent tous être pris");
     assert_eq!(unique_count, 20, "aucun job ne doit être pris deux fois");
 
-    let pending_count: i64 = sqlx::query_scalar!(
-        "SELECT count(*) AS \"count!\" FROM job WHERE status = 'pending'"
-    )
-    .fetch_one(&pool)
-    .await?;
+    let pending_count: i64 =
+        sqlx::query_scalar!("SELECT count(*) AS \"count!\" FROM job WHERE status = 'pending'")
+            .fetch_one(&pool)
+            .await?;
     assert_eq!(pending_count, 0, "aucun job ne doit rester en attente");
 
     Ok(())

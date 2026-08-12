@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE job\n        SET status    = (CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END)::job_status,\n            locked_at = NULL,\n            locked_by = NULL,\n            error     = COALESCE(error, 'reclaimed: worker heartbeat expired')\n        WHERE status = 'running'\n          AND locked_by IS NOT NULL\n          AND NOT EXISTS (\n              SELECT 1 FROM worker_heartbeat w\n              WHERE w.worker_id = job.locked_by\n                AND w.last_seen_at > now() - interval '1 minute'\n          )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "c80ab1f5e069a50dd6d9e28f671d9d635ca03939045f67729949f89e29bc48a9"
+}

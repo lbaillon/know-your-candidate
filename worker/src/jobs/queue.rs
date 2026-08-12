@@ -90,7 +90,7 @@ pub async fn fail_job(pool: &PgPool, job_id: i64, error: &str) -> sqlx::Result<(
     sqlx::query!(
         r#"
         UPDATE job
-        SET status    = CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END,
+        SET status    = (CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END)::job_status,
             error     = $2,
             locked_at = NULL,
             locked_by = NULL
@@ -128,7 +128,7 @@ pub async fn reclaim_zombie_jobs(pool: &PgPool) -> sqlx::Result<u64> {
     let result = sqlx::query!(
         r#"
         UPDATE job
-        SET status    = CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END,
+        SET status    = (CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END)::job_status,
             locked_at = NULL,
             locked_by = NULL,
             error     = COALESCE(error, 'reclaimed: worker heartbeat expired')

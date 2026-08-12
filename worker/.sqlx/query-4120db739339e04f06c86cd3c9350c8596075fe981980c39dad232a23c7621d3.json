@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO worker_heartbeat (worker_id, version, last_seen_at, current_job_id)\n        VALUES ($1, $2, now(), $3)\n        ON CONFLICT (worker_id) DO UPDATE\n        SET version         = EXCLUDED.version,\n            last_seen_at    = now(),\n            current_job_id  = EXCLUDED.current_job_id\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4120db739339e04f06c86cd3c9350c8596075fe981980c39dad232a23c7621d3"
+}
