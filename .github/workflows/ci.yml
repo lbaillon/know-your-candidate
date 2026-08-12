@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: kyc
+          POSTGRES_PASSWORD: kyc
+          POSTGRES_DB: kyc_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kyc -d kyc_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://kyc:kyc@localhost:5432/kyc_test
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+        with:
+          working-directory: backend
+
+      - name: Installer les dépendances
+        working-directory: backend
+        run: uv sync
+
+      - name: Lint (ruff check)
+        working-directory: backend
+        run: uv run ruff check .
+
+      - name: Format (ruff format --check)
+        working-directory: backend
+        run: uv run ruff format --check .
+
+      - name: Typage (ty)
+        working-directory: backend
+        run: uv run ty check
+
+      - name: Tests
+        working-directory: backend
+        run: uv run pytest
+
+  rust:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: kyc
+          POSTGRES_PASSWORD: kyc
+          POSTGRES_DB: kyc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kyc -d kyc"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://kyc:kyc@localhost:5432/kyc
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: worker
+
+      - name: Installer sqlx-cli
+        run: cargo install sqlx-cli --no-default-features --features postgres,rustls --locked
+
+      - name: Jouer les migrations
+        working-directory: worker
+        run: sqlx migrate run --source ../db/migrations
+
+      - name: Vérifier que .sqlx/ est à jour
+        working-directory: worker
+        run: cargo sqlx prepare --check -- --all-targets
+
+      - name: Format (cargo fmt --check)
+        working-directory: worker
+        run: cargo fmt --check
+
+      - name: Lint (clippy)
+        working-directory: worker
+        env:
+          SQLX_OFFLINE: "true"
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Tests
+        working-directory: worker
+        env:
+          SQLX_OFFLINE: "true"
+        run: cargo test
+
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: kyc
+          POSTGRES_PASSWORD: kyc
+          POSTGRES_DB: kyc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kyc -d kyc"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://kyc:kyc@localhost:5432/kyc
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Installer sqlx-cli
+        run: cargo install sqlx-cli --no-default-features --features postgres,rustls --locked
+
+      - name: Rejouer les migrations sur une base vierge
+        run: sqlx migrate run --source db/migrations
+
+      - name: Vérifier qu'un second passage ne casse rien
+        run: sqlx migrate run --source db/migrations
