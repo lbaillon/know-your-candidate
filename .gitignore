@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.ty_cache/
+*.egg-info/
+dist/
+build/
+
+# Rust
+target/
+**/*.rs.bk
+
+# Environnement / secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# Données téléchargées (jamais commitées : volumineuses et régénérables)
+data/
+*.zip
+*.csv.gz
+
+# Exports de catégorisation en cours de travail
+exports/
+!exports/.gitkeep
+
+# Outils
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+
+# Claude Code
+.claude/settings.local.json
