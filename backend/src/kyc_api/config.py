@@ -1,8 +1,18 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# .env est partagé par le backend et le worker et vit à la racine du dépôt (voir .env.example) —
+# pas dans backend/, d'où le chemin absolu : env_file résolu depuis le cwd casserait dès que le
+# process est lancé avec `cd backend` (cas de `make dev`).
+_REPO_ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    # extra="ignore" : .env contient aussi WORKER_ID (lu par le worker Rust, pas par le backend).
+    model_config = SettingsConfigDict(
+        env_file=_REPO_ROOT_ENV, env_file_encoding="utf-8", extra="ignore"
+    )
 
     database_url: str
     log_level: str = "info"
