@@ -104,7 +104,9 @@ Cette section est destinée à la session qui implémentera la phase. Elle est a
 est nécessaire est ici ou dans [CLAUDE.md](../../CLAUDE.md)**, il n'y a pas de contexte de conversation à
 retrouver. Les décisions ci-dessus sont arbitrées et ne sont pas à rediscuter.
 
-Travailler sur une branche `phase-0-socle`, une seule PR. Ne pas modifier les plans des autres phases.
+Le projet est en développement sur le tronc : **commits directs sur `main`**, pas de branche ni de PR.
+Découper en commits cohérents (migration, worker, backend, outillage, CI) plutôt qu'en un seul bloc, et
+laisser `main` vert à chaque commit. Ne pas modifier les plans des autres phases.
 
 ### Arborescence cible
 
@@ -362,7 +364,7 @@ Deux jobs GitHub Actions, un service PostgreSQL 16 :
 3. **migrations** — rejouer toutes les migrations sur une base vierge, puis vérifier qu'un second passage
    ne casse rien.
 
-### Vérifications à exécuter avant de proposer la PR
+### Vérifications à exécuter avant de déclarer la phase terminée
 
 Ce ne sont pas des cases à cocher de confort, ce sont les seules preuves que la plomberie tient :
 
@@ -381,14 +383,14 @@ Ce ne sont pas des cases à cocher de confort, ce sont les seules preuves que la
 8. Le worker éteint, `/healthz` répond 200 avec `worker: stale` et les pages publiques s'affichent.
 9. CI verte ; puis vérifier qu'une erreur de type introduite volontairement la fait échouer.
 
-Documenter dans la PR le résultat des points 4 à 7 : ce sont ceux qui ne se voient pas à la lecture du
-code.
+Consigner le résultat des points 4 à 7 dans le message du commit final : ce sont ceux qui ne se voient
+pas à la lecture du code.
 
 ### Hors périmètre — ne pas ajouter
 
 Pas d'authentification, pas de table métier (`person`, `scrutin`…), pas d'appel à l'open data, pas de
 Dockerfile de production, pas de configuration Render, pas de Logfire. Tout cela appartient aux phases
-suivantes et les ajouter ici rendrait la PR illisible.
+suivantes et les ajouter ici rendrait la phase illisible.
 
 En revanche, terminer par la mise à jour de la section « Démarrage rapide » du [README](../../README.md)
 et de la section « Commandes » de [CLAUDE.md](../../CLAUDE.md) avec les commandes réellement disponibles.
@@ -402,7 +404,7 @@ et de la section « Commandes » de [CLAUDE.md](../../CLAUDE.md) avec les comman
 - Le worker est arrêté → `/healthz` le signale via le battement de cœur périmé, sans erreur ni page
   cassée.
 - Un job interrompu par un SIGTERM en cours d'exécution est relâché puis repris, pas perdu.
-- La CI est verte sur une PR, et rouge si on introduit une erreur de type ou de lint.
+- La CI est verte sur `main`, et rouge si on introduit une erreur de type ou de lint.
 
 ## Risques
 

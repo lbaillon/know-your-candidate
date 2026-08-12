@@ -14,10 +14,15 @@ explication cliquable est un bug, pas une fonctionnalité.
 1. **Les plans passent avant le code.** Chaque phase a un fichier dans [docs/plans/](docs/plans/). On
    discute et on affine le plan, l'utilisateur valide, puis on implémente. N'écris pas le code d'une phase
    dont le plan n'a pas été validé (l'en-tête `Statut` du plan fait foi).
-2. **Une phase = une branche = une PR.** Ne commit pas sur `main` sans demande explicite.
+2. **Développement sur le tronc.** On commit directement sur `main`, pas de branche ni de PR pour le
+   travail des mainteneurs. En contrepartie, chaque commit doit laisser `main` dans un état qui tient :
+   lint, typage et tests verts. Un commit = un changement cohérent et racontable — plutôt plusieurs petits
+   commits qu'un seul fourre-tout en fin de phase.
 3. **Quand une décision change, mets à jour le plan** dans le même commit que le code. Un plan périmé est
    pire que pas de plan.
-4. **Ne pousse pas et ne déploie pas** sans demande explicite.
+4. **Ne pousse pas et ne déploie pas** sans demande explicite. Commiter localement est libre, pousser ne
+   l'est pas — d'autant qu'à partir de la phase 5, `main` se déploie automatiquement : un `push` sera une
+   mise en ligne.
 5. Si un plan s'avère faux au contact du code, dis-le et propose une révision — ne contourne pas
    silencieusement.
 

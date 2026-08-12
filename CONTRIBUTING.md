@@ -25,7 +25,9 @@ cas, proposez plutôt une modification des règles.
 1. Lisez [CLAUDE.md](CLAUDE.md) : il contient les conventions, y compris pour les contributions humaines.
 2. Regardez [docs/plans/](docs/plans/) : le travail est organisé par phases. Une contribution qui
    n'appartient à aucune phase se discute d'abord dans une issue.
-3. Une PR = une phase ou une tâche identifiée dans un plan. Les PR fourre-tout sont refusées.
+3. Une PR = une phase ou une tâche identifiée dans un plan. Les PR fourre-tout sont refusées. (Les
+   mainteneurs, eux, travaillent en développement sur le tronc et commitent directement sur `main` ; la
+   PR reste la porte d'entrée pour tout le monde d'autre.)
 4. Lint, typage et tests doivent passer (`ruff`, `ty`, `pytest`, `cargo clippy`, `cargo test`).
 5. Si votre changement modifie une décision documentée, mettez à jour la doc dans la même PR.
 
