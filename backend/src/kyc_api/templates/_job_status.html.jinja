@@ -1,0 +1,16 @@
+{% if job.is_finished %}
+<div id="job-status" class="job-status job-status--{{ job.status }}">
+{% else %}
+<div id="job-status" class="job-status job-status--{{ job.status }}"
+     hx-get="/fragments/dev/jobs/{{ job.id }}"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML">
+{% endif %}
+  <p>Statut : <strong>{{ job.status }}</strong></p>
+  {% if job.progress is not none %}
+    <p>Progression : {{ (job.progress * 100) | round(0, "common") }} %{% if job.progress_message %} — {{ job.progress_message }}{% endif %}</p>
+  {% endif %}
+  {% if job.error %}
+    <p class="job-status__error">Erreur : {{ job.error }}</p>
+  {% endif %}
+</div>

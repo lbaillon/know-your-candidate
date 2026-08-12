@@ -6,4 +6,34 @@ Rôle : **lire** des données déjà calculées et rendre des pages. Aucun trait
 l'open data. Les seules écritures autorisées sont les catégorisations saisies par un admin et les demandes
 de job.
 
-Contenu à venir (phase 0) : `pyproject.toml`, `src/kyc_api/`, `templates/`, `static/`, `tests/`.
+## Développement
+
+```
+uv sync                 # installe les dépendances
+uv run uvicorn kyc_api.main:app --reload --port 8000
+uv run ruff check .
+uv run ruff format .
+uv run ty check
+uv run pytest
+```
+
+Nécessite `DATABASE_URL` (voir [.env.example](../.env.example) à la racine) et une base migrée — voir la
+section « Démarrage rapide » du [README](../README.md) racine.
+
+## Structure
+
+```
+pyproject.toml           projet uv, dépendances, config Ruff + ty
+src/kyc_api/
+  main.py                 création de l'app FastAPI, montage des routeurs
+  config.py                réglages via variables d'environnement (Pydantic Settings)
+  db.py                    dépendance FastAPI donnant accès à la base (pool ou connexion de test)
+  jobs.py                  création d'un job et lecture de son état (SQL écrit à la main)
+  templating.py            instance Jinja2Templates partagée
+  routers/
+    health.py               /healthz
+    dev.py                   page d'accueil + boucle de jobs de démonstration
+  templates/
+  static/
+tests/
+```

@@ -1,0 +1,48 @@
+[project]
+name = "kyc-api"
+version = "0.1.0"
+description = "Know Your Candidate — API et interface web (FastAPI, lecture seule sur PostgreSQL)"
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "fastapi>=0.141.1,<0.142",
+    "uvicorn[standard]>=0.52.1,<0.53",
+    "jinja2>=3.1.6,<4",
+    "asyncpg>=0.31.0,<0.32",
+    "pydantic>=2.13.4,<3",
+    "pydantic-settings>=2.15.0,<3",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.2,<0.17",
+    "ty>=0.0.70",
+    "pytest>=9.1.1,<10",
+    "pytest-asyncio>=1.4.0,<2",
+    "httpx>=0.28.1,<0.29",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kyc_api"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+# B008 : faux positif sur `Depends(...)` en valeur par défaut, qui est l'idiome FastAPI standard
+# pour l'injection de dépendances (voir routers/*.py).
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["kyc_api"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
