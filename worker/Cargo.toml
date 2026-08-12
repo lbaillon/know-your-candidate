@@ -1,0 +1,27 @@
+[package]
+name = "kyc-worker"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+publish = false
+
+[dependencies]
+tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "signal", "time", "sync"] }
+sqlx = { version = "0.9", default-features = false, features = [
+    "runtime-tokio",
+    "tls-rustls",
+    "postgres",
+    "macros",
+    "migrate",
+    "chrono",
+    "json",
+] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+dotenvy = "0.15"
+
+[lints.clippy]
+unwrap_used = "warn"
