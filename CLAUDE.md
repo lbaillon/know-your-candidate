@@ -99,5 +99,17 @@ En cas de doute sur ce qu'on a le droit d'afficher ou de déduire : demande, ne 
 
 ## Commandes
 
-Le socle n'est pas encore implémenté (phase 0). Cette section sera remplie avec les commandes réelles
-(`uv run`, `cargo`, migrations, tests) dès que le socle existera.
+Prérequis : `uv`, Rust (édition 2024) + `sqlx-cli`, Docker, `make`. Copier `.env.example` en `.env` avant
+de lancer quoi que ce soit.
+
+```
+make dev          # docker compose up (Postgres), migrations, worker + backend
+make lint         # ruff check/format --check + cargo fmt --check + clippy -D warnings
+make typecheck    # ty check (backend)
+make test         # pytest (backend) + cargo test (worker)
+make migrate      # sqlx migrate run sur DATABASE_URL
+```
+
+Détail par composant : `cd backend && uv run <cmd>` (`ruff`, `ty`, `pytest`, `uvicorn kyc_api.main:app
+--reload`) ; `cd worker && cargo <cmd>` (`run`, `test`, `clippy --all-targets -- -D warnings`, `sqlx
+prepare` après toute modification d'une requête `sqlx::query!`/`query_as!`).

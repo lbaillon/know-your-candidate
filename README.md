@@ -9,8 +9,8 @@ elle-même et par les partis auxquels elle a appartenu, période par période.
 Le postulat du projet : un programme de campagne est une promesse, un vote est un fait. On s'appuie donc
 d'abord sur les faits, et chaque conclusion affichée est **cliquable jusqu'au scrutin qui la justifie**.
 
-> Statut : 🚧 conception. Aucun code n'est encore écrit. Les plans de réalisation sont dans
-> [docs/plans/](docs/plans/) et sont ouverts à la relecture.
+> Statut : 🚧 phase 0 (socle technique) implémentée, aucune donnée réelle. Les plans de réalisation sont
+> dans [docs/plans/](docs/plans/) et sont ouverts à la relecture.
 
 ---
 
@@ -59,9 +59,29 @@ Détails et justifications dans [docs/architecture.md](docs/architecture.md).
 
 ## Démarrage rapide
 
-Rien à lancer pour l'instant : le socle technique est décrit dans
-[docs/plans/phase-0-socle.md](docs/plans/phase-0-socle.md) et sera implémenté en premier. Cette section
-sera remplie à ce moment-là.
+Prérequis : [uv](https://docs.astral.sh/uv/), Rust (édition 2024) avec `sqlx-cli`
+(`cargo install sqlx-cli --no-default-features --features postgres,rustls`), Docker (pour PostgreSQL
+local), `make`.
+
+```
+cp .env.example .env
+make dev
+```
+
+`make dev` démarre PostgreSQL (docker compose), joue les migrations, puis lance le worker et le backend.
+Le backend écoute sur <http://localhost:8000>.
+
+Autres commandes utiles, voir aussi le [Makefile](Makefile) :
+
+```
+make lint        # ruff + clippy + fmt
+make typecheck   # ty
+make test        # pytest + cargo test
+make migrate     # rejoue les migrations sur DATABASE_URL
+```
+
+Détails par composant : [backend/README.md](backend/README.md), [worker/README.md](worker/README.md),
+[db/README.md](db/README.md).
 
 ## Documentation
 
