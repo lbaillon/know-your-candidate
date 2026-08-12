@@ -29,6 +29,24 @@ recherche, design de base, accessibilité, mentions de sources.
 | `/methodologie` | Rendu de [methodology.md](../methodology.md) — accessible depuis chaque page |
 | `/api/…` | Équivalents JSON des pages, pour la réutilisation des données |
 
+## ⚠️ À concevoir ici, pas ailleurs : l'architecture front
+
+La phase 0 ne pose qu'un `style.css` volontairement pauvre et deux conventions (fragments sur routes
+explicites, gabarits `_` n'étendant pas `base.html.jinja`). **Tout le reste du front se décide dans cette
+phase, avec le mainteneur, avant d'écrire les gabarits** — sans quoi il s'installera par accident :
+
+- **structure de la feuille de style** : variables CSS, `@layer`, découpage en plusieurs fichiers
+  concaténés ou fichier unique, convention de nommage des classes ;
+- **échelles** typographique et d'espacement, palette, contrastes — sachant la contrainte de neutralité :
+  aucune couleur ne doit suggérer un jugement, et les couleurs de parti viennent d'une table documentée ;
+- **stratégie responsive** : la grille de candidat·es et surtout **la frise des appartenances** sont les
+  deux composants difficiles sur petit écran. La frise est l'élément signature de l'UI, son implémentation
+  (grille CSS, SVG généré côté serveur ?) est une vraie question de conception ;
+- **organisation des gabarits** : blocs, macros, nommage, découpage — et à quel moment on extrait un
+  fragment ;
+- **stratégie de test des pages** : que vérifie-t-on d'un rendu Jinja/HTMX, et à quel niveau ? La phase 0
+  s'arrête volontairement au test de fumée.
+
 ## Points de conception
 
 - **La frise des appartenances est un élément central**, pas un ornement : c'est la représentation
@@ -64,6 +82,9 @@ recherche, design de base, accessibilité, mentions de sources.
 | D2.3 | Slug d'URL | `prenom-nom` avec suffixe en cas d'homonymie, table de redirection pour la stabilité des liens |
 | D2.4 | CSS | Feuille écrite à la main, sans framework, sans build — cohérent avec « pas de bundler » |
 | D2.5 | Mise en cache HTTP | `Cache-Control` court + `ETag` sur les pages publiques ; à réévaluer en phase 5 |
+| D2.6 | Architecture CSS | À trancher au début de la phase (voir l'avertissement ci-dessus) : variables, `@layer`, nommage, découpage |
+| D2.7 | Implémentation de la frise | Grille CSS pure, ou SVG rendu côté serveur ? Conditionne le comportement mobile et l'accessibilité |
+| D2.8 | Niveau de test des pages | Test de fumée par route, assertions sur le HTML, ou vérification d'accessibilité automatisée ? |
 
 ## Fini quand
 

@@ -336,6 +336,52 @@ Migrations : `sqlx migrate run`. Le worker joue les migrations au démarrage, pr
 - HTMX est **vendoré dans `static/`**, pas chargé depuis un CDN. Noter la version dans un commentaire.
 - Aucun ORM. Le SQL est écrit à la main, dans `jobs.py` et `db.py`.
 
+### Fragment ou page entière : la convention à poser dès maintenant
+
+C'est la convention qui pourrit le plus vite si elle s'installe par accident. On la fixe ici, elle vaudra
+pour tout le projet :
+
+- **une route renvoie une page entière, ou un fragment, mais jamais les deux selon l'en-tête `HX-Request`.**
+  Les fragments ont leurs propres routes explicites, sous un préfixe lisible (`/fragments/…`) ;
+- un gabarit de fragment est préfixé par `_` et **n'étend jamais `base.html.jinja`** ;
+- ouvrir directement l'URL d'un fragment dans un navigateur doit fonctionner et afficher le fragment nu.
+  C'est ce qui les rend débogables et testables sans outillage particulier.
+
+Raison du choix : pas de branchement invisible dans les vues, et un test qui appelle une URL sait ce qu'il
+va recevoir.
+
+### CSS : le strict minimum, volontairement
+
+`style.css` doit rester **délibérément pauvre** à ce stade : quelques variables CSS dans `:root` pour les
+couleurs, les espacements et l'échelle typographique, de quoi rendre une page lisible, et rien d'autre.
+
+**Ne pas** créer de design system, de bibliothèque de composants, de classes utilitaires, de thème sombre
+ni de stratégie responsive élaborée. L'architecture front — structure de la feuille, échelles, palette,
+comportement mobile, et le composant de frise des appartenances — se conçoit en
+[phase 2](phase-2-api-ui.md) avec le mainteneur. Tout ce qui serait inventé ici serait à défaire.
+
+### Stratégie de test
+
+Elle est fixée maintenant parce que `conftest.py` va faire jurisprudence pour tout le projet.
+
+**Côté Python** : une base jetable créée une fois, migrations jouées une fois, puis **chaque test s'exécute
+dans une transaction annulée à la fin**. Rapide, et aucun test ne dépend de l'ordre des autres.
+
+**L'exception importante** : les tests de la file de jobs ne peuvent pas utiliser cet isolement. `NOTIFY`
+n'est délivré qu'au `COMMIT`, et `SKIP LOCKED` n'a de sens qu'entre connexions distinctes voyant des
+données validées. Ces tests-là ont donc besoin d'un état réellement commité, et d'un nettoyage explicite
+entre chaque cas — les marquer clairement pour que la distinction ne se perde pas.
+
+**Côté Rust** : utiliser `#[sqlx::test]`, qui crée une base fraîche par test et joue les migrations. C'est
+l'idiome de sqlx, ne pas réinventer un harnais.
+
+**Ce qu'on teste en phase 0** : la mécanique de la file (prise, achèvement, échec, reprise des zombies,
+concurrence), la création de job côté backend, `/healthz` dans ses deux états. **Ce qu'on ne teste pas** :
+le rendu HTML au-delà d'un test de fumée — la manière de tester les pages Jinja/HTMX se décide en
+phase 2, quand il y aura de vraies pages.
+
+Pas d'objectif chiffré de couverture, ni maintenant ni plus tard : on teste ce qui casse silencieusement.
+
 ### Outillage
 
 `Makefile` avec au minimum :

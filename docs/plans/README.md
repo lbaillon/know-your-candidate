@@ -42,5 +42,10 @@ Chaque plan suit la même trame :
 6. **Fini quand** — critères vérifiables, pas d'appréciation subjective.
 7. **Risques** — ce qui peut faire dérailler la phase.
 
+Certains plans portent en plus une section **« ⚠️ À concevoir ici, pas ailleurs »** : un sujet qu'une phase
+antérieure a délibérément laissé à l'état d'ébauche pour ne pas le figer par accident, et qui doit être
+tranché au début de la phase concernée. Aujourd'hui : l'architecture front en [phase 2](phase-2-api-ui.md),
+la stratégie de test de l'import en [phase 3](phase-3-categorisation.md).
+
 Un plan est un document vivant : s'il s'avère faux au contact du code, on le corrige dans le commit qui le
 contredit.

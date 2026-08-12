@@ -81,6 +81,28 @@ Exigences :
 - chaque ligne importée conserve sa provenance (`import`, nom du fichier, date, auteur) et, si connu, le
   modèle utilisé.
 
+## ⚠️ À concevoir ici, pas ailleurs : la stratégie de test de l'import
+
+C'est **la cible de test la plus rentable du projet**, et elle doit être définie avant d'écrire l'import.
+Un bug dans la validation ou dans la règle de conflit ne provoque pas d'erreur visible : il détruit
+silencieusement des heures de relecture humaine, qui ne sont pas régénérables comme le sont les données
+ingérées.
+
+À couvrir explicitement, avec des cas écrits avant le code :
+
+- fichier malformé, colonnes manquantes, `schema_version` inconnue, identifiants de scrutin inexistants,
+  thèmes inconnus, valeurs hors bornes → **refus propre**, jamais d'interprétation approximative ;
+- doublons dans le fichier importé, et lignes contradictoires entre elles ;
+- **conflit avec une catégorisation `manual` plus récente** → non écrasée sans confirmation. C'est la
+  règle dont la violation coûterait le plus cher ;
+- import interrompu en cours → transaction annulée entièrement, aucun état intermédiaire en base ;
+- aller-retour complet : export → réimport à l'identique → **aucune modification en base**, et aucune
+  ligne d'historique créée ;
+- l'historique reflète exactement ce qui a changé, ni plus ni moins.
+
+À décider au moment de détailler la phase : jusqu'où on va sur les propriétés de l'aller-retour, et si on
+teste l'ergonomie du back-office autrement qu'à la main.
+
 ## Étapes
 
 1. Modèle des thèmes et des axes, alimenté par un seed versionné.
