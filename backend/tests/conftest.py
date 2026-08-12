@@ -32,6 +32,10 @@ MIGRATIONS_DIR = Path(__file__).parents[2] / "db" / "migrations"
 async def _migrated_db() -> AsyncIterator[None]:
     conn = await asyncpg.connect(TEST_DATABASE_URL)
     try:
+        # La base de test est réutilisée d'une invocation de pytest à l'autre (ce n'est pas une
+        # base recréée par le système à chaque run) : on la vide avant de rejouer les migrations,
+        # sinon "CREATE TYPE" échoue dès le deuxième `pytest` sur le même Postgres.
+        await conn.execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
         for migration in sorted(MIGRATIONS_DIR.glob("*.sql")):
             await conn.execute(migration.read_text(encoding="utf-8"))
         yield
@@ -56,6 +60,10 @@ async def client(db_conn: asyncpg.Connection) -> AsyncIterator[AsyncClient]:
     app = create_app()
     app.dependency_overrides[get_pool] = lambda: db_conn
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    # follow_redirects=True : httpx ne suit pas les redirections par défaut, contrairement à un
+    # navigateur ou à une requête HTMX — on veut tester le parcours réel (POST -> 303 -> page).
+    async with AsyncClient(
+        transport=transport, base_url="http://test", follow_redirects=True
+    ) as ac:
         yield ac
     app.dependency_overrides.clear()
