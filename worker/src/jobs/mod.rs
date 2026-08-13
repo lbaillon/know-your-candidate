@@ -9,14 +9,29 @@ use sqlx::postgres::PgListener;
 use tokio::sync::watch;
 use tokio::time::MissedTickBehavior;
 
+use crate::shutdown;
+
 /// Job actuellement traité par ce worker, si aucun n'est en cours. Partagé avec la tâche de
 /// battement de cœur pour renseigner `worker_heartbeat.current_job_id`.
 pub type CurrentJob = Arc<Mutex<Option<i64>>>;
 
 const POLL_INTERVAL: Duration = Duration::from_secs(30);
 const ZOMBIE_RECLAIM_INTERVAL: Duration = Duration::from_secs(60);
-const SHUTDOWN_GRACE: Duration = Duration::from_secs(30);
+/// Délai de grâce laissé à un job en cours avant qu'il ne soit relâché à l'arrêt. Exposé pour que
+/// `main` puisse aligner le délai qu'il laisse à cette tâche pour se terminer (voir F1,
+/// docs/plans/phase-0.1-fix.md).
+pub const SHUTDOWN_GRACE: Duration = Duration::from_secs(30);
 const NOTIFY_CHANNEL: &str = "kyc_jobs";
+
+/// Contexte passé à l'implémentation d'un job : ce dont un job a besoin pour s'exécuter et
+/// rapporter sa progression, sans multiplier les paramètres au fil des jobs à venir en phase 1
+/// (voir F2, docs/plans/phase-0.1-fix.md). `worker_id` sert de garde de propriété : toute
+/// écriture portée par ce contexte n'affecte que la ligne encore détenue par ce worker.
+pub struct JobContext {
+    pub pool: PgPool,
+    pub worker_id: String,
+    pub job_id: i64,
+}
 
 pub fn current_job_id(current_job: &CurrentJob) -> Option<i64> {
     *current_job.lock().unwrap_or_else(PoisonError::into_inner)
@@ -31,12 +46,8 @@ pub fn spawn(
     worker_id: String,
     current_job: CurrentJob,
     mut shutdown: watch::Receiver<bool>,
-) -> tokio::task::JoinHandle<()> {
-    tokio::spawn(async move {
-        if let Err(err) = run(&pool, &worker_id, &current_job, &mut shutdown).await {
-            tracing::error!(error = %err, "boucle de jobs interrompue par une erreur");
-        }
-    })
+) -> tokio::task::JoinHandle<anyhow::Result<()>> {
+    tokio::spawn(async move { run(&pool, &worker_id, &current_job, &mut shutdown).await })
 }
 
 async fn run(
@@ -80,9 +91,18 @@ async fn run(
                     Ok(_) => {}
                     Err(err) => tracing::warn!(error = %err, "échec de la reprise des jobs zombies"),
                 }
-                continue;
+                // F10 : pas de `continue` ici — on retombe sur drain_queue comme les autres
+                // branches, sinon un job zombie repris attend jusqu'à 30 s de plus (le poll
+                // suivant), puisqu'un simple UPDATE n'émet pas de NOTIFY.
             }
-            _ = shutdown.changed() => {
+            requested = shutdown::shutdown_requested(shutdown) => {
+                // Un récepteur ne doit jamais dépendre du bon comportement de l'émetteur : `Err`
+                // (tous les émetteurs disparus) est traité comme un arrêt par le helper. Sortir
+                // de la boucle plutôt que `continue`, sans quoi un `Err` immédiat et permanent
+                // tournerait en boucle serrée (F3, docs/plans/phase-0.1-fix.md).
+                if requested {
+                    break;
+                }
                 continue;
             }
         }
@@ -119,7 +139,7 @@ async fn drain_queue(
             }
         };
 
-        run_one_job(pool, claimed, current_job, shutdown).await;
+        run_one_job(pool, worker_id, claimed, current_job, shutdown).await;
     }
 }
 
@@ -127,6 +147,7 @@ async fn drain_queue(
 /// (voir docs/plans/phase-0-socle.md, section « Arrêt propre »).
 async fn run_one_job(
     pool: &PgPool,
+    worker_id: &str,
     claimed: queue::ClaimedJob,
     current_job: &CurrentJob,
     shutdown: &mut watch::Receiver<bool>,
@@ -134,14 +155,19 @@ async fn run_one_job(
     let job_id = claimed.id;
     set_current_job_id(current_job, Some(job_id));
 
-    let execution = execute(pool, &claimed);
+    let ctx = JobContext {
+        pool: pool.clone(),
+        worker_id: worker_id.to_string(),
+        job_id,
+    };
+    let execution = execute(&ctx, &claimed);
     tokio::pin!(execution);
 
     let outcome = loop {
         tokio::select! {
             result = &mut execution => break Some(result),
-            _ = shutdown.changed() => {
-                if !*shutdown.borrow() {
+            requested = shutdown::shutdown_requested(shutdown) => {
+                if !requested {
                     continue;
                 }
                 tracing::info!(job_id, "arrêt demandé pendant un job en cours, grâce de 30 s");
@@ -159,28 +185,28 @@ async fn run_one_job(
 
     match outcome {
         Some(Ok(())) => {
-            if let Err(err) = queue::complete_job(pool, job_id).await {
+            if let Err(err) = queue::complete_job(pool, job_id, worker_id).await {
                 tracing::error!(error = %err, job_id, "échec du passage en done");
             }
         }
         Some(Err(err)) => {
             tracing::warn!(error = %err, job_id, "échec du job");
-            if let Err(err) = queue::fail_job(pool, job_id, &err.to_string()).await {
+            if let Err(err) = queue::fail_job(pool, job_id, worker_id, &err.to_string()).await {
                 tracing::error!(error = %err, job_id, "échec de l'écriture de l'erreur");
             }
         }
         None => {
             tracing::info!(job_id, "grâce expirée, job relâché");
-            if let Err(err) = queue::release_job(pool, job_id).await {
+            if let Err(err) = queue::release_job(pool, job_id, worker_id).await {
                 tracing::error!(error = %err, job_id, "échec du relâchement du job");
             }
         }
     }
 }
 
-async fn execute(pool: &PgPool, job: &queue::ClaimedJob) -> anyhow::Result<()> {
+async fn execute(ctx: &JobContext, job: &queue::ClaimedJob) -> anyhow::Result<()> {
     match job.job_type.as_str() {
-        "noop" => noop::run(pool, job.id, &job.payload).await,
+        "noop" => noop::run(ctx, &job.payload).await,
         other => anyhow::bail!("type de job inconnu : {other}"),
     }
 }

@@ -5,6 +5,7 @@ use tokio::sync::watch;
 use tokio::time::MissedTickBehavior;
 
 use crate::jobs::{self, CurrentJob};
+use crate::shutdown;
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -14,7 +15,7 @@ pub fn spawn(
     version: String,
     current_job: CurrentJob,
     mut shutdown: watch::Receiver<bool>,
-) -> tokio::task::JoinHandle<()> {
+) -> tokio::task::JoinHandle<anyhow::Result<()>> {
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(HEARTBEAT_INTERVAL);
         ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
@@ -26,13 +27,15 @@ pub fn spawn(
                         tracing::warn!(error = %err, "échec du battement de cœur");
                     }
                 }
-                _ = shutdown.changed() => {
-                    if *shutdown.borrow() {
+                requested = shutdown::shutdown_requested(&mut shutdown) => {
+                    if requested {
                         break;
                     }
                 }
             }
         }
+
+        Ok(())
     })
 }
 

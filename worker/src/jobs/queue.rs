@@ -1,5 +1,22 @@
 use sqlx::PgPool;
 
+use super::JobContext;
+
+/// Journalise un avertissement quand une écriture censée porter sur le job détenu par
+/// `worker_id` n'a affecté aucune ligne : ça signifie que le job a été repris par un autre
+/// worker entre-temps (reprise de zombie). Ce n'est pas fatal, mais ça ne doit jamais passer
+/// inaperçu (voir F2, docs/plans/phase-0.1-fix.md).
+fn warn_if_not_owned(job_id: i64, worker_id: &str, operation: &str, rows_affected: u64) {
+    if rows_affected == 0 {
+        tracing::warn!(
+            job_id,
+            worker_id,
+            operation,
+            "job repris par un autre worker, écriture ignorée"
+        );
+    }
+}
+
 /// Job pris par ce worker : la ligne est déjà passée en `running` en base au moment où cette
 /// structure existe.
 #[derive(Debug)]
@@ -45,29 +62,32 @@ pub async fn claim_next_job(pool: &PgPool, worker_id: &str) -> sqlx::Result<Opti
     .await
 }
 
-pub async fn set_progress(
-    pool: &PgPool,
-    job_id: i64,
-    progress: f32,
-    message: &str,
-) -> sqlx::Result<()> {
-    sqlx::query!(
+/// Garde de propriété : n'affecte que la ligne encore verrouillée par `ctx.worker_id`. La prise
+/// de job (`claim_next_job`) est atomique, mais sans cette garde une écriture de restitution ne
+/// l'est pas — c'est le compagnon classique de `SKIP LOCKED` (voir F2,
+/// docs/plans/phase-0.1-fix.md).
+pub async fn set_progress(ctx: &JobContext, progress: f32, message: &str) -> sqlx::Result<u64> {
+    let result = sqlx::query!(
         r#"
         UPDATE job
-        SET progress = $2, progress_message = $3
-        WHERE id = $1
+        SET progress = $3, progress_message = $4
+        WHERE id = $1 AND locked_by = $2 AND status = 'running'
         "#,
-        job_id,
+        ctx.job_id,
+        ctx.worker_id,
         progress,
         message,
     )
-    .execute(pool)
+    .execute(&ctx.pool)
     .await?;
-    Ok(())
+    let rows_affected = result.rows_affected();
+    warn_if_not_owned(ctx.job_id, &ctx.worker_id, "set_progress", rows_affected);
+    Ok(rows_affected)
 }
 
-pub async fn complete_job(pool: &PgPool, job_id: i64) -> sqlx::Result<()> {
-    sqlx::query!(
+/// Garde de propriété — voir `set_progress`.
+pub async fn complete_job(pool: &PgPool, job_id: i64, worker_id: &str) -> sqlx::Result<u64> {
+    let result = sqlx::query!(
         r#"
         UPDATE job
         SET status      = 'done',
@@ -75,51 +95,76 @@ pub async fn complete_job(pool: &PgPool, job_id: i64) -> sqlx::Result<()> {
             finished_at = now(),
             locked_at   = NULL,
             locked_by   = NULL
-        WHERE id = $1
+        WHERE id = $1 AND locked_by = $2 AND status = 'running'
         "#,
         job_id,
+        worker_id,
     )
     .execute(pool)
     .await?;
-    Ok(())
+    let rows_affected = result.rows_affected();
+    warn_if_not_owned(job_id, worker_id, "complete_job", rows_affected);
+    Ok(rows_affected)
 }
 
 /// Au-delà de `max_attempts`, le job passe en `failed` et n'est pas repris — voir
-/// docs/plans/phase-0-socle.md.
-pub async fn fail_job(pool: &PgPool, job_id: i64, error: &str) -> sqlx::Result<()> {
-    sqlx::query!(
+/// docs/plans/phase-0-socle.md. Garde de propriété — voir `set_progress`.
+///
+/// `attempts` a déjà été incrémenté à la prise (`claim_next_job`) : on applique donc un report
+/// exponentiel plafonné (5 s, 15 s, 45 s… plafonné à 5 min) avant de rendre le job repris,
+/// sinon un job qui échoue à cause d'une panne courte épuise ses tentatives en une milliseconde,
+/// avant même que la panne ne soit terminée (voir F4, docs/plans/phase-0.1-fix.md). La requête de
+/// prise filtre déjà sur `scheduled_at <= now()`, le report est donc respecté sans autre
+/// changement.
+pub async fn fail_job(
+    pool: &PgPool,
+    job_id: i64,
+    worker_id: &str,
+    error: &str,
+) -> sqlx::Result<u64> {
+    let result = sqlx::query!(
         r#"
         UPDATE job
-        SET status    = (CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END)::job_status,
-            error     = $2,
-            locked_at = NULL,
-            locked_by = NULL
-        WHERE id = $1
+        SET status       = (CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END)::job_status,
+            error        = $3,
+            scheduled_at = now() + make_interval(
+                               secs => least(300, (5 * power(3, greatest(attempts - 1, 0)))::int)
+                           ),
+            locked_at    = NULL,
+            locked_by    = NULL
+        WHERE id = $1 AND locked_by = $2 AND status = 'running'
         "#,
         job_id,
+        worker_id,
         error,
     )
     .execute(pool)
     .await?;
-    Ok(())
+    let rows_affected = result.rows_affected();
+    warn_if_not_owned(job_id, worker_id, "fail_job", rows_affected);
+    Ok(rows_affected)
 }
 
 /// Relâche un job en cours sans le faire échouer : utilisé à l'arrêt propre. `attempts` n'est
 /// volontairement pas décrémenté (voir docs/plans/phase-0-socle.md, section « Arrêt propre »).
-pub async fn release_job(pool: &PgPool, job_id: i64) -> sqlx::Result<()> {
-    sqlx::query!(
+/// Garde de propriété — voir `set_progress`.
+pub async fn release_job(pool: &PgPool, job_id: i64, worker_id: &str) -> sqlx::Result<u64> {
+    let result = sqlx::query!(
         r#"
         UPDATE job
         SET status    = 'pending',
             locked_at = NULL,
             locked_by = NULL
-        WHERE id = $1
+        WHERE id = $1 AND locked_by = $2 AND status = 'running'
         "#,
         job_id,
+        worker_id,
     )
     .execute(pool)
     .await?;
-    Ok(())
+    let rows_affected = result.rows_affected();
+    warn_if_not_owned(job_id, worker_id, "release_job", rows_affected);
+    Ok(rows_affected)
 }
 
 /// Reprise des jobs zombies — voir docs/plans/phase-0-socle.md, section dédiée. Le seuil d'une

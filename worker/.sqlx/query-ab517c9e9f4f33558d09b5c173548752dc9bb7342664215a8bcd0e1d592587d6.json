@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO worker_heartbeat (worker_id, version, last_seen_at)\n        VALUES ('worker-a', '0.1.0', now() - interval '5 minutes')\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "ab517c9e9f4f33558d09b5c173548752dc9bb7342664215a8bcd0e1d592587d6"
+}

@@ -103,7 +103,7 @@ async fn complete_job_marks_it_done(pool: PgPool) -> sqlx::Result<()> {
     let job_id = insert_job(&pool, "noop", 3).await;
     queue::claim_next_job(&pool, "worker-a").await?;
 
-    queue::complete_job(&pool, job_id).await?;
+    queue::complete_job(&pool, job_id, "worker-a").await?;
 
     let row = sqlx::query!(
         r#"SELECT status::text AS "status!", finished_at FROM job WHERE id = $1"#,
@@ -125,7 +125,7 @@ async fn release_job_requeues_without_incrementing_attempts(pool: PgPool) -> sql
         .expect("un job en attente doit être pris");
     assert_eq!(claimed.attempts, 1);
 
-    queue::release_job(&pool, job_id).await?;
+    queue::release_job(&pool, job_id, "worker-a").await?;
 
     let row = sqlx::query!(
         r#"SELECT status::text AS "status!", locked_by, locked_at, attempts FROM job WHERE id = $1"#,
@@ -146,7 +146,7 @@ async fn fail_job_requeues_when_attempts_below_max(pool: PgPool) -> sqlx::Result
     let job_id = insert_job(&pool, "noop", 3).await;
     queue::claim_next_job(&pool, "worker-a").await?; // attempts = 1, max_attempts = 3
 
-    queue::fail_job(&pool, job_id, "boom").await?;
+    queue::fail_job(&pool, job_id, "worker-a", "boom").await?;
 
     let row = sqlx::query!(
         r#"SELECT status::text AS "status!", error, locked_by FROM job WHERE id = $1"#,
@@ -161,12 +161,41 @@ async fn fail_job_requeues_when_attempts_below_max(pool: PgPool) -> sqlx::Result
     Ok(())
 }
 
+/// F4 — voir docs/plans/phase-0.1-fix.md. Sans report, un job repris immédiatement par
+/// `claim_next_job` épuiserait ses tentatives en une fraction de seconde, avant même qu'une panne
+/// transitoire n'ait eu le temps de se résorber.
+#[sqlx::test(migrations = "../db/migrations")]
+async fn fail_job_schedules_a_backoff_before_the_job_is_claimable_again(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let job_id = insert_job(&pool, "noop", 3).await;
+    queue::claim_next_job(&pool, "worker-a").await?;
+
+    queue::fail_job(&pool, job_id, "worker-a", "boom").await?;
+
+    let row = sqlx::query!(
+        r#"SELECT scheduled_at > now() AS "deferred!" FROM job WHERE id = $1"#,
+        job_id,
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert!(row.deferred, "scheduled_at doit être reporté dans le futur");
+
+    let claimed = queue::claim_next_job(&pool, "worker-b").await?;
+    assert!(
+        claimed.is_none(),
+        "un job en report ne doit pas être repris immédiatement"
+    );
+
+    Ok(())
+}
+
 #[sqlx::test(migrations = "../db/migrations")]
 async fn fail_job_gives_up_once_max_attempts_is_reached(pool: PgPool) -> sqlx::Result<()> {
     let job_id = insert_job(&pool, "noop", 1).await;
     queue::claim_next_job(&pool, "worker-a").await?; // attempts = 1 = max_attempts
 
-    queue::fail_job(&pool, job_id, "boom").await?;
+    queue::fail_job(&pool, job_id, "worker-a", "boom").await?;
 
     let row = sqlx::query!(
         r#"SELECT status::text AS "status!" FROM job WHERE id = $1"#,
@@ -260,6 +289,45 @@ async fn reclaim_zombie_jobs_leaves_jobs_of_live_workers_alone(pool: PgPool) -> 
     .fetch_one(&pool)
     .await?;
     assert_eq!(row.status, "running");
+
+    Ok(())
+}
+
+/// F2 — voir docs/plans/phase-0.1-fix.md. La prise de job est atomique (`SKIP LOCKED`), mais sans
+/// garde de propriété une écriture de restitution ne l'est pas : un ancien détenteur pourrait
+/// écraser le travail d'un worker qui a repris le job après une reprise de zombie.
+#[sqlx::test(migrations = "../db/migrations")]
+async fn complete_job_is_ignored_once_the_job_was_reclaimed_by_another_worker(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let job_id = insert_job(&pool, "noop", 3).await;
+    queue::claim_next_job(&pool, "worker-a").await?;
+
+    sqlx::query!(
+        r#"
+        INSERT INTO worker_heartbeat (worker_id, version, last_seen_at)
+        VALUES ('worker-a', '0.1.0', now() - interval '5 minutes')
+        "#
+    )
+    .execute(&pool)
+    .await?;
+    queue::reclaim_zombie_jobs(&pool).await?;
+    queue::claim_next_job(&pool, "worker-b").await?;
+
+    let rows_affected = queue::complete_job(&pool, job_id, "worker-a").await?;
+    assert_eq!(
+        rows_affected, 0,
+        "l'ancien détenteur ne doit affecter aucune ligne"
+    );
+
+    let row = sqlx::query!(
+        r#"SELECT status::text AS "status!", locked_by FROM job WHERE id = $1"#,
+        job_id,
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(row.status, "running", "le job reste détenu par worker-b");
+    assert_eq!(row.locked_by.as_deref(), Some("worker-b"));
 
     Ok(())
 }
