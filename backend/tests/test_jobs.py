@@ -85,3 +85,22 @@ async def test_dev_routes_are_404_when_disabled() -> None:
         settings.enable_dev_routes = original
 
     assert response.status_code == 404
+
+
+async def test_homepage_survives_dev_routes_being_disabled() -> None:
+    # La page d'accueil vivait sur le même routeur que les routes de démonstration : l'éteindre
+    # la faisait disparaître avec elles, donc 404 sur `/` en production. Une page publique ne
+    # vit jamais sur un routeur qu'on conditionne.
+    original = settings.enable_dev_routes
+    settings.enable_dev_routes = False
+    try:
+        app = create_app()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.get("/")
+    finally:
+        settings.enable_dev_routes = original
+
+    assert response.status_code == 200
+    # Le bouton de démonstration ne doit pas être proposé quand la route qu'il vise n'existe pas.
+    assert "/dev/jobs" not in response.text

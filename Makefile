@@ -6,11 +6,16 @@ DATABASE_URL ?= postgresql://kyc:kyc@localhost:5432/kyc
 # démarrage à froid, ça fait échouer `make migrate` en « connection refused ». `--wait` aide mais
 # son support varie selon les versions de podman-compose, donc on ne s'y fie pas seul : on fait
 # suivre d'une boucle d'attente bornée sur `pg_isready` (voir F6, docs/plans/phase-0.1-fix.md).
+#
+# `-h 127.0.0.1` force une vérification TCP : pendant l'initialisation de la base, l'entrypoint de
+# l'image postgres démarre un serveur temporaire avec `listen_addresses=''`, qui répond sur la
+# socket Unix mais pas en TCP. Sans ce drapeau, la boucle peut réussir alors que le port publié
+# refuse encore les connexions — soit la panne que cette cible est censée éliminer.
 db-up:
 	podman compose up -d --wait 2>/dev/null || podman compose up -d
 	@echo "Attente de PostgreSQL..."
 	@for i in $$(seq 1 30); do \
-		podman compose exec -T postgres pg_isready -U kyc -d kyc >/dev/null 2>&1 && exit 0; \
+		podman compose exec -T postgres pg_isready -U kyc -d kyc -h 127.0.0.1 >/dev/null 2>&1 && exit 0; \
 		sleep 1; \
 	done; \
 	echo "PostgreSQL ne répond pas après 30 s. Vérifier 'podman compose logs postgres'." >&2; \

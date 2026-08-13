@@ -119,7 +119,28 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    let _ = shutdown_handle.await;
+    // La tâche de signal ne se termine d'elle-même que si un signal est arrivé. Quand on sort
+    // parce qu'une tâche de fond est morte — le scénario même de F1 —, elle est toujours parquée
+    // sur ctrl_c()/SIGTERM et l'attendre bloquerait le processus indéfiniment : on détecterait la
+    // panne, on journaliserait, et on ne sortirait jamais. On ne récupère donc son résultat que si
+    // elle a déjà fini, et on l'abandonne sinon.
+    if shutdown_handle.is_finished() {
+        match shutdown_handle.await {
+            Ok(Ok(())) => {}
+            // Échec d'installation des handlers : déclaré fatal par le plan. shutdown::spawn a
+            // déjà demandé l'arrêt, mais le processus doit sortir en erreur.
+            Ok(Err(err)) => {
+                tracing::error!(task = "shutdown", error = %err, "tâche de signal en erreur");
+                task_error.get_or_insert(err);
+            }
+            Err(join_err) => {
+                tracing::error!(task = "shutdown", error = %join_err, "tâche de signal a paniqué");
+                task_error.get_or_insert_with(|| anyhow::anyhow!("{join_err}"));
+            }
+        }
+    } else {
+        shutdown_handle.abort();
+    }
 
     if let Some(err) = task_error {
         return Err(err);

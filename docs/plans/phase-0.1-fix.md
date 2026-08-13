@@ -269,5 +269,30 @@ que la phase 1 en hérite au lieu de refaire les mêmes erreurs sur de vrais job
   puis F3 par-dessus. Ne pas les faire en parallèle.
 - **F2 touche la signature de tout ce qui écrit un job**, y compris `noop::run` et la progression. C'est le
   correctif le plus étendu ; le faire dans son propre commit, avec `cargo sqlx prepare` rejoué.
-- Après toute modification d'une requête `sqlx::query!`, **relancer `cargo sqlx prepare`** et commiter
-  `.sqlx/`, sinon la CI cassera en mode offline.
+- Après toute modification d'une requête `sqlx::query!`, **relancer `cargo sqlx prepare -- --all-targets`**
+  et commiter `.sqlx/`, sinon la CI cassera en mode offline. Sans `--all-targets`, la commande régénère
+  `.sqlx/` **en écrasant** les entrées des requêtes qui ne vivent que dans les tests d'intégration : la
+  compilation offline des tests échoue alors, et la cause n'est pas évidente à lire dans l'erreur.
+
+## Suites : ce qu'une seconde revue a trouvé
+
+L'implémentation de F1 à F10 a fait l'objet d'une relecture, qui a relevé sept points de plus — dont deux
+qui annulaient l'effet du correctif qu'ils portaient. Corrigés dans la foulée :
+
+1. **La supervision n'aboutissait pas.** `main` attendait la tâche de signal après avoir détecté la mort
+   d'une tâche de fond ; cette tâche étant parquée sur `ctrl_c()`/SIGTERM, le processus se bloquait au lieu
+   de sortir. F1 détectait la panne mais n'en tirait aucune conséquence. On ne récupère désormais son
+   résultat que si elle a déjà fini, et on l'abandonne sinon.
+2. **`GET /` vivait sur `dev.router`.** Conditionner ce routeur démontait donc aussi la page d'accueil :
+   404 sur `/` avec le défaut sûr. Les pages publiques sont passées dans `routers/pages.py`, toujours
+   monté — **une page publique ne vit jamais sur un routeur qu'on éteint**, et un test le vérifie.
+3. Le cast `::int` du report exponentiel était appliqué dans l'argument de `least()` au lieu d'envelopper
+   le résultat : débordement possible avant le plafond. `make_interval(secs => …)` prenant un
+   `double precision`, le cast a simplement été retiré.
+4. Le repli de `WORKER_ID` sur le seul pid redonnait `worker-pid1` à tous les conteneurs — la panne de F8,
+   décalée en production. Nom d'hôte et suffixe temporel ajoutés.
+5. `pg_isready` interrogeait la socket Unix, sur laquelle le serveur temporaire d'initialisation répond
+   aussi ; `-h 127.0.0.1` force une vérification TCP réelle.
+6. Le test de `WORKER_ID` mutait l'environnement du processus sous un commentaire `SAFETY` invoquant un
+   test mono-thread, alors que cargo exécute les tests en parallèle. La résolution a été extraite en
+   fonction pure, testable sans `unsafe`.

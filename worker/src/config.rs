@@ -21,39 +21,62 @@ impl Config {
 /// absente, sans quoi le repli ci-dessous ne se déclenche jamais et deux workers lancés en local
 /// partagent la même identité (voir F8, docs/plans/phase-0.1-fix.md).
 fn worker_id_from_env() -> String {
-    match std::env::var("WORKER_ID") {
-        Ok(value) if !value.trim().is_empty() => value,
+    resolve_worker_id(std::env::var("WORKER_ID").ok().as_deref())
+}
+
+/// Séparée de la lecture de l'environnement pour être testable sans muter les variables du
+/// processus : `std::env::set_var` est `unsafe` en édition 2024 précisément parce que cargo
+/// exécute les tests d'un même crate en parallèle dans un seul processus.
+fn resolve_worker_id(raw: Option<&str>) -> String {
+    match raw {
+        Some(value) if !value.trim().is_empty() => value.trim().to_string(),
         _ => default_worker_id(),
     }
 }
 
-/// Utilisé quand WORKER_ID n'est pas fourni par l'environnement (typiquement en local). Le pid
-/// suffit à garantir l'unicité par processus sur un même hôte ; pas de dépendance ajoutée pour un
-/// nom d'hôte, ce serait disproportionné pour ce seul repli local (voir F8,
-/// docs/plans/phase-0.1-fix.md).
+/// Utilisé quand WORKER_ID n'est pas fourni par l'environnement.
+///
+/// Le pid seul ne suffit pas : dans un conteneur il vaut presque toujours 1, donc deux instances
+/// déployées partageraient une identité et donc une ligne de `worker_heartbeat` — celle qui vit
+/// maintiendrait le battement de cœur de celle qui est morte, et les jobs de cette dernière ne
+/// seraient jamais repris. C'est exactement la panne que F8 corrigeait, décalée en production.
+/// On y ajoute donc le nom d'hôte quand il est disponible et un suffixe temporel, ce qui rend une
+/// collision improbable sans ajouter de dépendance.
 fn default_worker_id() -> String {
-    format!("worker-pid{}", std::process::id())
+    let host = std::env::var("HOSTNAME")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| "unknown".to_string());
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.subsec_nanos())
+        .unwrap_or_default();
+    format!("worker-{}-pid{}-{nanos}", host.trim(), std::process::id())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::worker_id_from_env;
+    use super::{default_worker_id, resolve_worker_id};
 
     #[test]
     fn falls_back_to_default_when_env_var_is_blank() {
-        // SAFETY: modifie une variable d'environnement de processus dans un test mono-thread —
-        // aucune autre tâche ne lit WORKER_ID en parallèle ici.
-        unsafe {
-            std::env::set_var("WORKER_ID", "   ");
-        }
-        let worker_id = worker_id_from_env();
-        unsafe {
-            std::env::remove_var("WORKER_ID");
-        }
+        assert!(resolve_worker_id(Some("   ")).starts_with("worker-"));
+        assert!(resolve_worker_id(Some("")).starts_with("worker-"));
+        assert!(resolve_worker_id(None).starts_with("worker-"));
+    }
 
-        assert!(
-            worker_id.starts_with("worker-"),
-            "une valeur blanche doit retomber sur le repli, pas être utilisée telle quelle"
+    #[test]
+    fn keeps_an_explicit_worker_id() {
+        assert_eq!(
+            resolve_worker_id(Some(" render-worker-1 ")),
+            "render-worker-1"
         );
+    }
+
+    #[test]
+    fn default_ids_differ_between_calls() {
+        // Deux conteneurs ont le même nom d'hôte potentiel et le même pid 1 : c'est le suffixe
+        // temporel qui porte l'unicité.
+        assert_ne!(default_worker_id(), default_worker_id());
     }
 }

@@ -86,6 +86,9 @@ pour lint + format, configuré dans `backend/pyproject.toml`. Pas de `Any` sans 
 
 **Rust** — édition 2024, `tokio` pour l'async, `sqlx` en mode requêtes vérifiées à la compilation.
 `cargo clippy -- -D warnings` doit passer. Pas de `unwrap()` hors tests et hors démarrage.
+Après toute modification d'une requête `sqlx::query!`/`query_as!`, régénérer les métadonnées avec
+**`cargo sqlx prepare -- --all-targets`** : sans `--all-targets`, les requêtes des tests d'intégration
+perdent leurs entrées `.sqlx` et la CI casse en mode offline.
 
 **SQL** — migrations numérotées et immuables une fois mergées (`db/migrations/NNNN_description.sql`).
 Toute migration doit être rejouable sur une base existante. On exploite volontairement Postgres :

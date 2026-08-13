@@ -127,8 +127,10 @@ pub async fn fail_job(
         UPDATE job
         SET status       = (CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END)::job_status,
             error        = $3,
+            -- `make_interval(secs => …)` prend un double precision : pas de cast en int, qui
+            -- déborderait pour un max_attempts élevé avant même que least() ne plafonne.
             scheduled_at = now() + make_interval(
-                               secs => least(300, (5 * power(3, greatest(attempts - 1, 0)))::int)
+                               secs => least(300, 5 * power(3, greatest(attempts - 1, 0)))
                            ),
             locked_at    = NULL,
             locked_by    = NULL

@@ -9,11 +9,6 @@ router = APIRouter()
 fragments_router = APIRouter(prefix="/fragments")
 
 
-@router.get("/")
-async def index(request: Request):
-    return templates.TemplateResponse(request, "index.html.jinja")
-
-
 @router.post("/dev/jobs")
 async def create_demo_job(pool: Queryable = Depends(get_pool)) -> RedirectResponse:
     job_id = await create_job(pool, type="noop", payload={"seconds": 3})
