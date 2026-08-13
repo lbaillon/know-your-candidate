@@ -63,6 +63,14 @@ docs/plans/ Un plan par phase. C'est là que se fait la conception.
   exiger un appel direct, c'est presque toujours une colonne qui manque.
 - **Pas de framework JS, pas de build front.** HTMX + Jinja, rendu serveur. Si une interaction semble
   exiger du JS, on cherche d'abord la solution HTMX.
+- **Toute écriture sur un job porte le garde de propriété** (`locked_by`, `status`), et une écriture qui
+  n'affecte aucune ligne est journalisée, jamais ignorée en silence. La prise de job (`SKIP LOCKED`) est
+  atomique ; sans cette garde, une restitution (achèvement, échec, relâchement, progression) ne l'est pas,
+  et un worker qui a perdu son job après une reprise de zombie peut écraser le travail de celui qui l'a
+  repris (leçon de la revue de la phase 0, voir [phase-0.1-fix.md](docs/plans/phase-0.1-fix.md), F2).
+- **Toute tâche de fond est supervisée** : sa mort arrête le processus avec un code non nul. Un processus à
+  moitié vivant qui continue de signaler qu'il va bien (heartbeat qui tourne, boucle de jobs qui ne tourne
+  plus) est pire qu'un processus mort (même revue, F1).
 
 ## Conventions techniques
 
@@ -101,6 +109,12 @@ En cas de doute sur ce qu'on a le droit d'afficher ou de déduire : demande, ne 
 
 Prérequis : `uv`, Rust (édition 2024) + `sqlx-cli`, Podman + `podman-compose`, `make`. Copier
 `.env.example` en `.env` avant de lancer quoi que ce soit.
+
+**Sur la machine de développement Windows de l'utilisateur, tout l'outillage (`cargo`, `uv`, `podman`,
+`make`, `sqlx`) est installé dans WSL, pas dans Windows.** Préfixer les commandes par
+`wsl -d Ubuntu-26.04 --`, par exemple `wsl -d Ubuntu-26.04 -- make test`. Cela ne s'applique qu'en session
+interactive sur cette machine ; la CI GitHub Actions tourne nativement sur Linux et n'a pas besoin de ce
+préfixe.
 
 ```
 make dev          # podman compose up (Postgres), migrations, worker + backend

@@ -300,6 +300,25 @@ expression is of type text » — contrairement à un `UPDATE` exécuté tel que
 Postgres résout l'ambiguïté depuis le contexte d'affectation. Repéré à la compilation du worker,
 pas en le devinant : ne pas retirer ce cast.
 
+### Écriture sur un job : garde de propriété et report — leçon de la revue de la phase 0
+
+Corrigé en phase 0.1 (voir [phase-0.1-fix.md](phase-0.1-fix.md), F2 et F4), à hériter dès le premier job
+réel de la phase 1 plutôt qu'à redécouvrir sur de vraies données :
+
+- **Toute écriture qui restitue un job pris** (achèvement, échec, relâchement, progression) filtre sur
+  `WHERE id = $1 AND locked_by = $2 AND status = 'running'`, `$2` étant l'identité du worker qui l'a pris.
+  La prise de job (`SKIP LOCKED`) est atomique ; sans cette garde, la restitution ne l'est pas — un worker
+  qui a perdu son job après une reprise de zombie peut sinon écraser le travail de celui qui l'a repris.
+  Une écriture qui n'affecte aucune ligne (`rows_affected() == 0`) est journalisée en avertissement, jamais
+  ignorée en silence.
+- **`fail_job` applique un report exponentiel plafonné** avant de rendre le job repris (`attempts` étant
+  déjà incrémenté à la prise) : 5 s, 15 s, 45 s… plafonné à 5 minutes via
+  `now() + make_interval(secs => least(300, (5 * power(3, greatest(attempts - 1, 0)))::int))`. Sans ce
+  report, un job qui échoue à cause d'une panne transitoire épuise ses tentatives en une fraction de
+  seconde, avant même que la panne ne soit terminée — le mécanisme de tentatives ne protège alors de rien.
+  La requête de prise filtre déjà sur `scheduled_at <= now()`, le report est donc respecté sans changement
+  côté prise.
+
 ### Arrêt propre
 
 Sur SIGTERM (et SIGINT en local) : arrêter de prendre de nouveaux jobs, laisser le job en cours se
