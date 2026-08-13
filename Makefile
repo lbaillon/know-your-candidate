@@ -1,9 +1,22 @@
-.PHONY: dev lint typecheck test migrate
+.PHONY: dev lint typecheck test migrate db-up
 
 DATABASE_URL ?= postgresql://kyc:kyc@localhost:5432/kyc
 
-dev:
-	podman compose up -d
+# `podman compose up -d` rend la main avant que Postgres accepte les connexions ; au premier
+# démarrage à froid, ça fait échouer `make migrate` en « connection refused ». `--wait` aide mais
+# son support varie selon les versions de podman-compose, donc on ne s'y fie pas seul : on fait
+# suivre d'une boucle d'attente bornée sur `pg_isready` (voir F6, docs/plans/phase-0.1-fix.md).
+db-up:
+	podman compose up -d --wait 2>/dev/null || podman compose up -d
+	@echo "Attente de PostgreSQL..."
+	@for i in $$(seq 1 30); do \
+		podman compose exec -T postgres pg_isready -U kyc -d kyc >/dev/null 2>&1 && exit 0; \
+		sleep 1; \
+	done; \
+	echo "PostgreSQL ne répond pas après 30 s. Vérifier 'podman compose logs postgres'." >&2; \
+	exit 1
+
+dev: db-up
 	$(MAKE) migrate
 	@trap 'kill 0' EXIT; \
 	(cd worker && cargo run) & \
@@ -17,7 +30,7 @@ lint:
 typecheck:
 	cd backend && uv run ty check
 
-test:
+test: db-up
 	cd backend && uv run pytest
 	cd worker && SQLX_OFFLINE=true cargo test
 
