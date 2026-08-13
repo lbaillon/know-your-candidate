@@ -7,7 +7,8 @@ moindre ligne de code.** C'est le seul processus imposé par le projet.
 
 | Phase | Objet | Statut |
 | --- | --- | --- |
-| [0](phase-0-socle.md) | Socle technique : uv, FastAPI, Rust, PostgreSQL, file de jobs, CI | ✅ validé |
+| [0](phase-0-socle.md) | Socle technique : uv, FastAPI, Rust, PostgreSQL, file de jobs, CI | ✔️ terminé |
+| [0.1](phase-0.1-fix.md) | Corrections du socle relevées à la revue de la phase 0 | ✅ validé |
 | [1](phase-1-ingestion.md) | Ingestion des scrutins et des mandats depuis l'open data | 📝 à relire |
 | [2](phase-2-api-ui.md) | Pages publiques : liste des candidats, fiche candidat | 📝 à relire |
 | [3](phase-3-categorisation.md) | Catégorisation : heuristique, back-office, export/import | 📝 à relire |
@@ -20,7 +21,7 @@ Légende : 📝 à relire · ✅ validé · 🚧 en cours · ✔️ terminé · 
 ## Ordre et dépendances
 
 ```
-0 socle ──► 1 ingestion ──► 2 pages publiques (données brutes visibles)
+0 socle ──► 0.1 corrections ──► 1 ingestion ──► 2 pages publiques (données brutes visibles)
                   │
                   └──────► 3 catégorisation ──► 4 scores & explications ──► 5 déploiement
 ```
