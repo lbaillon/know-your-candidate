@@ -32,8 +32,9 @@ Le nom change (`Scrutins` vs `Scrutins_XV` vs `Scrutins_XIV`) : **construire l'U
 numéro de législature ne marche pas**, il faut une table de correspondance explicite.
 
 Les législatures 15 à 17 publient un fichier JSON par scrutin, toutes en `modePublicationDesVotes =
-DecompteNominatif`, soit **2 346 018 votes nominatifs** au total. Chaque scrutin porte le titre, la date, le
-type, le sort, les compteurs, et la position de chaque votant, groupe par groupe.
+DecompteNominatif`, soit **2 346 018 votes nominatifs** à l'Assemblée, plus 902 au Congrès. Chaque scrutin
+porte le titre, la date, le type, le sort, les compteurs, et la position de chaque votant, groupe par
+groupe.
 
 La **législature 14 est un autre format** : une archive monolithique, et surtout 710 de ses 1 354 scrutins
 sont publiés en `DecompteDissidentsPositionGroupe` — on connaît la position du groupe et le nom des
@@ -73,14 +74,29 @@ de vie (`viMoDe.dateDebut` / `dateFin`). Les appartenances sont portées par les
 GP` : **7 759 mandats**, tous avec une `dateDebut`, 588 sans `dateFin` (en cours). Qualités observées :
 `Membre` (4 643), `Député non-inscrit` (2 770), `Membre apparenté` (261), `Président` (85).
 
-Deux pièges mesurés :
+Trois pièges mesurés :
 
 - les **non-inscrits** sont modélisés comme un pseudo-groupe par législature (`PO840056` = NI de la 17e).
   Techniquement un `GP`, politiquement l'absence de groupe : ne jamais l'afficher comme une appartenance ni
   le faire entrer dans un calcul d'alignement de groupe ;
 - **86 chevauchements** de mandats GP existent pour une même personne, dont des **doublons exacts** (mêmes
-  dates, même groupe, deux `uid` de mandat distincts). Une contrainte `EXCLUDE` posée naïvement rejetterait
-  l'ingestion : il faut normaliser et dédupliquer avant d'insérer, et journaliser ce qui reste.
+  dates, même groupe, deux `uid` de mandat distincts). Tous les 85 chevauchements d'un même groupe sont des
+  **inclusions** — une plage en contient une autre, aucune n'est partielle ; le 86e croise deux groupes et
+  date de 2007. Une contrainte `EXCLUDE` posée naïvement rejetterait l'ingestion : il faut normaliser avant
+  d'insérer, et journaliser ce qui reste ;
+- **`dateFin` est incluse dans le mandat.** Ce n'est pas une convention supposée, c'est la source qui
+  l'établit : sur les votes tombant exactement un jour de fin de mandat, **870 confirment le groupe qui se
+  termine ce jour-là et aucun ne confirme le suivant**. Une plage se construit donc en
+  `daterange(debut, fin + 1, '[)')`. Corollaire : 10 mandats consécutifs d'un même groupe partagent leur
+  date de charnière et se chevaucheraient d'un jour — à raboter à l'ingestion.
+
+Aucun mandat n'a de date de début manquante ni de fin antérieure à son début : les plages sont
+constructibles sans garde-fou, ce qui n'empêche pas d'en poser un.
+
+**Le référentiel contredit parfois le fichier de scrutin**, et c'est le fichier qui a raison. Cas mesuré :
+un député porte un mandat de non-inscrit d'un seul jour, le 13/11/2025, alors que le scrutin de ce jour-là
+le range dans son groupe. 324 votes du corpus sont dans cette situation. Le rattachement au groupe se lit
+donc **d'abord dans le scrutin**, et les mandats ne servent qu'à combler ce que le scrutin ne dit pas.
 
 ### Partis politiques — l'AN publie ses propres rattachements
 
@@ -114,6 +130,10 @@ Ce n'est pas un détail de confort : c'est la première source de bugs de parsin
 - **Un singleton n'est pas une liste.** Le bloc `votant` est une liste quand le groupe a plusieurs votants
   et un objet quand il n'en a qu'un (mesuré en 17e : 95 180 listes contre 35 671 objets).
 - **Les booléens sont des chaînes.** `parDelegation` vaut `"true"` ou `"false"`.
+- **Les noms de blocs changent d'un scrutin à l'autre.** Le scrutin du Congrès nomme ses blocs nominatifs
+  `pour`, `contre`, `abstention` au **singulier**, là où les 16 956 autres les nomment `pours`, `contres`,
+  `abstentions`. Un parseur qui ne connaît que le pluriel ingère **zéro vote pour ce scrutin, sans lever la
+  moindre erreur** : accepter les deux graphies et journaliser tout nom de bloc inconnu.
 
 Tout accès à un champ doit donc passer par un normalisateur « texte, objet à `#text`, ou nil », et tout
 accès à une collection par un « objet ou liste → liste ».

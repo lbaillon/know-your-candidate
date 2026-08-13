@@ -31,7 +31,8 @@ explication cliquable est un bug, pas une fonctionnalité.
 - **Documentation, UI, commentaires expliquant un choix métier : français.**
 - **Identifiants de code, noms de fichiers, messages de commit : anglais**, sauf les termes du domaine
   parlementaire qui n'ont pas d'équivalent propre et qui mappent 1:1 sur les données sources. On garde
-  donc en français : `scrutin`, `groupe` (groupe parlementaire), `legislature`, `dossier`, `organe`.
+  donc en français : `scrutin`, `groupe` (groupe parlementaire), `legislature`, `dossier`, `organe`,
+  `mandat` (« mandate » est un faux ami en anglais).
 - Tout le reste en anglais : `person`, `party`, `vote`, `theme`, `score`, `job`, `ingestion_run`.
 
 ## Structure du repo
