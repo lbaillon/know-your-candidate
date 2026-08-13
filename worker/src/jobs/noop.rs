@@ -11,7 +11,7 @@ pub async fn run(pool: &PgPool, job_id: i64, payload: &serde_json::Value) -> any
         .get("seconds")
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(3)
-        .clamp(1, 30);
+        .clamp(1, 120);
 
     for step in 1..=seconds {
         tokio::time::sleep(Duration::from_secs(1)).await;

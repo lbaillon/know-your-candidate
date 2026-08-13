@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT status::text AS \"status!\", locked_by, locked_at, attempts FROM job WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "status!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "locked_by",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "job",
+            "name": "locked_by"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "locked_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "job",
+            "name": "locked_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "attempts",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "job",
+            "name": "attempts"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "a01c3e11559c0b70a5deef3438d881cb7c15f7e8cc51ae9944f2910f459d64ba"
+}

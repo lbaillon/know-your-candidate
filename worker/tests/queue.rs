@@ -118,6 +118,30 @@ async fn complete_job_marks_it_done(pool: PgPool) -> sqlx::Result<()> {
 }
 
 #[sqlx::test(migrations = "../db/migrations")]
+async fn release_job_requeues_without_incrementing_attempts(pool: PgPool) -> sqlx::Result<()> {
+    let job_id = insert_job(&pool, "noop", 3).await;
+    let claimed = queue::claim_next_job(&pool, "worker-a")
+        .await?
+        .expect("un job en attente doit être pris");
+    assert_eq!(claimed.attempts, 1);
+
+    queue::release_job(&pool, job_id).await?;
+
+    let row = sqlx::query!(
+        r#"SELECT status::text AS "status!", locked_by, locked_at, attempts FROM job WHERE id = $1"#,
+        job_id,
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(row.status, "pending");
+    assert!(row.locked_by.is_none());
+    assert!(row.locked_at.is_none());
+    assert_eq!(row.attempts, 1, "release ne doit pas décrémenter attempts");
+
+    Ok(())
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
 async fn fail_job_requeues_when_attempts_below_max(pool: PgPool) -> sqlx::Result<()> {
     let job_id = insert_job(&pool, "noop", 3).await;
     queue::claim_next_job(&pool, "worker-a").await?; // attempts = 1, max_attempts = 3

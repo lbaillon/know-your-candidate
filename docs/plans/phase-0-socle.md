@@ -431,7 +431,11 @@ Ce ne sont pas des cases à cocher de confort, ce sont les seules preuves que la
    (`SELECT count(*) <> count(DISTINCT id)` doit être faux) et qu'aucun ne reste en `pending`.
 5. **Perte de `NOTIFY`** — couper la connexion du worker (`pg_terminate_backend` sur sa connexion
    d'écoute) pendant qu'un job est créé : il doit être traité au poll de secours suivant, et le worker
-   doit se réabonner.
+   doit se réabonner. Constaté en pratique : `sqlx::postgres::PgListener` a un `eager_reconnect`
+   intégré (voir sa doc) qui réabonne la connexion dès le `recv()` suivant, en général bien avant les
+   30 s du poll — le job est repris en ~1 s. C'est strictement mieux que ce qui était demandé ici ; le
+   code de réabonnement explicite dans `jobs/mod.rs` reste en filet de sécurité pour le cas où
+   `eager_reconnect` lui-même échoue.
 6. **Zombie** — `kill -9` sur un worker pendant un job long ; après expiration du battement de cœur, le
    job repasse `pending` et un autre worker le reprend.
 7. **Arrêt propre** — SIGTERM pendant un job long : le job est relâché, pas perdu, et le processus sort
