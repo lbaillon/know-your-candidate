@@ -24,13 +24,47 @@ Trois règles en découlent, non négociables :
 
 | Critère | Valeur v1 | Pourquoi c'est un paramètre et pas une constante |
 | --- | --- | --- |
-| Profondeur | 10 ans glissants | On veut pouvoir remonter plus loin sans réécrire de code |
-| Participation minimale | 50 % des sièges | Un scrutin à 60 votants sur 577 n'est pas représentatif ; le seuil pourra être abaissé pour enrichir le corpus, la donnée étant conservée |
-| Type de scrutins | scrutins publics (solennels, motions, déclarations du Gouvernement) | C'est ce que publie l'open data |
+| Profondeur | législatures 15 à 17, soit du 04/07/2017 à aujourd'hui | On veut pouvoir remonter plus loin sans réécrire de code |
+| Participation minimale | 50 % de l'effectif | Un scrutin à 16 votants sur 577 n'est pas représentatif ; le seuil pourra être abaissé pour enrichir le corpus, la donnée étant conservée |
+| Type de scrutins | scrutins publics (ordinaires, solennels, motions de censure) | C'est ce que publie l'open data |
 
-Le calcul de la participation, son dénominateur (sièges pourvus ou effectif légal) et le traitement des
-non-votants sont à figer en [phase 1](plans/phase-1-ingestion.md) — et à écrire noir sur blanc ici, car
-ce seul choix déplace des scrutins entiers dans ou hors du corpus.
+**Pourquoi 2017 et pas « 10 ans glissants ».** L'ambition initiale était de dix ans. Le spike de la
+[phase 1](plans/phase-1-ingestion.md) a montré que la 14e législature (2012-2017) ne publie de vote
+nominatif que pour 644 de ses 1 354 scrutins — les 710 autres ne donnent que la position du groupe et le
+nom des dissidents — et que son archive s'arrête en novembre 2016. L'inclure reviendrait à afficher, pour
+la même personne, des votes personnels sur une période et des positions de groupe sur une autre : deux
+natures de fait sous une seule étiquette. On préfère un corpus **plus court et homogène** : neuf ans,
+16 957 scrutins, 2 346 018 votes nominatifs. La 14e législature est au backlog v2.
+
+**Dénominateur de la participation : l'effectif au jour du scrutin**, obtenu en sommant les
+`nombreMembresGroupe` publiés dans le fichier du scrutin (574 à 577 en pratique). Ni l'effectif légal
+(577, faux dès qu'un siège est vacant), ni une reconstruction à partir des mandats (fragile et inutile
+puisque la source donne le chiffre). Participation = `nombreVotants / effectif`.
+
+**Ce que le dénominateur ne dit pas** : les absents ne figurent pas dans les fichiers de l'Assemblée. Un
+scrutin à 30 % de participation ne permet donc **pas** de dire qui était absent, seulement qui était
+présent et comment il a voté. On n'affiche jamais de « taux de présence » par personne : la source ne le
+porte pas.
+
+### Ce que « appartenir à un parti » veut dire ici
+
+Trois liens différents sont mesurés par trois sources différentes, et **ils ne se disent pas de la même
+façon** :
+
+| Lien | Source | Formulation imposée |
+| --- | --- | --- |
+| Siéger dans un groupe parlementaire | mandats `GP` de l'Assemblée | « a siégé au groupe X du JJ/MM/AAAA au JJ/MM/AAAA » |
+| Être rattaché à un parti | organes `PARPOL` de l'Assemblée | « rattaché·e au parti X au titre du financement de la vie politique, déclaration du JJ/MM/AAAA » |
+| Adhérer à un parti | Wikidata (`P102`) | « adhésion au parti X selon Wikidata, du … au … » |
+
+Le rattachement au titre du financement est un **acte administratif annuel**, pas une adhésion : l'écrire
+« membre de X » serait une inférence, exactement le genre que ce document interdit. Le lien à afficher en
+priorité est le groupe parlementaire, parce que c'est lui qui a un rapport avec les votes.
+
+Cas à ne jamais afficher comme une appartenance : les **députés non-inscrits**. La source les modélise
+comme un groupe (un pseudo-groupe « NI » par législature), mais n'appartenir à aucun groupe n'est pas
+appartenir au groupe des sans-groupe. On affiche « non-inscrit·e », et aucun alignement de groupe n'est
+calculé sur cette période.
 
 ## 3. Comment on lit une position de vote
 
@@ -39,11 +73,26 @@ ce seul choix déplace des scrutins entiers dans ou hors du corpus.
 | Pour | contribue au score |
 | Contre | contribue au score, en sens inverse |
 | Abstention | conservée, **signalée**, pondération faible ou nulle — jamais convertie en « contre » |
-| Non-votant | **exclu de tout calcul** |
+| Non-votant | **exclu de tout calcul**, affiché avec sa cause |
 
 L'abstention en France recouvre le refus de choisir comme la nuance politique ; elle mérite d'être
-affichée, pas interprétée. Le non-votant recouvre l'absence, la mission, la présidence de séance : en
-faire une opinion serait une faute.
+affichée, pas interprétée.
+
+**Le non-votant, lui, est documenté par la source.** L'Assemblée publie la cause de chaque non-vote, et il
+n'en existe que trois : président de séance (`PSE`), président de l'Assemblée (`PAN`), membre du
+Gouvernement (`MG`). Toutes institutionnelles. On affiche donc la cause en clair — « ne prend pas part au
+vote : préside la séance » — plutôt qu'un « non-votant » qui inviterait à imaginer un désengagement. Les
+absents, eux, ne figurent pas dans les fichiers : leur absence n'est ni affichée ni comptée.
+
+**Le vote par délégation est un vote, et il est dit.** 12,6 % des votes du corpus sont émis par délégation
+(15,1 % sur la seule 17e législature). Il compte comme le vote de la personne au nom de qui il est émis —
+c'est son sens juridique — et l'UI le signale systématiquement. Le masquer serait malhonnête ; l'écarter
+amputerait le corpus d'un vote sur huit.
+
+**Une mise au point n'écrase pas le vote.** Quand un député déclare après coup s'être trompé, l'Assemblée
+publie la correction sans modifier le résultat du scrutin. Nous faisons pareil : le vote enregistré reste
+la donnée, la mise au point est **stockée à côté, affichée, et n'entre pas dans le calcul**. Le cas est
+rare (0,2 % des votes), et il dit quelque chose — c'est pourquoi on le garde.
 
 ## 4. Les axes thématiques
 

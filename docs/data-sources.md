@@ -3,9 +3,10 @@
 Toutes les sources doivent être **ouvertes, officielles ou vérifiables, et citées dans l'UI**. Une donnée
 sans source affichable n'entre pas en base.
 
-> Les URLs ci-dessous ont été relevées en août 2026 et doivent être revalidées au moment de
-> l'implémentation (voir le spike de la [phase 1](plans/phase-1-ingestion.md)) : l'Assemblée nationale
-> réorganise régulièrement ses chemins d'archives.
+> **Relevé du 13 août 2026, vérifié en téléchargeant les archives** (spike de la
+> [phase 1](plans/phase-1-ingestion.md)). Les chiffres de cette page sont mesurés, pas estimés. Les chemins
+> restent à revalider avant chaque campagne d'ingestion : l'Assemblée nationale réorganise ses archives, et
+> les noms de fichiers ne sont **pas** uniformes d'une législature à l'autre.
 
 ## 1. Assemblée nationale — open data officiel (source principale)
 
@@ -14,45 +15,144 @@ distribués en archives `.zip`.
 
 ### Scrutins (les votes)
 
-Page de référence : <https://data.assemblee-nationale.fr/travaux-parlementaires/votes>
+Pages de référence : <https://data.assemblee-nationale.fr/travaux-parlementaires/votes> pour la législature
+en cours, `archives-16e/votes` et `archives-anterieures/archives-15e/scrutins` pour les précédentes. Les
+pages ne listent que leur propre législature : il n'existe pas de page unique énumérant tout.
 
-```
-https://data.assemblee-nationale.fr/static/openData/repository/{legislature}/loi/scrutins/Scrutins.json.zip
-https://data.assemblee-nationale.fr/static/openData/repository/{legislature}/loi/scrutins/Scrutins.xml.zip
-```
+Base commune : `https://data.assemblee-nationale.fr/static/openData/repository/`
 
-`{legislature}` vaut `17` pour la législature en cours ; les archives des législatures 15 et 16 sont
-disponibles. Chaque archive fournit un fichier par scrutin, contenant le titre, la date, le type
-(solennel, ordinaire, motion, déclaration du Gouvernement), les compteurs (votants, pour, contre,
-abstentions) et **la position de vote de chaque député, groupe par groupe**.
+| Lég. | Chemin | Archive | Contenu | Période |
+| --- | --- | --- | --- | --- |
+| 17 | `17/loi/scrutins/Scrutins.json.zip` | 26,3 Mo | 8 434 fichiers, 172,7 Mo | 2024-10-08 → 2026-07-21 |
+| 16 | `16/loi/scrutins/Scrutins.json.zip` | 10,1 Mo | 4 106 fichiers, 68,4 Mo | 2022-07-11 → 2024-06-07 |
+| 15 | `15/loi/scrutins/Scrutins_XV.json.zip` | 9,2 Mo | 4 417 fichiers, 57,1 Mo | 2017-07-04 → 2022-02-24 |
+| 14 | `14/loi/scrutins/Scrutins_XIV.json.zip` | 0,7 Mo | **1 seul fichier**, 1 354 scrutins | 2012-07-03 → 2016-11-24 |
 
-Un MD5 est publié à côté de chaque archive : à utiliser pour éviter de retraiter une archive inchangée.
+Le nom change (`Scrutins` vs `Scrutins_XV` vs `Scrutins_XIV`) : **construire l'URL par formatage sur le
+numéro de législature ne marche pas**, il faut une table de correspondance explicite.
 
-Points d'attention connus :
+Les législatures 15 à 17 publient un fichier JSON par scrutin, toutes en `modePublicationDesVotes =
+DecompteNominatif`, soit **2 346 018 votes nominatifs** au total. Chaque scrutin porte le titre, la date, le
+type, le sort, les compteurs, et la position de chaque votant, groupe par groupe.
 
-- la position de vote est structurée par groupe puis par votant, avec des cas particuliers
-  (`misesAuPoint` — corrections de vote déclarées après coup) qu'il faut décider de suivre ou d'ignorer ;
-- les délégations de vote existent : un vote peut être émis pour le compte d'un autre député ;
-- « non-votant » recouvre des situations très différentes (présidence de séance, mission, absence) et ne
-  doit jamais être lu comme une opinion.
+La **législature 14 est un autre format** : une archive monolithique, et surtout 710 de ses 1 354 scrutins
+sont publiés en `DecompteDissidentsPositionGroupe` — on connaît la position du groupe et le nom des
+dissidents, pas le vote de chacun. L'archive s'arrête au 24 novembre 2016 alors que la législature a duré
+jusqu'en juin 2017. Elle est donc **hors corpus v1** (voir [methodology.md](methodology.md), § 2).
+
+Un MD5 est publié à côté de chaque archive (`Scrutins.json.zip.md5`). **Ce n'est pas une somme de contrôle
+utilisable** : le 13/08/2026, le MD5 publié ne correspondait pas à l'archive servie, et l'archive a été
+régénérée dans la journée (même taille à l'octet près, `Last-Modified` et `ETag` différents). L'AN
+reconstruit ses archives périodiquement. Conséquences pour l'ingestion :
+
+- le MD5 publié sert d'**indice de changement**, jamais de vérification d'intégrité ;
+- le hash qui fait foi est celui **que nous calculons sur ce que nous avons réellement reçu**, et c'est
+  celui-là qui va en base ;
+- deux téléchargements successifs peuvent différer sans que le contenu métier ait bougé : l'idempotence
+  doit reposer sur les clés naturelles (`uid`), pas sur le hash de l'archive.
 
 ### Acteurs, mandats, organes (AMO) — qui siège, dans quel groupe, à quelles dates
 
-Page de référence : <https://data.assemblee-nationale.fr/acteurs/deputes-en-exercice>
+Le jeu **historique existe** et c'est celui qu'il faut : `AMO30`, publié sous le chemin de la législature
+en cours mais couvrant toutes les législatures depuis la XIe.
 
 ```
-.../{legislature}/amo/deputes_actifs_mandats_actifs_organes/AMO10_deputes_actifs_mandats_actifs_organes.json.zip
-.../{legislature}/amo/acteurs_mandats_organes_divises/AMO50_acteurs_mandats_organes_divises.json.zip
+17/amo/tous_acteurs_mandats_organes_xi_legislature/AMO30_tous_acteurs_tous_mandats_tous_organes_historique.json.zip
 ```
 
-C'est la source des **appartenances aux groupes parlementaires avec dates de début et de fin**, donc la
-brique qui permet de reconstruire l'historique « PS de 2015 à 2018, puis LFI ». À vérifier lors du spike :
-l'existence et le nom exact du jeu de données *historique* (tous acteurs / tous mandats / tous organes),
-nécessaire pour couvrir les dix dernières années et pas seulement la législature en cours.
+13,6 Mo compressés, 13 989 fichiers, 94,5 Mo décompressés : **3 117 acteurs**, **10 813 organes**, 59
+déports. Les autres jeux (`AMO10` députés actifs, `AMO20` députés/sénateurs/ministres, `AMO40`, `AMO50`) ne
+couvrent que la législature en cours et ne sont pas nécessaires en phase 1.
 
-Distinction importante : un **groupe parlementaire** n'est pas un **parti**. On peut être encarté dans un
-parti sans siéger dans le groupe correspondant, et les groupes se renomment ou se recomposent. Le modèle
-doit porter les deux notions.
+Couverture mesurée : sur les **1 524 acteurs distincts** apparaissant dans les scrutins des législatures 15
+à 17, **2 seulement** sont absents d'AMO30 (`PA429842`, `PA720634`). La réconciliation acteur ↔ vote est
+donc quasi complète par simple jointure sur l'`uid`.
+
+**Groupes parlementaires** (`codeType = GP`) : 63 groupes, des législatures 12 à 17, chacun avec ses dates
+de vie (`viMoDe.dateDebut` / `dateFin`). Les appartenances sont portées par les mandats de `typeOrgane =
+GP` : **7 759 mandats**, tous avec une `dateDebut`, 588 sans `dateFin` (en cours). Qualités observées :
+`Membre` (4 643), `Député non-inscrit` (2 770), `Membre apparenté` (261), `Président` (85).
+
+Deux pièges mesurés :
+
+- les **non-inscrits** sont modélisés comme un pseudo-groupe par législature (`PO840056` = NI de la 17e).
+  Techniquement un `GP`, politiquement l'absence de groupe : ne jamais l'afficher comme une appartenance ni
+  le faire entrer dans un calcul d'alignement de groupe ;
+- **86 chevauchements** de mandats GP existent pour une même personne, dont des **doublons exacts** (mêmes
+  dates, même groupe, deux `uid` de mandat distincts). Une contrainte `EXCLUDE` posée naïvement rejetterait
+  l'ingestion : il faut normaliser et dédupliquer avant d'insérer, et journaliser ce qui reste.
+
+### Partis politiques — l'AN publie ses propres rattachements
+
+Découverte du spike : AMO30 contient un type d'organe `PARPOL`, **58 partis politiques**, avec **3 670
+rattachements datés couvrant 1 613 personnes** (574 sans date de fin). C'est une source officielle,
+datée et jointe aux acteurs — meilleure que Wikidata pour les personnes passées par l'Assemblée.
+
+**Mais ce n'est pas une adhésion.** Ce sont les déclarations de rattachement **au titre du financement de
+la vie politique**, renouvelées périodiquement — d'où des dates communes à des dizaines de lignes
+(`2012-12-01`, `2015-12-01`, `2025-12-03`). Le libellé affiché doit dire exactement cela, et jamais
+« membre de X » (voir [methodology.md](methodology.md), § 2).
+
+Distinction à conserver dans le modèle : un **groupe parlementaire** n'est pas un **parti**. On peut être
+rattaché à un parti sans siéger dans le groupe correspondant, et les groupes se renomment ou se
+recomposent.
+
+### Cas particulier : les scrutins du Congrès
+
+L'archive de la 16e législature contient un scrutin `VTCGR5L16V1` (04/03/2024, révision constitutionnelle
+sur l'IVG) : **902 votants**, `organeRef` du Congrès (`PO791932`), donc **députés et sénateurs mélangés**.
+Son `uid` commence par `VTCGR` et non `VTANR`. À ingérer marqué comme tel et exclu des calculs par défaut,
+sans quoi des sénateurs entreraient dans les statistiques de l'Assemblée.
+
+### Le JSON de l'AN est un XML converti mécaniquement
+
+Ce n'est pas un détail de confort : c'est la première source de bugs de parsing.
+
+- **Un scalaire peut être un objet.** `acteur.uid` vaut
+  `{"@xsi:type": "IdActeur_type", "#text": "PA267551"}` et non `"PA267551"`.
+- **Un null peut être un objet.** Une valeur absente vaut `{"@xsi:nil": "true"}`, pas `null`.
+- **Un singleton n'est pas une liste.** Le bloc `votant` est une liste quand le groupe a plusieurs votants
+  et un objet quand il n'en a qu'un (mesuré en 17e : 95 180 listes contre 35 671 objets).
+- **Les booléens sont des chaînes.** `parDelegation` vaut `"true"` ou `"false"`.
+
+Tout accès à un champ doit donc passer par un normalisateur « texte, objet à `#text`, ou nil », et tout
+accès à une collection par un « objet ou liste → liste ».
+
+### Ce que contient une position de vote
+
+Le `decompteNominatif` d'un groupe n'a que **quatre** blocs nominatifs : `pours`, `contres`, `abstentions`,
+`nonVotants`. Les « non-votants volontaires » sont comptés mais **jamais nommés** — et les absents
+n'apparaissent pas du tout dans le fichier : seuls les votants et les non-votants institutionnels y sont.
+
+Chaque non-votant porte une **cause explicite** (`causePositionVote`), et il n'en existe que trois :
+
+| Code | Signification | Occurrences (L14-L17) |
+| --- | --- | --- |
+| `PSE` | président de séance | 15 127 |
+| `PAN` | président de l'Assemblée nationale | 12 473 |
+| `MG` | membre du Gouvernement | 10 723 |
+
+C'est une bonne nouvelle pour la règle « une absence de vote n'est pas une opinion » : la source dit
+elle-même pourquoi la personne n'a pas voté, et la réponse est toujours institutionnelle.
+
+**Délégations** : massives et en hausse. 191 629 votes délégués en 17e (15,1 %), 51 737 en 16e (8,6 %),
+52 110 en 15e (11,0 %) — **12,6 % du corpus**. Impossible de les ignorer, impossible de les traiter comme
+un vote ordinaire sans le dire.
+
+**Mises au point** (`miseAuPoint`) : corrections déclarées après coup. 3 597 scrutins concernés sur les
+trois législatures, pour 4 799 entrées seulement — 0,2 % des votes. Attention : le bloc est **presque
+toujours présent mais vide**, rempli de `null`, artefact de la conversion XML ; il faut détecter les
+entrées réelles, pas la présence du bloc. Sont aussi signalés 160 scrutins avec un `dysfonctionnement`
+déclaré.
+
+**Cohérence interne** : sur les 8 434 scrutins de la 17e, 8 433 vérifient
+`total nominatif = nombreVotants + nonVotants`. L'unique écart est `VTANR5L17V1`, l'élection du président
+de l'Assemblée. Cette égalité fait un bon contrôle d'ingestion — à journaliser comme anomalie, pas à
+traiter comme une erreur fatale.
+
+**Effectif et dénominateur** : la somme des `nombreMembresGroupe` d'un scrutin donne l'effectif de
+l'Assemblée à sa date (574 à 577 en 17e). Le dénominateur de la participation est donc **dans le fichier**,
+sans reconstruction à partir des mandats.
 
 ## 2. Wikidata — identité, partis hors Assemblée, photos
 
@@ -61,9 +161,18 @@ Endpoint SPARQL : <https://query.wikidata.org/sparql> · Licence CC0.
 Sert à :
 
 - rattacher une personne à un identifiant stable (`QID`) et faire le lien avec d'autres bases ;
-- récupérer les **adhésions à un parti** (`P102`) avec leurs qualificatifs de date début/fin — utile pour
-  les partis qui ne sont pas des groupes parlementaires ;
-- récupérer la **photo** (`P18`), hébergée sur Wikimedia Commons.
+- récupérer la **photo** (`P18`), hébergée sur Wikimedia Commons ;
+- compléter les **partis** (`P102`) pour les personnes que l'AN ne couvre pas, PARPOL restant primaire pour
+  celles qui ont siégé.
+
+**La jointure est exacte, pas approximative.** La propriété `P4123` (identifiant Assemblée nationale) porte
+le suffixe numérique de l'`uid` AN : `P4123 = 410` ↔ `PA410` (vérifié sur François Bayrou, Michèle
+Alliot-Marie, Jean-François Copé, Ségolène Royal, Guy Drut). Mesure sur la 15e législature : **651 des 652**
+député·es ont un `P4123`. Le rapprochement par nom et date de naissance n'est donc qu'un **filet de
+sécurité pour une poignée de cas**, pas le mécanisme principal.
+
+Couverture photo mesurée sur la même population : **549 sur 652 ont un `P18`** (84 %). La licence, elle,
+n'est pas dans Wikidata — elle se lit sur Commons, fichier par fichier (§ 3).
 
 Wikidata est collaboratif, donc faillible : les données servent d'appoint et de complément, jamais de
 contradiction à l'open data officiel. En cas de désaccord, l'AN gagne.
@@ -116,13 +225,20 @@ date**, et reste modifiable par PR argumentée. On cite, on ne délègue pas.
 
 ## 6. Règles d'ingestion
 
-1. **Archiver le brut avant de parser.** Le payload d'origine va en `source_document` (JSONB) avec son URL
-   et sa date de récupération. Quand le format change, on rejoue le parsing sans retélécharger.
+1. **Archiver le brut avant de parser.** Le payload d'origine va en `source_document` (JSONB), **un
+   document par scrutin et par acteur**, avec son URL et sa date de récupération. Quand le format change,
+   on rejoue le parsing sans retélécharger, et une ligne d'UI remonte jusqu'à son payload exact.
 2. **Idempotence par clé naturelle.** L'`uid` de l'AN est la clé. Rejouer une ingestion met à jour, ne
-   duplique pas, ne supprime pas.
+   duplique pas, ne supprime pas. **Pas d'idempotence fondée sur le hash de l'archive** : l'AN régénère ses
+   archives, le hash change sans que le contenu métier bouge.
 3. **Additivité.** On peut lancer une ingestion sur une seule législature, une période, ou un seuil de
    participation plus bas, sans toucher à ce qui existe déjà.
-4. **Traçabilité.** Chaque `ingestion_run` note la source, l'URL, le hash de l'archive, les compteurs et
-   les erreurs. Une fiche candidat doit pouvoir remonter jusqu'au fichier qui a produit la donnée.
-5. **Politesse.** Un `User-Agent` identifiant le projet avec son URL, pas de parallélisme agressif, respect
-   des MD5 pour ne pas retélécharger inutilement. Ce sont des serveurs publics.
+4. **Traçabilité.** Chaque `ingestion_run` note la source, l'URL, le hash **calculé par nous** sur ce que
+   nous avons reçu, les compteurs et les erreurs. Une fiche candidat doit pouvoir remonter jusqu'au fichier
+   qui a produit la donnée.
+5. **Politesse.** Un `User-Agent` identifiant le projet avec son URL, pas de parallélisme agressif, et une
+   requête conditionnelle (`If-None-Match` sur l'`ETag`) pour ne pas retélécharger inutilement — le MD5
+   publié ne permet pas de le décider de façon fiable. Ce sont des serveurs publics.
+6. **Une anomalie se journalise, elle n'interrompt pas.** Doublons de mandats, incohérence de compteurs,
+   acteur inconnu : l'ingestion continue et rend compte. Seule une erreur qui rendrait les données fausses
+   justifie d'échouer.
