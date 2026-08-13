@@ -119,11 +119,18 @@ En cas de doute sur ce qu'on a le droit d'afficher ou de déduire : demande, ne 
 Prérequis : `uv`, Rust (édition 2024) + `sqlx-cli`, Podman + `podman-compose`, `make`. Copier
 `.env.example` en `.env` avant de lancer quoi que ce soit.
 
-**Sur la machine de développement Windows de l'utilisateur, tout l'outillage (`cargo`, `uv`, `podman`,
-`make`, `sqlx`) est installé dans WSL, pas dans Windows.** Préfixer les commandes par
-`wsl -d Ubuntu-26.04 --`, par exemple `wsl -d Ubuntu-26.04 -- make test`. Cela ne s'applique qu'en session
-interactive sur cette machine ; la CI GitHub Actions tourne nativement sur Linux et n'a pas besoin de ce
-préfixe.
+**Tout l'outillage (`cargo`, `uv`, `podman`, `make`, `sqlx`) est installé dans WSL, pas dans Windows**, et
+le dépôt lui-même vit dans le système de fichiers WSL (`/home/laury/know-your-candidate`), pas sous
+`/mnt/c`. La manière de lancer une commande dépend donc de l'endroit d'où tourne la session :
+
+- **Session déjà dans WSL** (cas normal : `uname -r` contient `microsoft`, plateforme Linux, répertoire de
+  travail sous `/home`) : lancer les commandes directement, `make test`. **Ne pas préfixer par `wsl`** —
+  depuis WSL, ce préfixe échoue.
+- **Session lancée depuis Windows** (PowerShell, `cmd`, plateforme Windows) : préfixer par
+  `wsl -d Ubuntu-26.04 --`, par exemple `wsl -d Ubuntu-26.04 -- make test`.
+
+En cas de doute, `uname -r` tranche. La CI GitHub Actions tourne nativement sur Linux et n'est concernée
+par aucun des deux cas.
 
 ```
 make dev          # podman compose up (Postgres), migrations, worker + backend
