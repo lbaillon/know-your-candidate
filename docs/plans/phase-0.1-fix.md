@@ -1,6 +1,6 @@
 # Phase 0.1 — Corrections du socle
 
-**Statut : ✅ validé, à implémenter** · Dépend de : phase 0 · Bloque : phase 1
+**Statut : ✅ implémenté** · Dépend de : phase 0 · Bloque : phase 1
 
 ## Objectif
 
