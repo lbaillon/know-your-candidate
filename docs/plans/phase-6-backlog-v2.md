@@ -11,6 +11,14 @@ données, d'autres axes politiques (un vote au Parlement européen ne se lit pas
 autre ingestion. À évaluer une fois la liste des candidat·es plus stable — c'est peut-être le sujet le
 plus rentable de la v2.
 
+**14e législature (2012-2017).** Écartée du corpus v1 sur mesure, pas par principe : 710 de ses 1 354
+scrutins sont publiés sans détail nominatif — on connaît la position du groupe et le nom des dissidents,
+pas le vote de chacun — et l'archive s'arrête en novembre 2016 (voir
+[phase-1-ingestion.md](phase-1-ingestion.md), D1.7). L'ajouter suppose donc d'abord de répondre à une
+question d'affichage, pas d'ingestion : comment montrer, sur une même fiche, des votes personnels sur une
+période et des positions de groupe sur une autre, sans que le lecteur confonde les deux. Sans réponse à
+cette question, l'ajout dégrade le produit au lieu de l'enrichir.
+
 **Textes des dossiers législatifs.** Récupérer le contenu réel des textes permettrait une catégorisation
 nettement mieux informée, notamment pour le cycle export/LLM. Ingestion supplémentaire, volume important.
 
