@@ -131,9 +131,9 @@ scrutin_groupe(scrutin_id, organe_id, nombre_membres, position_majoritaire,
 
 La ventilation par groupe, nécessaire dès la phase 3 pour l'alignement et déjà utile pour afficher qu'un
 groupe s'est divisé. `organe_id` est **nullable** : 14 scrutins de la 17e publient leurs groupes sous
-l'identifiant fantôme `PO0`. Les votes de ces scrutins restent nominatifs et exploitables, seul le rattachement
-au groupe est perdu — il est alors reconstitué depuis les mandats à la date du scrutin, et la méthode
-employée est tracée.
+l'identifiant fantôme `PO0`. Les votes de ces scrutins restent nominatifs et exploitables, seul le
+rattachement au groupe est perdu — il est alors reconstitué depuis les mandats à la date du scrutin, et la
+méthode employée est tracée.
 
 ```
 vote(scrutin_id, person_id, position, cause_non_vote, groupe_organe_id, groupe_source,

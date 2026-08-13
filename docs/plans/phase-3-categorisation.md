@@ -39,13 +39,15 @@ l'application (volontairement : le travail LLM se fait **hors ligne**, sur un ex
 
 ## L'heuristique automatique
 
-Objectif : dégrossir. Deux stratégies décrites dans [methodology.md](../methodology.md#5-les-trois-méthodes-de-catégorisation) :
+Objectif : dégrossir. Deux stratégies décrites dans
+[methodology.md](../methodology.md#5-les-trois-méthodes-de-catégorisation) :
 
 - `group_alignment` — position par rapport à un ordonnancement gauche-droite des groupes parlementaires,
   lu depuis un **fichier de configuration versionné** (`db/seeds/group_axis.yaml`).
 
   Cet ordonnancement n'est pas inventé : il est **dérivé de la grille des nuances politiques du ministère
-  de l'Intérieur** (26 nuances, 6 blocs — voir [data-sources.md](../data-sources.md#4-ministère-de-lintérieur--grille-des-nuances-politiques)).
+  de l'Intérieur** (26 nuances, 6 blocs — voir
+  [data-sources.md](../data-sources.md#4-ministère-de-lintérieur--grille-des-nuances-politiques)).
   Chaque ligne du seed porte donc la nuance officielle, la version de la grille, sa date et l'URL de la
   source, plus le rattachement nuance → parti → groupe parlementaire que nous établissons.
 
