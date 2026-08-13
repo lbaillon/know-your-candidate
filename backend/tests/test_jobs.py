@@ -1,7 +1,9 @@
 import asyncpg
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
+from kyc_api.config import settings
 from kyc_api.jobs import create_job, get_job
+from kyc_api.main import create_app
 
 
 async def test_create_job_inserts_a_pending_row(db_conn: asyncpg.Connection) -> None:
@@ -65,5 +67,21 @@ async def test_demo_job_fragment_stops_polling_once_done(
 
 async def test_demo_job_page_404s_for_unknown_id(client: AsyncClient) -> None:
     response = await client.get("/dev/jobs/999999")
+
+    assert response.status_code == 404
+
+
+async def test_dev_routes_are_404_when_disabled() -> None:
+    # F9 — voir docs/plans/phase-0.1-fix.md : POST /dev/jobs n'est pas authentifiée, donc son
+    # montage doit rester conditionné à un drapeau explicite, faux par défaut.
+    original = settings.enable_dev_routes
+    settings.enable_dev_routes = False
+    try:
+        app = create_app()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.post("/dev/jobs")
+    finally:
+        settings.enable_dev_routes = original
 
     assert response.status_code == 404

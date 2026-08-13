@@ -25,8 +25,9 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Know Your Candidate", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(health.router)
-    app.include_router(dev.router)
-    app.include_router(dev.fragments_router)
+    if settings.enable_dev_routes:
+        app.include_router(dev.router)
+        app.include_router(dev.fragments_router)
     return app
 
 
