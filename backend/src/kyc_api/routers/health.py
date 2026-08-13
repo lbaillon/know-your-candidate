@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 
-import asyncpg
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
@@ -14,8 +13,16 @@ router = APIRouter()
 async def healthz(pool: Queryable = Depends(get_pool)) -> JSONResponse:
     try:
         last_seen_at = await pool.fetchval("SELECT max(last_seen_at) FROM worker_heartbeat")
-    except asyncpg.PostgresError:
-        return JSONResponse(status_code=503, content={"database": "error", "worker": "unknown"})
+    except Exception as exc:
+        # Capture large et volontaire : ce endpoint existe précisément pour signaler que la base
+        # est injoignable, et Postgres arrêté lève ConnectionRefusedError / asyncpg.InterfaceError,
+        # pas seulement asyncpg.PostgresError. Un point de santé qui plante n'a aucune valeur —
+        # c'est l'un des rares endroits où une capture large est le comportement correct (voir F7,
+        # docs/plans/phase-0.1-fix.md).
+        return JSONResponse(
+            status_code=503,
+            content={"database": "error", "worker": "unknown", "detail": type(exc).__name__},
+        )
 
     if last_seen_at is None:
         worker_status = "unknown"
