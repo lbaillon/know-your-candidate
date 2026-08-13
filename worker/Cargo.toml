@@ -6,7 +6,7 @@ rust-version = "1.94"
 publish = false
 
 [dependencies]
-tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "signal", "time", "sync"] }
+tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "signal", "time", "sync", "fs"] }
 sqlx = { version = "0.9", default-features = false, features = [
     "runtime-tokio",
     "tls-rustls",
@@ -22,6 +22,14 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow = "1.0"
 dotenvy = "0.15"
+reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "http2", "charset"] }
+zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
+sha2 = "0.11.0"
+bytes = "1.12.1"
+chrono = { version = "0.4.45", features = ["serde"] }
 
 [lints.clippy]
 unwrap_used = "warn"
+
+[dev-dependencies]
+tempfile = "3.27.0"
