@@ -47,6 +47,22 @@ Le déploiement est numéroté 5 mais trois éléments doivent exister dès la p
 5. Page de statut publique minimale : date de la dernière ingestion, nombre de scrutins, de votes, de
    catégorisations relues.
 6. Documentation d'exploitation : comment lancer une ingestion, relancer un job bloqué, restaurer.
+7. **Checklist de mise en ligne**, vérifiée à chaque déploiement et pas seulement au premier — voir
+   ci-dessous.
+
+### Checklist de mise en ligne
+
+Le point qui mérite d'être écrit plutôt que retenu : **`.env.example` contient des valeurs de confort pour
+le développement local**, et composer les variables d'environnement de production en partant de l'exemple
+est le réflexe le plus naturel du monde. La checklist existe pour que ce réflexe ne coûte rien :
+
+- aucun échafaudage de développement n'est actif en production. En phase 2 les routes de démonstration
+  auront disparu du code, mais tant qu'elles existent, `ENABLE_DEV_ROUTES` doit valoir `false` ;
+- `WORKER_ID` est fourni par l'orchestrateur et unique par instance (un identifiant fixe casse la reprise
+  des jobs zombies — voir [phase 0.1](phase-0.1-fix.md), F8) ;
+- aucun secret ne provient de `.env.example` ;
+- `LOG_LEVEL` n'est pas en `debug` ;
+- la base de production n'est pas celle de développement.
 
 ## Étapes
 
@@ -75,6 +91,8 @@ Le déploiement est numéroté 5 mais trois éléments doivent exister dès la p
 - Une trace Logfire montre une ingestion complète, étape par étape.
 - Une restauration de sauvegarde a été réalisée pour de vrai, et la procédure est écrite.
 - La page de statut affiche des chiffres exacts.
+- La checklist de mise en ligne est passée et consignée : aucun échafaudage de développement actif,
+  `WORKER_ID` unique, aucun secret hérité de `.env.example`.
 
 ## Risques
 

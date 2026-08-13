@@ -72,6 +72,13 @@ phase, avec le mainteneur, avant d'écrire les gabarits** — sans quoi il s'ins
 6. API JSON en miroir des pages.
 7. Passe accessibilité et performance (mesurer le temps de rendu des pages, viser une page candidat en
    moins de 100 ms côté serveur).
+8. **Supprimer les routes de démonstration de la phase 0** (`POST /dev/jobs` et la page qui va avec).
+   Elles existaient pour prouver que la chaîne worker fonctionnait ; les vraies pages les rendent
+   inutiles. On les **supprime**, on ne se contente pas de les laisser derrière `enable_dev_routes` : un
+   échafaudage protégé par un drapeau finit toujours par être activé « temporairement ».
+   Le fragment de suivi de progression, lui, n'est pas jetable — il est repris par le back-office de la
+   [phase 3](phase-3-categorisation.md) pour suivre les imports et les ingestions. Le déplacer, pas le
+   détruire.
 
 ## Décisions à trancher
 
@@ -95,6 +102,8 @@ phase, avec le mainteneur, avant d'écrire les gabarits** — sans quoi il s'ins
 - Les pages passent sans JS pour la lecture, et sans erreur d'accessibilité bloquante.
 - Aucune requête vers un domaine tiers au chargement d'une page.
 - Une page candidat se rend en moins de 100 ms côté serveur sur des données réelles.
+- **Il ne reste aucune route de démonstration dans le code**, et le réglage `enable_dev_routes` a disparu
+  avec elles.
 
 ## Risques
 

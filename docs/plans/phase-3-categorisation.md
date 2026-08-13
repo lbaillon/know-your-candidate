@@ -30,6 +30,12 @@ l'application (volontairement : le travail LLM se fait **hors ligne**, sur un ex
 6. Pages publiques : liste des scrutins catégorisés, détail d'une catégorisation avec sa méthode, son
    auteur et son historique.
 7. Authentification admin (voir décisions).
+8. **Suivi des jobs dans le back-office** : reprise du fragment de progression HTMX écrit en phase 0 et
+   retiré des routes publiques en phase 2. C'est ici qu'il trouve son vrai usage — suivre un import de
+   catégorisations ou une ingestion, derrière l'authentification.
+9. **Déclenchement du job `noop` réservé aux admins** : il est conservé comme test de fumée en production
+   (« le worker traite-t-il réellement quelque chose ? »), mais n'est déclenchable que depuis le
+   back-office authentifié. Jamais de route publique de création de job, à aucun moment.
 
 ## L'heuristique automatique
 

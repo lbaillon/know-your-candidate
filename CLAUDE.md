@@ -71,6 +71,12 @@ docs/plans/ Un plan par phase. C'est là que se fait la conception.
 - **Toute tâche de fond est supervisée** : sa mort arrête le processus avec un code non nul. Un processus à
   moitié vivant qui continue de signaler qu'il va bien (heartbeat qui tourne, boucle de jobs qui ne tourne
   plus) est pire qu'un processus mort (même revue, F1).
+- **Aucun échafaudage de développement ne survit dans le produit final.** Les routes de démonstration, les
+  jeux de données factices et les raccourcis de mise au point sont supprimés dès qu'ils ont servi, pas
+  neutralisés derrière un drapeau : un drapeau finit toujours par être activé « temporairement ». Quand un
+  échafaudage se révèle réellement utile (le suivi de progression, le job `noop` comme test de fumée), il
+  est **promu** — déplacé derrière l'authentification admin et assumé comme fonctionnalité — jamais laissé
+  en libre accès. Corollaire : aucune route publique ne crée de job.
 
 ## Conventions techniques
 
