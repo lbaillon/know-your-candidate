@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO scrutin_groupe (scrutin_id, rang, organe_id, nombre_membres, pour,\n                                         contre, abstentions, non_votants)\n            VALUES ($1, $2, NULL, 10, 0, 0, 0, 0)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7441dfff4bc6365ddaabb8437df2fe1721ab277b997174a6f637e76b2f4f33a1"
+}

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO source_document (source, uid, url, content_hash, payload)\n        VALUES ('an_scrutin', $1, 'https://example.org', 'hash', '{}'::jsonb)\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "source_document",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b82d0d7ecbb0485e5e1794e5c00d0120d8e3de31e6a749d42d979bf448eef65a"
+}
