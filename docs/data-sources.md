@@ -78,12 +78,24 @@ Trois pièges mesurés :
 
 - les **non-inscrits** sont modélisés comme un pseudo-groupe par législature (`PO840056` = NI de la 17e).
   Techniquement un `GP`, politiquement l'absence de groupe : ne jamais l'afficher comme une appartenance ni
-  le faire entrer dans un calcul d'alignement de groupe ;
-- **86 chevauchements** de mandats GP existent pour une même personne, dont des **doublons exacts** (mêmes
-  dates, même groupe, deux `uid` de mandat distincts). Tous les 85 chevauchements d'un même groupe sont des
-  **inclusions** — une plage en contient une autre, aucune n'est partielle ; le 86e croise deux groupes et
-  date de 2007. Une contrainte `EXCLUDE` posée naïvement rejetterait l'ingestion : il faut normaliser avant
-  d'insérer, et journaliser ce qui reste ;
+  le faire entrer dans un calcul d'alignement de groupe. L'AN ne clôture par ailleurs pas toujours ce
+  pseudo-mandat à la date où la personne rejoint un vrai groupe, ce qui le fait chevaucher son groupe
+  suivant en continu — sans que ce soit une vraie contradiction (voir point suivant) ;
+- **95 chevauchements** de mandats GP existent pour une même personne dans un **même** organe, dont des
+  **doublons exacts** (mêmes dates, même groupe, deux `uid` de mandat distincts) : 85 sont des
+  **inclusions** — une plage en contient une autre, aucune n'est partielle — et 10 sont des **charnières**
+  (deux plages consécutives qui partagent leur jour de bascule, voir plus bas). Une contrainte `EXCLUDE`
+  posée naïvement rejetterait l'ingestion : il faut normaliser avant d'insérer, et journaliser ce qui
+  reste.
+  **Correction du 14 août 2026** (implémentation de la phase 1, `worker/src/an/acteur.rs`) : le spike
+  initial n'avait mesuré qu'**un seul** chevauchement entre deux organes différents (« 2007, hors corpus »).
+  Une vérification indépendante sur l'archive réelle en trouve **~74 à 77**, pour deux raisons non
+  anticipées : (1) le non-clôturage du pseudo-mandat non-inscrit décrit ci-dessus, qui n'est pas une vraie
+  contradiction et est donc **exclu** du contrôle de chevauchement inter-organes ; (2) la **scission
+  UMP / Rassemblement-UMP de novembre 2012 à janvier 2013** (crise Copé-Fillon), où l'AN a recensé environ
+  73 député·es simultanément membres des deux groupes — un fait politique réel, pas une anomalie de saisie.
+  Ce second cas reste un chevauchement au sens du plan : la plage la plus courte (le groupe éphémère
+  « Rassemblement-UMP ») est écartée et journalisée (`mandat_chevauchement`) ;
 - **`dateFin` est incluse dans le mandat.** Ce n'est pas une convention supposée, c'est la source qui
   l'établit : sur les votes tombant exactement un jour de fin de mandat, **870 confirment le groupe qui se
   termine ce jour-là et aucun ne confirme le suivant**. Une plage se construit donc en

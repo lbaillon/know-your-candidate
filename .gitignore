@@ -24,6 +24,7 @@ target/
 data/
 *.zip
 *.csv.gz
+worker/.cache/
 
 # Exports de catégorisation en cours de travail
 exports/

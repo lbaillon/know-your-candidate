@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE ingestion_run\n        SET status = 'failed',\n            counters = counters || jsonb_build_object('error', $2::text),\n            finished_at = now()\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "25d1cfe88c8c439d53ea6a06b3cb58c851ebdd4bad494376b900762d25762c57"
+}

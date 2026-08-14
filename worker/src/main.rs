@@ -19,6 +19,28 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
+    let mut args = std::env::args().skip(1);
+    if args.next().as_deref() == Some("enqueue") {
+        let job_type = args
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("usage: kyc-worker enqueue <type> [payload_json]"))?;
+        let payload: serde_json::Value = match args.next() {
+            Some(raw) => serde_json::from_str(&raw)?,
+            None => serde_json::json!({}),
+        };
+        let pool = db::connect(&config.database_url).await?;
+        sqlx::migrate!("../db/migrations").run(&pool).await?;
+        let job_id: i64 = sqlx::query_scalar!(
+            "INSERT INTO job (type, payload, created_by) VALUES ($1, $2, 'cli') RETURNING id",
+            job_type,
+            payload,
+        )
+        .fetch_one(&pool)
+        .await?;
+        tracing::info!(job_id, job_type = %job_type, "job créé");
+        return Ok(());
+    }
+
     tracing::info!(worker_id = %config.worker_id, version = VERSION, "démarrage du worker");
 
     let pool = db::connect(&config.database_url).await?;

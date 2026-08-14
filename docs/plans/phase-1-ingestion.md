@@ -33,7 +33,7 @@ sont consignés dans [data-sources.md](../data-sources.md) ; les conséquences m
 | Structure et volume des scrutins ? | 16 957 scrutins, 2 346 018 votes nominatifs sur L15-L17, ~300 Mo décompressés | Volume confortable, `COPY` par lots suffit largement |
 | Corrections de vote ? | 4 799 mises au point, 0,2 % des votes, bloc presque toujours présent mais vide | Stockées à part, affichées, hors calcul |
 | Délégations ? | 12,6 % du corpus, 15,1 % sur la seule 17e | Impossible à ignorer ; drapeau par vote et mention systématique dans l'UI |
-| Dates d'appartenance fiables ? | Oui : 7 759 mandats de groupe, tous avec une date de début, 588 en cours | Mais **86 chevauchements** à normaliser avant toute contrainte `EXCLUDE` |
+| Dates d'appartenance fiables ? | Oui : 7 759 mandats de groupe, tous avec une date de début, 588 en cours | Mais **95 chevauchements intra-groupe + ~74 inter-groupes** à normaliser avant toute contrainte `EXCLUDE` (chiffre inter-groupes corrigé le 14 août 2026, voir data-sources.md — le spike initial n'en avait mesuré qu'un) |
 | Dénominateur de la participation ? | La somme des `nombreMembresGroupe` du scrutin donne l'effectif du jour | Colonne générée, aucune reconstruction |
 | Combien de QID avec photo ? | 549/652 ont une photo, **651/652 ont un `P4123`** | La réconciliation d'identités est une jointure exacte, pas un rapprochement flou |
 
@@ -496,7 +496,7 @@ Vocabulaire fermé des `kind`, à définir comme constantes dans `anomaly.rs` pl
 | `acteur_inconnu` | un vote cite un `acteurRef` absent du référentiel | 2 |
 | `mandat_inclus` | une plage de mandat en contient une autre, même personne et même organe | 85 |
 | `mandat_charniere` | deux mandats consécutifs d'un même organe partagent leur date de charnière | 10 |
-| `mandat_chevauchement` | chevauchement résiduel entre deux organes différents | 1, hors corpus |
+| `mandat_chevauchement` | chevauchement résiduel entre deux organes différents (pseudo-groupe non-inscrit exclu du contrôle, voir data-sources.md) | ~74, dominé par la scission UMP/R-UMP de 2012 |
 | `groupe_fantome` | ligne de groupe portant `PO0` | 146 lignes, 14 scrutins |
 | `cause_non_vote_inconnue` | code hors `PSE`, `PAN`, `MG` | 0 |
 | `bloc_nominatif_inconnu` | nom de bloc hors singulier et pluriel connus | 0 |

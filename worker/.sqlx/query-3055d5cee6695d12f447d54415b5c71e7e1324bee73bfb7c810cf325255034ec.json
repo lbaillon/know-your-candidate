@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT an_uid, id FROM person",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "an_uid",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "person",
+            "name": "an_uid"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "person",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "3055d5cee6695d12f447d54415b5c71e7e1324bee73bfb7c810cf325255034ec"
+}

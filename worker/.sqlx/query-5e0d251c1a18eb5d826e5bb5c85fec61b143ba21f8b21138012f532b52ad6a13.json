@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO person (an_uid, civilite, prenom, nom, date_naissance, ville_naissance,\n                                 departement_naissance, pays_naissance, date_deces, uri_hatvp)\n            SELECT * FROM UNNEST(\n                $1::text[], $2::text[], $3::text[], $4::text[], $5::date[], $6::text[],\n                $7::text[], $8::text[], $9::date[], $10::text[]\n            )\n            ON CONFLICT (an_uid) DO UPDATE SET\n                civilite = EXCLUDED.civilite,\n                prenom = EXCLUDED.prenom,\n                nom = EXCLUDED.nom,\n                date_naissance = EXCLUDED.date_naissance,\n                ville_naissance = EXCLUDED.ville_naissance,\n                departement_naissance = EXCLUDED.departement_naissance,\n                pays_naissance = EXCLUDED.pays_naissance,\n                date_deces = EXCLUDED.date_deces,\n                uri_hatvp = EXCLUDED.uri_hatvp,\n                updated_at = now()\n            WHERE person.civilite IS DISTINCT FROM EXCLUDED.civilite\n               OR person.prenom IS DISTINCT FROM EXCLUDED.prenom\n               OR person.nom IS DISTINCT FROM EXCLUDED.nom\n               OR person.date_naissance IS DISTINCT FROM EXCLUDED.date_naissance\n               OR person.ville_naissance IS DISTINCT FROM EXCLUDED.ville_naissance\n               OR person.departement_naissance IS DISTINCT FROM EXCLUDED.departement_naissance\n               OR person.pays_naissance IS DISTINCT FROM EXCLUDED.pays_naissance\n               OR person.date_deces IS DISTINCT FROM EXCLUDED.date_deces\n               OR person.uri_hatvp IS DISTINCT FROM EXCLUDED.uri_hatvp\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "DateArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "DateArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5e0d251c1a18eb5d826e5bb5c85fec61b143ba21f8b21138012f532b52ad6a13"
+}

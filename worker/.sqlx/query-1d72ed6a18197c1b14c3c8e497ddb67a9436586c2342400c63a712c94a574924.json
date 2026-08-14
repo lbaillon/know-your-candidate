@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO mandat (an_uid, person_id, organe_id, type_organe, period, qualite, legislature)\n            SELECT an_uid, person_id, organe_id, type_organe,\n                   daterange(debut, fin + 1, '[)'),\n                   qualite, legislature\n            FROM UNNEST(\n                $1::text[], $2::bigint[], $3::bigint[], $4::text[], $5::date[], $6::date[],\n                $7::text[], $8::smallint[]\n            ) AS t(an_uid, person_id, organe_id, type_organe, debut, fin, qualite, legislature)\n            ON CONFLICT (an_uid) DO UPDATE SET\n                person_id = EXCLUDED.person_id,\n                organe_id = EXCLUDED.organe_id,\n                type_organe = EXCLUDED.type_organe,\n                period = EXCLUDED.period,\n                qualite = EXCLUDED.qualite,\n                legislature = EXCLUDED.legislature,\n                updated_at = now()\n            WHERE mandat.person_id IS DISTINCT FROM EXCLUDED.person_id\n               OR mandat.organe_id IS DISTINCT FROM EXCLUDED.organe_id\n               OR mandat.type_organe IS DISTINCT FROM EXCLUDED.type_organe\n               OR mandat.period IS DISTINCT FROM EXCLUDED.period\n               OR mandat.qualite IS DISTINCT FROM EXCLUDED.qualite\n               OR mandat.legislature IS DISTINCT FROM EXCLUDED.legislature\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Int8Array",
+        "Int8Array",
+        "TextArray",
+        "DateArray",
+        "DateArray",
+        "TextArray",
+        "Int2Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1d72ed6a18197c1b14c3c8e497ddb67a9436586c2342400c63a712c94a574924"
+}

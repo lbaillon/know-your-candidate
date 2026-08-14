@@ -5,8 +5,12 @@
 //! développement.
 
 use std::path::PathBuf;
+use std::time::Duration;
 
 use sha2::{Digest, Sha256};
+
+/// Un serveur public qui ne répond plus ne doit jamais bloquer un job indéfiniment.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
 
 pub const USER_AGENT: &str =
     "know-your-candidate/0.1 (+https://github.com/lbaillon/know-your-candidate)";
@@ -31,7 +35,10 @@ pub struct AnClient {
 
 impl AnClient {
     pub fn new(cache_dir: Option<PathBuf>) -> anyhow::Result<Self> {
-        let http = reqwest::Client::builder().user_agent(USER_AGENT).build()?;
+        let http = reqwest::Client::builder()
+            .user_agent(USER_AGENT)
+            .timeout(REQUEST_TIMEOUT)
+            .build()?;
         Ok(Self { http, cache_dir })
     }
 

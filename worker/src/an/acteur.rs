@@ -122,6 +122,11 @@ pub struct MandatGroupe {
     pub debut: NaiveDate,
     /// `None` = mandat en cours.
     pub fin: Option<NaiveDate>,
+    /// Le pseudo-groupe « non-inscrit » n'est pas une appartenance réelle (methodology.md, § 2) :
+    /// l'AN ne le clôture pas toujours proprement quand la personne rejoint un vrai groupe, ce qui
+    /// le fait chevaucher son groupe suivant en permanence sans que ce soit une vraie
+    /// contradiction. Il est donc exclu du contrôle de chevauchement inter-organes.
+    pub is_non_inscrit: bool,
 }
 
 fn fin_ou_infini(m: &MandatGroupe) -> NaiveDate {
@@ -166,12 +171,21 @@ pub fn normalize_gp_mandats(mut mandats: Vec<MandatGroupe>) -> NormalizationResu
         start = end;
     }
 
-    // Chevauchement résiduel entre organes différents (cas mesuré : 1, hors corpus L15-L17). On
-    // retire la plage la plus courte de chaque paire qui se chevauche encore.
+    // Chevauchement résiduel entre organes différents : mesuré en pratique très au-delà du seul
+    // cas de 2007 relevé par le spike (voir docs/data-sources.md, mis à jour) — la scission
+    // UMP / Rassemblement-UMP de novembre 2012 à elle seule en produit 73, un vrai fait politique
+    // et non une anomalie de saisie. On retire la plage la plus courte de chaque paire qui se
+    // chevauche encore, sauf quand l'un des deux mandats est le pseudo-groupe « non-inscrit » :
+    // il n'est pas une appartenance réelle (methodology.md, § 2) et l'AN ne le clôture pas
+    // toujours à la date où la personne rejoint un vrai groupe, ce qui le ferait sinon chevaucher
+    // en permanence sans que ce soit une vraie contradiction.
     per_organe.sort_by_key(|m| m.debut);
     let mut retained: Vec<MandatGroupe> = Vec::new();
     'outer: for candidate in per_organe {
         for kept in &retained {
+            if candidate.is_non_inscrit || kept.is_non_inscrit {
+                continue;
+            }
             let overlaps =
                 candidate.debut <= fin_ou_infini(kept) && kept.debut <= fin_ou_infini(&candidate);
             if !overlaps {
@@ -233,6 +247,21 @@ fn normalize_same_organe(
             continue;
         }
 
+        // Inclusion inverse : `cur` est contenu dans `next`. Le tri (début croissant, fin
+        // croissante) garantit `cur.debut <= next.debut` ; une inclusion de `cur` dans `next`
+        // n'est donc possible qu'à égalité stricte des débuts (sinon `next` commencerait après
+        // la fin de `cur` sans la contenir). Cas manqué par le premier passage du spike : sans
+        // cette branche, ces paires tombent dans le chevauchement résiduel ci-dessous — la bonne
+        // plage est tout de même écartée car elle est la plus courte, mais l'anomalie est mal
+        // qualifiée (`mandat_chevauchement` au lieu de `mandat_inclus`).
+        if cur.debut == next.debut {
+            events.push(NormalizationEvent::Inclus {
+                an_uid: cur.an_uid.clone(),
+            });
+            current = Some(next.clone());
+            continue;
+        }
+
         if next.debut == fin_ou_infini(&cur) {
             // Charnière : les deux plages partagent leur jour de bascule. On raccourcit `cur`
             // d'un jour et on garde les deux mandats.
@@ -283,6 +312,7 @@ mod tests {
             organe_uid: organe.to_string(),
             debut: date(debut),
             fin: fin.map(date),
+            is_non_inscrit: false,
         }
     }
 
@@ -416,6 +446,27 @@ mod tests {
         );
     }
 
+    /// Régression : quand deux mandats partagent exactement la même date de début, celui trié en
+    /// premier (`cur`) peut être le plus court des deux — l'inclusion est alors « inversée ». Le
+    /// tri (début croissant, fin croissante) garantit que ce cas ne peut se produire qu'à égalité
+    /// stricte des débuts.
+    #[test]
+    fn inclusion_inversee_meme_debut_second_plus_long() {
+        let mandats = vec![
+            mandat("MDT1", "PO1", "2020-01-01", Some("2020-06-01")),
+            mandat("MDT2", "PO1", "2020-01-01", Some("2022-01-01")),
+        ];
+        let result = normalize_gp_mandats(mandats);
+        assert_eq!(result.retained.len(), 1);
+        assert_eq!(result.retained[0].an_uid, "MDT2");
+        assert_eq!(
+            result.events,
+            vec![NormalizationEvent::Inclus {
+                an_uid: "MDT1".to_string()
+            }]
+        );
+    }
+
     #[test]
     fn inclusion_egale_doublon_exact() {
         // Mesuré par le spike : des doublons exacts (mêmes dates, deux uid de mandat distincts).
@@ -485,6 +536,47 @@ mod tests {
             result.events,
             vec![NormalizationEvent::Chevauchement {
                 an_uid: "MDT2".to_string()
+            }]
+        );
+    }
+
+    /// Régression : mesuré sur les données réelles (77 cas dans AMO30, très au-delà du seul cas
+    /// de 2007 relevé par le spike), une bascule vers un vrai groupe chevauche presque toujours
+    /// le pseudo-groupe « non-inscrit » qui la précède, parce que l'AN ne clôture pas
+    /// systématiquement le mandat NI à la date exacte du départ. Ce n'est pas une vraie
+    /// contradiction (le NI n'est pas une appartenance, methodology.md § 2) : les deux mandats
+    /// doivent être conservés sans déclencher de `Chevauchement`.
+    #[test]
+    fn chevauchement_avec_un_pseudo_groupe_non_inscrit_est_ignore() {
+        let mut ni = mandat("MDT_NI", "PO_NI", "2024-07-08", None);
+        ni.is_non_inscrit = true;
+        let reel = mandat("MDT_REEL", "PO_REEL", "2024-07-19", Some("2024-09-20"));
+
+        let mandats = vec![ni, reel];
+        let result = normalize_gp_mandats(mandats);
+
+        assert_eq!(result.retained.len(), 2);
+        assert!(result.events.is_empty());
+    }
+
+    /// Le vrai chevauchement mesuré à grande échelle : la scission UMP / Rassemblement-UMP de
+    /// novembre 2012 à janvier 2013, où 73 député·es sont recensé·es simultanément dans les deux
+    /// groupes. Aucun des deux organes n'est un pseudo-groupe, le chevauchement est donc réel et
+    /// doit continuer à écarter la plage la plus courte.
+    #[test]
+    fn chevauchement_reel_entre_deux_vrais_groupes_est_toujours_detecte() {
+        let mandats = vec![
+            mandat("MDT_UMP", "PO_UMP", "2012-06-26", Some("2015-06-01")),
+            mandat("MDT_RUMP", "PO_RUMP", "2012-11-27", Some("2013-01-15")),
+        ];
+        let result = normalize_gp_mandats(mandats);
+
+        assert_eq!(result.retained.len(), 1);
+        assert_eq!(result.retained[0].an_uid, "MDT_UMP");
+        assert_eq!(
+            result.events,
+            vec![NormalizationEvent::Chevauchement {
+                an_uid: "MDT_RUMP".to_string()
             }]
         );
     }

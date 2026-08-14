@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO organe (an_uid, code_type, libelle, libelle_abrege, libelle_abrev,\n                                 legislature, period, is_non_inscrit)\n            SELECT an_uid, code_type, libelle, libelle_abrege, libelle_abrev, legislature,\n                   daterange(debut, CASE WHEN fin IS NULL THEN NULL ELSE fin + 1 END, '[)'),\n                   is_non_inscrit\n            FROM UNNEST(\n                $1::text[], $2::text[], $3::text[], $4::text[], $5::text[],\n                $6::smallint[], $7::date[], $8::date[], $9::bool[]\n            ) AS t(an_uid, code_type, libelle, libelle_abrege, libelle_abrev, legislature,\n                   debut, fin, is_non_inscrit)\n            ON CONFLICT (an_uid) DO UPDATE SET\n                code_type = EXCLUDED.code_type,\n                libelle = EXCLUDED.libelle,\n                libelle_abrege = EXCLUDED.libelle_abrege,\n                libelle_abrev = EXCLUDED.libelle_abrev,\n                legislature = EXCLUDED.legislature,\n                period = EXCLUDED.period,\n                is_non_inscrit = EXCLUDED.is_non_inscrit,\n                updated_at = now()\n            WHERE organe.code_type IS DISTINCT FROM EXCLUDED.code_type\n               OR organe.libelle IS DISTINCT FROM EXCLUDED.libelle\n               OR organe.libelle_abrege IS DISTINCT FROM EXCLUDED.libelle_abrege\n               OR organe.libelle_abrev IS DISTINCT FROM EXCLUDED.libelle_abrev\n               OR organe.legislature IS DISTINCT FROM EXCLUDED.legislature\n               OR organe.period IS DISTINCT FROM EXCLUDED.period\n               OR organe.is_non_inscrit IS DISTINCT FROM EXCLUDED.is_non_inscrit\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Int2Array",
+        "DateArray",
+        "DateArray",
+        "BoolArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fd8f3a27e674ce9a4eff301860268bb77e7cc5abaa139c1038c32c0f88897514"
+}

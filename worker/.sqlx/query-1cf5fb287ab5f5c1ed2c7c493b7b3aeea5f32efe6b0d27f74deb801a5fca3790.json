@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT an_uid, id, is_non_inscrit FROM organe",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "an_uid",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "organe",
+            "name": "an_uid"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "organe",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "is_non_inscrit",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "organe",
+            "name": "is_non_inscrit"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1cf5fb287ab5f5c1ed2c7c493b7b3aeea5f32efe6b0d27f74deb801a5fca3790"
+}

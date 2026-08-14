@@ -1,3 +1,4 @@
+pub mod ingest_acteurs;
 pub mod noop;
 pub mod queue;
 
@@ -207,6 +208,7 @@ async fn run_one_job(
 async fn execute(ctx: &JobContext, job: &queue::ClaimedJob) -> anyhow::Result<()> {
     match job.job_type.as_str() {
         "noop" => noop::run(ctx, &job.payload).await,
+        "ingest_acteurs" => ingest_acteurs::run(ctx, &job.payload).await,
         other => anyhow::bail!("type de job inconnu : {other}"),
     }
 }

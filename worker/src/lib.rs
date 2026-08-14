@@ -6,4 +6,5 @@ pub mod config;
 pub mod db;
 pub mod heartbeat;
 pub mod jobs;
+pub mod run;
 pub mod shutdown;
