@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO vote (scrutin_id, person_id, position, cause_non_vote, groupe_organe_id,\n                               groupe_from_mandat, mandat_an_uid, par_delegation)\n            SELECT scrutin_id, person_id, position::vote_position, cause_non_vote,\n                   groupe_organe_id, groupe_from_mandat, mandat_an_uid, par_delegation\n            FROM UNNEST(\n                $1::bigint[], $2::bigint[], $3::text[], $4::text[], $5::bigint[], $6::bool[],\n                $7::text[], $8::bool[]\n            ) AS t(scrutin_id, person_id, position, cause_non_vote, groupe_organe_id,\n                   groupe_from_mandat, mandat_an_uid, par_delegation)\n            ON CONFLICT (scrutin_id, person_id) DO UPDATE SET\n                position = EXCLUDED.position,\n                cause_non_vote = EXCLUDED.cause_non_vote,\n                groupe_organe_id = EXCLUDED.groupe_organe_id,\n                groupe_from_mandat = EXCLUDED.groupe_from_mandat,\n                mandat_an_uid = EXCLUDED.mandat_an_uid,\n                par_delegation = EXCLUDED.par_delegation\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int8Array",
+        "TextArray",
+        "TextArray",
+        "Int8Array",
+        "BoolArray",
+        "TextArray",
+        "BoolArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b6cff38e393daa66819bc6d50f23a18c2a6c91247240d9f036183b20cc744bdd"
+}

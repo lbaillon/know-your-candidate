@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO scrutin (an_uid, numero, legislature, date_scrutin, chambre, organe_id,\n                                  session_ref, seance_ref, type_code, type_libelle, type_majorite,\n                                  sort_code, titre, demandeur, dossier_ref, mode_publication,\n                                  lieu_vote, nombre_votants, suffrages_exprimes, pour, contre,\n                                  abstentions, non_votants, non_votants_volontaires, effectif,\n                                  source_document_id)\n            SELECT an_uid, numero, legislature, date_scrutin, chambre::chambre, organe_id,\n                   session_ref, seance_ref, type_code, type_libelle, type_majorite, sort_code,\n                   titre, demandeur, dossier_ref, mode_publication, lieu_vote, nombre_votants,\n                   suffrages_exprimes, pour, contre, abstentions, non_votants,\n                   non_votants_volontaires, effectif, source_document_id\n            FROM UNNEST(\n                $1::text[], $2::int[], $3::smallint[], $4::date[], $5::text[], $6::bigint[],\n                $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], $12::text[],\n                $13::text[], $14::text[], $15::text[], $16::text[], $17::text[], $18::int[],\n                $19::int[], $20::int[], $21::int[], $22::int[], $23::int[], $24::int[],\n                $25::int[], $26::bigint[]\n            ) AS t(an_uid, numero, legislature, date_scrutin, chambre, organe_id, session_ref,\n                   seance_ref, type_code, type_libelle, type_majorite, sort_code, titre,\n                   demandeur, dossier_ref, mode_publication, lieu_vote, nombre_votants,\n                   suffrages_exprimes, pour, contre, abstentions, non_votants,\n                   non_votants_volontaires, effectif, source_document_id)\n            ON CONFLICT (an_uid) DO UPDATE SET\n                numero = EXCLUDED.numero,\n                legislature = EXCLUDED.legislature,\n                date_scrutin = EXCLUDED.date_scrutin,\n                chambre = EXCLUDED.chambre,\n                organe_id = EXCLUDED.organe_id,\n                session_ref = EXCLUDED.session_ref,\n                seance_ref = EXCLUDED.seance_ref,\n                type_code = EXCLUDED.type_code,\n                type_libelle = EXCLUDED.type_libelle,\n                type_majorite = EXCLUDED.type_majorite,\n                sort_code = EXCLUDED.sort_code,\n                titre = EXCLUDED.titre,\n                demandeur = EXCLUDED.demandeur,\n                dossier_ref = EXCLUDED.dossier_ref,\n                mode_publication = EXCLUDED.mode_publication,\n                lieu_vote = EXCLUDED.lieu_vote,\n                nombre_votants = EXCLUDED.nombre_votants,\n                suffrages_exprimes = EXCLUDED.suffrages_exprimes,\n                pour = EXCLUDED.pour,\n                contre = EXCLUDED.contre,\n                abstentions = EXCLUDED.abstentions,\n                non_votants = EXCLUDED.non_votants,\n                non_votants_volontaires = EXCLUDED.non_votants_volontaires,\n                effectif = EXCLUDED.effectif,\n                source_document_id = EXCLUDED.source_document_id,\n                updated_at = now()\n            WHERE scrutin.numero IS DISTINCT FROM EXCLUDED.numero\n               OR scrutin.legislature IS DISTINCT FROM EXCLUDED.legislature\n               OR scrutin.date_scrutin IS DISTINCT FROM EXCLUDED.date_scrutin\n               OR scrutin.chambre IS DISTINCT FROM EXCLUDED.chambre\n               OR scrutin.organe_id IS DISTINCT FROM EXCLUDED.organe_id\n               OR scrutin.session_ref IS DISTINCT FROM EXCLUDED.session_ref\n               OR scrutin.seance_ref IS DISTINCT FROM EXCLUDED.seance_ref\n               OR scrutin.type_code IS DISTINCT FROM EXCLUDED.type_code\n               OR scrutin.type_libelle IS DISTINCT FROM EXCLUDED.type_libelle\n               OR scrutin.type_majorite IS DISTINCT FROM EXCLUDED.type_majorite\n               OR scrutin.sort_code IS DISTINCT FROM EXCLUDED.sort_code\n               OR scrutin.titre IS DISTINCT FROM EXCLUDED.titre\n               OR scrutin.demandeur IS DISTINCT FROM EXCLUDED.demandeur\n               OR scrutin.dossier_ref IS DISTINCT FROM EXCLUDED.dossier_ref\n               OR scrutin.mode_publication IS DISTINCT FROM EXCLUDED.mode_publication\n               OR scrutin.lieu_vote IS DISTINCT FROM EXCLUDED.lieu_vote\n               OR scrutin.nombre_votants IS DISTINCT FROM EXCLUDED.nombre_votants\n               OR scrutin.suffrages_exprimes IS DISTINCT FROM EXCLUDED.suffrages_exprimes\n               OR scrutin.pour IS DISTINCT FROM EXCLUDED.pour\n               OR scrutin.contre IS DISTINCT FROM EXCLUDED.contre\n               OR scrutin.abstentions IS DISTINCT FROM EXCLUDED.abstentions\n               OR scrutin.non_votants IS DISTINCT FROM EXCLUDED.non_votants\n               OR scrutin.non_votants_volontaires IS DISTINCT FROM EXCLUDED.non_votants_volontaires\n               OR scrutin.effectif IS DISTINCT FROM EXCLUDED.effectif\n               OR scrutin.source_document_id IS DISTINCT FROM EXCLUDED.source_document_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Int4Array",
+        "Int2Array",
+        "DateArray",
+        "TextArray",
+        "Int8Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d7f752c6c9cbcdec7afe3fe58c34a34f65661221985a57fd1e4b61f6b86218ee"
+}

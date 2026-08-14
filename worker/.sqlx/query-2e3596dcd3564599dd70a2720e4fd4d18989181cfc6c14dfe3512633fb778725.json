@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT an_uid, id FROM scrutin WHERE an_uid = ANY($1::text[])",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "an_uid",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "scrutin",
+            "name": "an_uid"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "scrutin",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "2e3596dcd3564599dd70a2720e4fd4d18989181cfc6c14dfe3512633fb778725"
+}

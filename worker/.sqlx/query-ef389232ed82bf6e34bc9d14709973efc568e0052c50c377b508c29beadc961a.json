@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT an_uid, id FROM organe",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "an_uid",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "organe",
+            "name": "an_uid"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "organe",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "ef389232ed82bf6e34bc9d14709973efc568e0052c50c377b508c29beadc961a"
+}

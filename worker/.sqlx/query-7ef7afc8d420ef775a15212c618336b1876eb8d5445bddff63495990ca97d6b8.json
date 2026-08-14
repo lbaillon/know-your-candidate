@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO scrutin_groupe (scrutin_id, rang, organe_id, nombre_membres,\n                                         position_majoritaire, pour, contre, abstentions,\n                                         non_votants)\n            SELECT * FROM UNNEST(\n                $1::bigint[], $2::smallint[], $3::bigint[], $4::int[], $5::text[], $6::int[],\n                $7::int[], $8::int[], $9::int[]\n            )\n            ON CONFLICT (scrutin_id, rang) DO UPDATE SET\n                organe_id = EXCLUDED.organe_id,\n                nombre_membres = EXCLUDED.nombre_membres,\n                position_majoritaire = EXCLUDED.position_majoritaire,\n                pour = EXCLUDED.pour,\n                contre = EXCLUDED.contre,\n                abstentions = EXCLUDED.abstentions,\n                non_votants = EXCLUDED.non_votants\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int2Array",
+        "Int8Array",
+        "Int4Array",
+        "TextArray",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7ef7afc8d420ef775a15212c618336b1876eb8d5445bddff63495990ca97d6b8"
+}

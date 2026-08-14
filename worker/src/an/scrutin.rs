@@ -16,6 +16,16 @@ pub enum Chambre {
     Congres,
 }
 
+impl Chambre {
+    /// Valeur exacte de l'enum Postgres `chambre` (migration 0003).
+    pub fn as_db_str(self) -> &'static str {
+        match self {
+            Chambre::Assemblee => "assemblee",
+            Chambre::Congres => "congres",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VotePosition {
     Pour,

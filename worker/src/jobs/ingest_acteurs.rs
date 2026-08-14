@@ -9,6 +9,7 @@ use serde_json::Value;
 use sqlx::PgPool;
 
 use crate::an::acteur::{self, MandatGroupe, NormalizationEvent, ParsedActeur, ParsedOrgane};
+use crate::an::document::{RawDocument, archive_documents};
 use crate::an::http::{AnClient, sha256_hex};
 use crate::an::open_zip;
 use crate::run;
@@ -18,12 +19,6 @@ use super::JobContext;
 const AMO30_URL: &str = "https://data.assemblee-nationale.fr/static/openData/repository/17/amo/tous_acteurs_mandats_organes_xi_legislature/AMO30_tous_acteurs_tous_mandats_tous_organes_historique.json.zip";
 const RETAINED_CODE_TYPES: [&str; 3] = ["GP", "PARPOL", "ASSEMBLEE"];
 const BATCH_SIZE: usize = 1000;
-
-struct RawDoc {
-    uid: String,
-    payload: Value,
-    content_hash: String,
-}
 
 pub async fn run(ctx: &JobContext, payload: &Value) -> anyhow::Result<()> {
     let force_refetch = payload
@@ -59,8 +54,8 @@ async fn ingest(pool: &PgPool, force_refetch: bool) -> anyhow::Result<Value> {
     let (organe_docs, acteur_docs) =
         tokio::task::spawn_blocking(move || read_amo30_docs(bytes)).await??;
 
-    archive_documents(pool, "an_organe", &organe_docs).await?;
-    archive_documents(pool, "an_acteur", &acteur_docs).await?;
+    archive_documents(pool, "an_organe", AMO30_URL, &organe_docs).await?;
+    archive_documents(pool, "an_acteur", AMO30_URL, &acteur_docs).await?;
 
     let organes: Vec<ParsedOrgane> = organe_docs
         .iter()
@@ -102,7 +97,7 @@ fn cache_dir() -> Option<std::path::PathBuf> {
 
 /// Décompression et lecture brute de l'archive — travail CPU, exécuté hors de l'exécuteur async
 /// pour ne pas le bloquer le temps de parcourir ~14 000 fichiers.
-fn read_amo30_docs(bytes: bytes::Bytes) -> anyhow::Result<(Vec<RawDoc>, Vec<RawDoc>)> {
+fn read_amo30_docs(bytes: bytes::Bytes) -> anyhow::Result<(Vec<RawDocument>, Vec<RawDocument>)> {
     let mut zip = open_zip(bytes)?;
     let mut organes = Vec::new();
     let mut acteurs = Vec::new();
@@ -129,7 +124,7 @@ fn read_amo30_docs(bytes: bytes::Bytes) -> anyhow::Result<(Vec<RawDoc>, Vec<RawD
             .to_string();
         let content_hash = sha256_hex(&buf);
 
-        let doc = RawDoc {
+        let doc = RawDocument {
             uid,
             payload,
             content_hash,
@@ -142,32 +137,6 @@ fn read_amo30_docs(bytes: bytes::Bytes) -> anyhow::Result<(Vec<RawDoc>, Vec<RawD
     }
 
     Ok((organes, acteurs))
-}
-
-async fn archive_documents(pool: &PgPool, source: &str, docs: &[RawDoc]) -> sqlx::Result<()> {
-    for batch in docs.chunks(BATCH_SIZE) {
-        let sources: Vec<&str> = batch.iter().map(|_| source).collect();
-        let uids: Vec<&str> = batch.iter().map(|d| d.uid.as_str()).collect();
-        let urls: Vec<&str> = batch.iter().map(|_| AMO30_URL).collect();
-        let hashes: Vec<&str> = batch.iter().map(|d| d.content_hash.as_str()).collect();
-        let payloads: Vec<Value> = batch.iter().map(|d| d.payload.clone()).collect();
-
-        sqlx::query!(
-            r#"
-            INSERT INTO source_document (source, uid, url, content_hash, payload)
-            SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[], $5::jsonb[])
-            ON CONFLICT (source, uid, content_hash) DO NOTHING
-            "#,
-            &sources as _,
-            &uids as _,
-            &urls as _,
-            &hashes as _,
-            &payloads,
-        )
-        .execute(pool)
-        .await?;
-    }
-    Ok(())
 }
 
 async fn upsert_organes(pool: &PgPool, organes: &[ParsedOrgane]) -> sqlx::Result<()> {

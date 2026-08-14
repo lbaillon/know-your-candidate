@@ -2,6 +2,7 @@
 //! décompression, et parsing du JSON (qui est un XML converti mécaniquement, voir `json`).
 
 pub mod acteur;
+pub mod document;
 pub mod http;
 pub mod json;
 pub mod scrutin;
