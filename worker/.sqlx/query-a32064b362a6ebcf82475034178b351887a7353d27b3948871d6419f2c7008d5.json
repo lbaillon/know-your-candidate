@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE person p\n            SET wikidata_qid = t.qid, updated_at = now()\n            FROM UNNEST($1::text[], $2::text[]) AS t(an_uid, qid)\n            WHERE p.an_uid = t.an_uid AND p.wikidata_qid IS DISTINCT FROM t.qid\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a32064b362a6ebcf82475034178b351887a7353d27b3948871d6419f2c7008d5"
+}

@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO person_photo (person_id, url, commons_file, licence, licence_url, auteur)\n            SELECT * FROM UNNEST($1::bigint[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[])\n            ON CONFLICT (person_id) DO UPDATE SET\n                url = EXCLUDED.url,\n                commons_file = EXCLUDED.commons_file,\n                licence = EXCLUDED.licence,\n                licence_url = EXCLUDED.licence_url,\n                auteur = EXCLUDED.auteur,\n                fetched_at = now()\n            WHERE person_photo.url IS DISTINCT FROM EXCLUDED.url\n               OR person_photo.commons_file IS DISTINCT FROM EXCLUDED.commons_file\n               OR person_photo.licence IS DISTINCT FROM EXCLUDED.licence\n               OR person_photo.licence_url IS DISTINCT FROM EXCLUDED.licence_url\n               OR person_photo.auteur IS DISTINCT FROM EXCLUDED.auteur\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cd88f51b02951769a57bcb7a4fb5a536aca6cdd211bfabdae24c0450761d86d2"
+}

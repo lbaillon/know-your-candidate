@@ -1,3 +1,4 @@
+pub mod enrich_wikidata;
 pub mod ingest_acteurs;
 pub mod ingest_scrutins;
 pub mod noop;
@@ -211,6 +212,7 @@ async fn execute(ctx: &JobContext, job: &queue::ClaimedJob) -> anyhow::Result<()
         "noop" => noop::run(ctx, &job.payload).await,
         "ingest_acteurs" => ingest_acteurs::run(ctx, &job.payload).await,
         "ingest_scrutins" => ingest_scrutins::run(ctx, &job.payload).await,
+        "enrich_wikidata" => enrich_wikidata::run(ctx, &job.payload).await,
         other => anyhow::bail!("type de job inconnu : {other}"),
     }
 }
