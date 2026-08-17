@@ -27,7 +27,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10
+      # Version complète et non `@v10` : `astral-sh/setup-uv` ne publie plus de tag majeur mobile
+      # depuis `v6` (les refs `v8`, `v9`, `v10` n'existent pas). GitHub résout l'action à
+      # l'initialisation du job, donc un ref introuvable fait échouer `python` avant même le
+      # checkout — c'est ce qui a tenu la CI rouge depuis le premier commit du dépôt sans que
+      # `make test` en local puisse le voir.
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           working-directory: backend
 
