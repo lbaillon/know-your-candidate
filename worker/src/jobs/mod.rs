@@ -4,6 +4,7 @@ pub mod ingest_scrutins;
 pub mod noop;
 pub mod queue;
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
@@ -246,24 +247,34 @@ async fn run_one_job(
 /// ne pas masquer les erreurs suivantes derrière la première, puis rend `Err` en nommant tous les
 /// jobs qui n'ont pas terminé en `done` — sans quoi `main` sort en code 0 et `make ingest` se
 /// termine « avec succès » alors qu'une législature entière peut manquer.
+///
+/// Un échec sous `max_attempts` est requis (`fail_job`) plutôt que définitivement `failed`, donc
+/// le même `job_id` peut repasser par `claim_next_job` et réussir plus tard dans cette même
+/// boucle (observé en pratique : un blip réseau a fait échouer un `ingest_scrutins` que la reprise
+/// automatique a réparé quelques secondes plus tard, dans le même `run-once`). Les issues sont donc
+/// indexées par `job_id` — la **dernière** connue pour chacun compte, pas la première — sans quoi
+/// `drain_once` rendrait encore `Err` pour un job qui a fini par aboutir.
 pub async fn drain_once(pool: &PgPool, worker_id: &str) -> anyhow::Result<()> {
     let current_job: CurrentJob = Arc::new(Mutex::new(None));
     let (_never_shuts_down, mut shutdown) = watch::channel(false);
-    let mut failures: Vec<JobResult> = Vec::new();
+    let mut last_outcome: HashMap<i64, JobResult> = HashMap::new();
     loop {
         let claimed = match queue::claim_next_job(pool, worker_id).await? {
             Some(job) => job,
             None => break,
         };
         let result = run_one_job(pool, worker_id, claimed, &current_job, &mut shutdown).await;
-        if !matches!(result.outcome, JobOutcome::Done) {
-            failures.push(result);
-        }
+        last_outcome.insert(result.job_id, result);
     }
 
+    let mut failures: Vec<JobResult> = last_outcome
+        .into_values()
+        .filter(|r| !matches!(r.outcome, JobOutcome::Done))
+        .collect();
     if failures.is_empty() {
         return Ok(());
     }
+    failures.sort_by_key(|f| f.job_id);
 
     let detail = failures
         .iter()

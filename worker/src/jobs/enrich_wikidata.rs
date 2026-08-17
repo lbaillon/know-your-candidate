@@ -189,6 +189,7 @@ async fn ingest(
         "photos_candidates": photo_candidates.len(),
         "photos_enregistrees": photo_stats.enregistrees,
         "photos_sans_licence": photo_stats.sans_licence,
+        "photos_hors_perimetre": photo_stats.hors_perimetre,
     }))
 }
 
@@ -277,6 +278,11 @@ fn normalize_commons_title(title: &str) -> String {
 struct PhotoStats {
     enregistrees: usize,
     sans_licence: usize,
+    /// `P4123` couvre tous les député·es depuis toujours, pas seulement les législatures 15 à 17 :
+    /// un candidat photo dont l'`an_uid` n'a pas de ligne `person` n'est pas une perte de notre
+    /// corpus, mesurée séparément de `sans_licence` pour ne pas la faire passer pour une anomalie
+    /// de données (trouvé au contact de l'exécution réelle du job, F2c, docs/plans/phase-1.1-fix.md).
+    hors_perimetre: usize,
 }
 
 #[derive(Deserialize)]
@@ -361,10 +367,20 @@ async fn enrich_photos(
     // `attendues` (F2b) : tout an_uid dont un titre a pu être construit, pour détecter en fin de
     // lot celles que la réponse Commons n'a jamais couvertes (retirées, renommées, requête
     // partiellement vide...) plutôt que de les laisser disparaître sans anomalie.
+    //
+    // Filtré sur `person_ids` **avant** toute requête Commons : `P4123` couvre tous les
+    // député·es depuis la XIe législature, pas seulement notre corpus L15-L17 (trouvé en
+    // exécutant réellement F2c) — interroger Commons pour des personnes qu'on ne suit pas
+    // gaspillerait des appels, et surtout ferait retomber leur non-résolution dans le même
+    // `continue` silencieux que F2b vise justement à éliminer.
     let mut title_to_an_uid: HashMap<String, &str> = HashMap::new();
     let mut titles: Vec<String> = Vec::new();
     let mut attendues: HashSet<&str> = HashSet::new();
     for (an_uid, image_url) in candidates {
+        if !person_ids.contains_key(*an_uid) {
+            stats.hors_perimetre += 1;
+            continue;
+        }
         let Some(title) = commons_title_from_image_url(image_url) else {
             stats.sans_licence += 1;
             anomalies.push(AnomalyRecord {

@@ -18,6 +18,39 @@ sans source affichable n'entre pas en base.
 > 902 votes du Congrès, que le chiffre du spike excluait implicitement. Vérification manuelle de trois
 > député·es (dont Charlotte Parmentier-Lecocq, 5 groupes différents sur la seule 17e législature) contre le
 > site de l'Assemblée : historique de groupe et position de vote strictement identiques.
+>
+> **Ré-exécuté en entier le 17 août 2026 après les correctifs de la revue** ([phase-1.1-fix.md](plans/phase-1.1-fix.md)),
+> sur une base vierge : scrutins et votes des trois législatures **inchangés** (les correctifs ne
+> touchaient ni au parsing des scrutins ni au calcul des votes). Deux chiffres bougent, comme prévu par
+> le plan :
+>
+> - **15 298 mandats** au lieu de 15 224 (D1.16, F5) : les 74 chevauchements réels entre organes
+>   différents (dont la scission UMP/Rassemblement-UMP de 2012) sont désormais **conservés et
+>   journalisés** plutôt que tranchés silencieusement à l'ingestion — `mandat_chevauchement` reste à 74
+>   dans `ingestion_anomaly`, mais compte des signalements, plus des suppressions.
+> - `enrich_wikidata`, jamais exécuté par `make ingest` avant F2c, mesuré pour la première fois :
+>   **2 474 résultats SPARQL**, **2 454 personnes uniques**, **10 `wikidata_qid_ambigu`** (le cas
+>   miroir que F2a corrige — un même QID portant deux `P4123` — n'était pas détecté avant le correctif,
+>   donc jamais mesuré), **1 684 candidats photo**, dont **85 hors du corpus L15-L17** (`P4123` couvre
+>   toutes les législatures depuis la XIe, pas seulement les nôtres — découvert à l'exécution réelle, voir
+>   `photos_hors_perimetre` ci-dessous) et **1 599 photos enregistrées, 0 sans licence exploitable** parmi
+>   les 1 599 candidats restants. Écart avec le ~84 % annoncé par le plan (mesuré sur la 15e législature
+>   seule, 652 personnes) : sur l'ensemble du corpus L15-L17, le ratio réel est proche (1 599 photos pour
+>   environ 1 900 personnes avec `wikidata_qid`), l'ordre de grandeur tient.
+>
+> **Une régression a été trouvée et corrigée pendant cette exécution réelle**, au-delà de ce que F2/F3
+> décrivaient : `enrich_photos` ne comptait ni ne journalisait les 85 candidats hors périmètre (silencieux
+> avant le correctif — exactement la classe de bug que F2b visait à éliminer, manquée parce que F2b ne
+> couvrait que la normalisation de titre, pas l'absence de `person`), et `drain_once` (F3) rendait `Err`
+> pour un job qui avait fini par réussir après une reprise automatique (un blip réseau a fait échouer le
+> téléchargement de la 15e législature, réparé quelques secondes plus tard dans le même `run-once` —
+> `drain_once` gardait la trace du premier échec au lieu de la dernière issue connue par `job_id`). Les
+> deux corrigés dans le même commit que cette exécution, voir son message pour le détail.
+>
+> Idempotence vérifiée sur les **huit** tables métier (`person`, `organe`, `mandat`, `scrutin`,
+> `scrutin_groupe`, `vote`, `vote_mise_au_point`, `person_photo`) en relançant `make ingest` sur la base
+> déjà peuplée : condensés strictement identiques avant/après — `person_photo` n'avait jamais été
+> vérifiée jusqu'ici.
 
 ## 1. Assemblée nationale — open data officiel (source principale)
 

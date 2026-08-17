@@ -139,8 +139,9 @@ make lint         # ruff check/format --check + cargo fmt --check + clippy -D wa
 make typecheck    # ty check (backend)
 make test         # pytest (backend) + cargo test (worker)
 make migrate      # sqlx migrate run sur DATABASE_URL
-make ingest       # référentiel (AMO30) puis législatures 15, 16, 17 dans l'ordre — plusieurs
-                   # dizaines de minutes, voir docs/plans/phase-1-ingestion.md
+make ingest       # référentiel (AMO30), législatures 15/16/17, puis enrich_wikidata — plusieurs
+                   # dizaines de minutes, voir docs/plans/phase-1-ingestion.md. Sort en code non
+                   # nul si un job échoue (F3, docs/plans/phase-1.1-fix.md)
 ```
 
 Détail par composant : `cd backend && uv run <cmd>` (`ruff`, `ty`, `pytest`, `uvicorn kyc_api.main:app

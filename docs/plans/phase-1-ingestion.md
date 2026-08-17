@@ -502,8 +502,8 @@ Vocabulaire fermé des `kind`, à définir comme constantes dans `anomaly.rs` pl
 | `cause_non_vote_inconnue` | code hors `PSE`, `PAN`, `MG` | 0 |
 | `bloc_nominatif_inconnu` | nom de bloc hors singulier et pluriel connus | 0 |
 | `compteurs_incoherents` | `total nominatif <> nombreVotants + nonVotants` | 1 (`VTANR5L17V1`) |
-| `photo_sans_licence` | Commons ne rend pas de licence exploitable | à mesurer |
-| `wikidata_qid_ambigu` | deux QID revendiquent le même `P4123` | à mesurer |
+| `photo_sans_licence` | Commons ne rend pas de licence exploitable | 0 (mesuré le 17 août 2026, phase 1.1, voir [phase-1.1-fix.md](phase-1.1-fix.md) F2) |
+| `wikidata_qid_ambigu` | deux QID revendiquent le même `P4123`, **ou** un même QID revendiqué par deux `P4123` (F2a) | 10 (mesuré le 17 août 2026, phase 1.1) |
 
 Ces attendus sont des tests d'acceptation, pas de la documentation d'ambiance : un `groupe_fantome` à 0
 signifie que le cas n'est pas détecté, pas qu'il a disparu.
