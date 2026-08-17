@@ -1,0 +1,14 @@
+{
+  "organe": {
+    "uid": "PO900002",
+    "codeType": "GP",
+    "libelle": "Groupe Beta (fixture)",
+    "libelleAbrege": "Beta",
+    "libelleAbrev": "BETA",
+    "legislature": "17",
+    "viMoDe": {
+      "dateDebut": "2024-07-18",
+      "dateFin": null
+    }
+  }
+}

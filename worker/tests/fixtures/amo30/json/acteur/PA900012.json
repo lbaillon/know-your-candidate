@@ -1,0 +1,48 @@
+{
+  "acteur": {
+    "uid": "PA900012",
+    "etatCivil": {
+      "ident": {
+        "civ": "M.",
+        "prenom": "Lucas",
+        "nom": "Vernhes"
+      },
+      "dateDeces": {
+        "@xsi:nil": "true"
+      }
+    },
+    "uri_hatvp": {
+      "@xsi:nil": "true"
+    },
+    "mandats": {
+      "mandat": [
+        {
+          "uid": "PM900012A",
+          "typeOrgane": "GP",
+          "dateDebut": "2012-06-26",
+          "dateFin": "2015-06-01",
+          "infosQualite": {
+            "codeQualite": "Membre"
+          },
+          "organes": {
+            "organeRef": "PO900001"
+          },
+          "legislature": "17"
+        },
+        {
+          "uid": "PM900012B",
+          "typeOrgane": "GP",
+          "dateDebut": "2012-11-27",
+          "dateFin": "2013-01-15",
+          "infosQualite": {
+            "codeQualite": "Membre"
+          },
+          "organes": {
+            "organeRef": "PO900006"
+          },
+          "legislature": "17"
+        }
+      ]
+    }
+  }
+}

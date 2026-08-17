@@ -1,0 +1,14 @@
+{
+  "organe": {
+    "uid": "PO900007",
+    "codeType": "GROUPESENAT",
+    "libelle": "Groupe sénatorial Fictif",
+    "libelleAbrege": "GSF",
+    "libelleAbrev": "GSF",
+    "legislature": null,
+    "viMoDe": {
+      "dateDebut": null,
+      "dateFin": null
+    }
+  }
+}

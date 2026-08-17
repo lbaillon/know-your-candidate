@@ -1,0 +1,43 @@
+{
+  "acteur": {
+    "uid": {
+      "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+      "@xsi:type": "IdActeur_type",
+      "#text": "PA900001"
+    },
+    "etatCivil": {
+      "ident": {
+        "civ": "Mme",
+        "prenom": "Adèle",
+        "nom": "Dupont-Lemoine"
+      },
+      "infoNaissance": {
+        "dateNais": "1978-04-12",
+        "villeNais": "Rennes",
+        "depNais": "Ille-et-Vilaine",
+        "paysNais": "France"
+      },
+      "dateDeces": {
+        "@xsi:nil": "true"
+      }
+    },
+    "uri_hatvp": {
+      "@xsi:nil": "true"
+    },
+    "mandats": {
+      "mandat": {
+        "uid": "PM900001A",
+        "typeOrgane": "ASSEMBLEE",
+        "dateDebut": "2024-07-18",
+        "dateFin": null,
+        "infosQualite": {
+          "codeQualite": "Titulaire"
+        },
+        "organes": {
+          "organeRef": "PO900010"
+        },
+        "legislature": "17"
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "organe": {
+    "uid": "PO900006",
+    "codeType": "GP",
+    "libelle": "Groupe Delta (fixture, scission)",
+    "libelleAbrege": "Delta",
+    "libelleAbrev": "DELTA",
+    "legislature": "14",
+    "viMoDe": {
+      "dateDebut": "2012-06-26",
+      "dateFin": "2013-01-15"
+    }
+  }
+}

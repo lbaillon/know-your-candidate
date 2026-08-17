@@ -1,0 +1,14 @@
+{
+  "organe": {
+    "uid": "PO900005",
+    "codeType": "PARPOL",
+    "libelle": "Parti Fictif",
+    "libelleAbrege": "PF",
+    "libelleAbrev": null,
+    "legislature": null,
+    "viMoDe": {
+      "dateDebut": null,
+      "dateFin": null
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "organe": {
+    "uid": "PO900001",
+    "codeType": "GP",
+    "libelle": "Groupe Alpha (fixture)",
+    "libelleAbrege": "Alpha",
+    "libelleAbrev": "ALPHA",
+    "legislature": "17",
+    "viMoDe": {
+      "dateDebut": "2024-07-18",
+      "dateFin": null
+    }
+  }
+}

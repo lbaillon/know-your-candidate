@@ -1,0 +1,33 @@
+{
+  "acteur": {
+    "uid": "PA900005",
+    "etatCivil": {
+      "ident": {
+        "civ": "M.",
+        "prenom": "Élian",
+        "nom": "Cabrol"
+      },
+      "dateDeces": {
+        "@xsi:nil": "true"
+      }
+    },
+    "uri_hatvp": {
+      "@xsi:nil": "true"
+    },
+    "mandats": {
+      "mandat": {
+        "uid": "PM900005A",
+        "typeOrgane": "ASSEMBLEE",
+        "dateDebut": "2024-07-18",
+        "dateFin": null,
+        "infosQualite": {
+          "codeQualite": "Titulaire"
+        },
+        "organes": {
+          "organeRef": "PO900010"
+        },
+        "legislature": "17"
+      }
+    }
+  }
+}

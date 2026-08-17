@@ -1,0 +1,14 @@
+{
+  "organe": {
+    "uid": "PO900003",
+    "codeType": "GP",
+    "libelle": "Groupe Gamma (fixture)",
+    "libelleAbrege": "Gamma",
+    "libelleAbrev": "GAMMA",
+    "legislature": "17",
+    "viMoDe": {
+      "dateDebut": "2024-07-18",
+      "dateFin": null
+    }
+  }
+}

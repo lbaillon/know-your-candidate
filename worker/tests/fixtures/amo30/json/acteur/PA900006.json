@@ -1,0 +1,33 @@
+{
+  "acteur": {
+    "uid": "PA900006",
+    "etatCivil": {
+      "ident": {
+        "civ": "Mme",
+        "prenom": "Fanny",
+        "nom": "Duquesne"
+      },
+      "dateDeces": {
+        "@xsi:nil": "true"
+      }
+    },
+    "uri_hatvp": {
+      "@xsi:nil": "true"
+    },
+    "mandats": {
+      "mandat": {
+        "uid": "PM900006A",
+        "typeOrgane": "ASSEMBLEE",
+        "dateDebut": "2024-07-18",
+        "dateFin": null,
+        "infosQualite": {
+          "codeQualite": "Titulaire"
+        },
+        "organes": {
+          "organeRef": "PO900010"
+        },
+        "legislature": "17"
+      }
+    }
+  }
+}

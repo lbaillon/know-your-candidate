@@ -1,0 +1,18 @@
+{
+  "acteur": {
+    "uid": "PA900003",
+    "etatCivil": {
+      "ident": {
+        "civ": "Mme",
+        "prenom": "Camille",
+        "nom": "Vasseur"
+      },
+      "dateDeces": {
+        "@xsi:nil": "true"
+      }
+    },
+    "uri_hatvp": {
+      "@xsi:nil": "true"
+    }
+  }
+}

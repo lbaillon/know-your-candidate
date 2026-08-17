@@ -1,0 +1,14 @@
+{
+  "organe": {
+    "uid": "PO900010",
+    "codeType": "ASSEMBLEE",
+    "libelle": "Assemblée nationale",
+    "libelleAbrege": "AN",
+    "libelleAbrev": null,
+    "legislature": "17",
+    "viMoDe": {
+      "dateDebut": "2024-07-18",
+      "dateFin": null
+    }
+  }
+}

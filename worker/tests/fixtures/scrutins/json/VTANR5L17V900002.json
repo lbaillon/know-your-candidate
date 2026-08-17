@@ -1,0 +1,116 @@
+{
+  "scrutin": {
+    "uid": "VTANR5L17V900002",
+    "numero": "900002",
+    "organeRef": "PO900010",
+    "legislature": "17",
+    "sessionRef": "SCR5A17O1_FIXTURE",
+    "seanceRef": "RUANR5L17S_FIXTURE_900002",
+    "dateScrutin": "2025-04-01",
+    "typeVote": {
+      "codeTypeVote": "SPO",
+      "libelleTypeVote": "scrutin public ordinaire",
+      "typeMajorite": "majorité absolue des suffrages exprimés"
+    },
+    "sort": {
+      "code": "adopté",
+      "libelle": "l'Assemblée nationale a adopté"
+    },
+    "titre": "Titre fictif du scrutin 900002 (fixture)",
+    "demandeur": {
+      "texte": "Président de groupe (fixture)"
+    },
+    "objet": {
+      "libelle": "Objet fictif (fixture)",
+      "dossierLegislatif": null
+    },
+    "modePublicationDesVotes": "DecompteNominatif",
+    "lieuVote": "Hémicycle",
+    "syntheseVote": {
+      "nombreVotants": "3",
+      "suffragesExprimes": "3",
+      "decompte": {
+        "nonVotants": "0",
+        "pour": "2",
+        "contre": "1",
+        "abstentions": "0",
+        "nonVotantsVolontaires": "0"
+      }
+    },
+    "ventilationVotes": {
+      "organe": {
+        "organeRef": "PO900010",
+        "groupes": {
+          "groupe": [
+            {
+              "organeRef": "PO0",
+              "nombreMembresGroupe": "5",
+              "vote": {
+                "positionMajoritaire": "pour",
+                "decompteVoix": {
+                  "pour": "1",
+                  "contre": "0",
+                  "abstentions": "0",
+                  "nonVotants": "0"
+                },
+                "decompteNominatif": {
+                  "pours": {
+                    "votant": {
+                      "acteurRef": "PA900020",
+                      "mandatRef": null,
+                      "parDelegation": "false"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "organeRef": "PO0",
+              "nombreMembresGroupe": "5",
+              "vote": {
+                "positionMajoritaire": "pour",
+                "decompteVoix": {
+                  "pour": "1",
+                  "contre": "0",
+                  "abstentions": "0",
+                  "nonVotants": "0"
+                },
+                "decompteNominatif": {
+                  "pours": {
+                    "votant": {
+                      "acteurRef": "PA900021",
+                      "mandatRef": "PM900021B",
+                      "parDelegation": "false"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "organeRef": "PO0",
+              "nombreMembresGroupe": "5",
+              "vote": {
+                "positionMajoritaire": "contre",
+                "decompteVoix": {
+                  "pour": "0",
+                  "contre": "1",
+                  "abstentions": "0",
+                  "nonVotants": "0"
+                },
+                "decompteNominatif": {
+                  "contres": {
+                    "votant": {
+                      "acteurRef": "PA900001",
+                      "mandatRef": "PM900001A",
+                      "parDelegation": "false"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

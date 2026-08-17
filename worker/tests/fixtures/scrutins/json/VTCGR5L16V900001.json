@@ -1,0 +1,116 @@
+{
+  "scrutin": {
+    "uid": "VTCGR5L16V900001",
+    "numero": "900001",
+    "organeRef": "PO900010",
+    "legislature": "16",
+    "sessionRef": "SCR5A16O1_FIXTURE",
+    "seanceRef": "RUANR5L16S_FIXTURE_900001",
+    "dateScrutin": "2025-01-01",
+    "typeVote": {
+      "codeTypeVote": "SPO",
+      "libelleTypeVote": "scrutin public ordinaire",
+      "typeMajorite": "majorité absolue des suffrages exprimés"
+    },
+    "sort": {
+      "code": "adopté",
+      "libelle": "l'Assemblée nationale a adopté"
+    },
+    "titre": "Titre fictif du Congrès 900001 (fixture)",
+    "demandeur": {
+      "texte": "Président de groupe (fixture)"
+    },
+    "objet": {
+      "libelle": "Objet fictif (fixture)",
+      "dossierLegislatif": {
+        "libelle": "Projet de loi fictif 900001",
+        "dossierRef": "DLR5L16N900001"
+      }
+    },
+    "modePublicationDesVotes": "DecompteNominatif",
+    "lieuVote": "Hémicycle",
+    "syntheseVote": {
+      "nombreVotants": "3",
+      "suffragesExprimes": "3",
+      "decompte": {
+        "nonVotants": "1",
+        "pour": "2",
+        "contre": "1",
+        "abstentions": "0",
+        "nonVotantsVolontaires": "0"
+      }
+    },
+    "ventilationVotes": {
+      "organe": {
+        "organeRef": "PO900010",
+        "groupes": {
+          "groupe": [
+            {
+              "organeRef": "PO900001",
+              "nombreMembresGroupe": "60",
+              "vote": {
+                "positionMajoritaire": "pour",
+                "decompteVoix": {
+                  "pour": "1",
+                  "contre": "0",
+                  "abstentions": "0",
+                  "nonVotants": "0"
+                },
+                "decompteNominatif": {
+                  "pour": {
+                    "votant": {
+                      "acteurRef": "PA900004",
+                      "mandatRef": "PM900004A",
+                      "parDelegation": "false"
+                    }
+                  },
+                  "contre": null,
+                  "abstention": null,
+                  "nonVotant": null
+                }
+              }
+            },
+            {
+              "organeRef": "PO900007",
+              "nombreMembresGroupe": "40",
+              "vote": {
+                "positionMajoritaire": "pour",
+                "decompteVoix": {
+                  "pour": "1",
+                  "contre": "1",
+                  "abstentions": "0",
+                  "nonVotants": "1"
+                },
+                "decompteNominatif": {
+                  "pour": {
+                    "votant": {
+                      "acteurRef": "PA900023",
+                      "mandatRef": null,
+                      "parDelegation": "false"
+                    }
+                  },
+                  "contre": {
+                    "votant": {
+                      "acteurRef": "PA900024",
+                      "mandatRef": null,
+                      "parDelegation": "false"
+                    }
+                  },
+                  "abstention": null,
+                  "nonVotant": {
+                    "votant": {
+                      "acteurRef": "PA900001",
+                      "mandatRef": "PM900001A",
+                      "parDelegation": "false",
+                      "causePositionVote": "PSE"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

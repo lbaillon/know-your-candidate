@@ -1,0 +1,14 @@
+{
+  "organe": {
+    "uid": "PO900004",
+    "codeType": "GP",
+    "libelle": "Députés non-inscrits (fixture)",
+    "libelleAbrege": "NI",
+    "libelleAbrev": "NI",
+    "legislature": "17",
+    "viMoDe": {
+      "dateDebut": "2024-07-18",
+      "dateFin": null
+    }
+  }
+}

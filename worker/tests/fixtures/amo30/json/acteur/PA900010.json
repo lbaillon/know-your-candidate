@@ -1,0 +1,48 @@
+{
+  "acteur": {
+    "uid": "PA900010",
+    "etatCivil": {
+      "ident": {
+        "civ": "M.",
+        "prenom": "Joachim",
+        "nom": "Sartoux"
+      },
+      "dateDeces": {
+        "@xsi:nil": "true"
+      }
+    },
+    "uri_hatvp": {
+      "@xsi:nil": "true"
+    },
+    "mandats": {
+      "mandat": [
+        {
+          "uid": "PM900010A",
+          "typeOrgane": "GP",
+          "dateDebut": "2020-01-01",
+          "dateFin": "2022-01-01",
+          "infosQualite": {
+            "codeQualite": "Membre"
+          },
+          "organes": {
+            "organeRef": "PO900001"
+          },
+          "legislature": "17"
+        },
+        {
+          "uid": "PM900010B",
+          "typeOrgane": "GP",
+          "dateDebut": "2020-06-01",
+          "dateFin": "2020-08-01",
+          "infosQualite": {
+            "codeQualite": "Membre"
+          },
+          "organes": {
+            "organeRef": "PO900001"
+          },
+          "legislature": "17"
+        }
+      ]
+    }
+  }
+}

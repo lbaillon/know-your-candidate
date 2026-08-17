@@ -1,0 +1,48 @@
+{
+  "acteur": {
+    "uid": "PA900013",
+    "etatCivil": {
+      "ident": {
+        "civ": "Mme",
+        "prenom": "Maëlys",
+        "nom": "Corvin"
+      },
+      "dateDeces": {
+        "@xsi:nil": "true"
+      }
+    },
+    "uri_hatvp": {
+      "@xsi:nil": "true"
+    },
+    "mandats": {
+      "mandat": [
+        {
+          "uid": "PM900013A",
+          "typeOrgane": "GP",
+          "dateDebut": "2024-07-08",
+          "dateFin": null,
+          "infosQualite": {
+            "codeQualite": "Membre"
+          },
+          "organes": {
+            "organeRef": "PO900004"
+          },
+          "legislature": "17"
+        },
+        {
+          "uid": "PM900013B",
+          "typeOrgane": "GP",
+          "dateDebut": "2024-07-19",
+          "dateFin": "2024-09-20",
+          "infosQualite": {
+            "codeQualite": "Membre"
+          },
+          "organes": {
+            "organeRef": "PO900001"
+          },
+          "legislature": "17"
+        }
+      ]
+    }
+  }
+}

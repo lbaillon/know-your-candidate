@@ -1,0 +1,33 @@
+{
+  "acteur": {
+    "uid": "PA900007",
+    "etatCivil": {
+      "ident": {
+        "civ": "M.",
+        "prenom": "Gaspard",
+        "nom": "Lherbier"
+      },
+      "dateDeces": {
+        "@xsi:nil": "true"
+      }
+    },
+    "uri_hatvp": {
+      "@xsi:nil": "true"
+    },
+    "mandats": {
+      "mandat": {
+        "uid": "PM900007A",
+        "typeOrgane": "ASSEMBLEE",
+        "dateDebut": "2024-07-18",
+        "dateFin": null,
+        "infosQualite": {
+          "codeQualite": "Titulaire"
+        },
+        "organes": {
+          "organeRef": "PO900010"
+        },
+        "legislature": "17"
+      }
+    }
+  }
+}

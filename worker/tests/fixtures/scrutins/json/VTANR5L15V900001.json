@@ -1,0 +1,72 @@
+{
+  "scrutin": {
+    "uid": "VTANR5L15V900001",
+    "numero": "900001",
+    "organeRef": "PO900010",
+    "legislature": "15",
+    "sessionRef": "SCR5A15O1_FIXTURE",
+    "seanceRef": "RUANR5L15S_FIXTURE_900001",
+    "dateScrutin": "2025-02-15",
+    "typeVote": {
+      "codeTypeVote": "SPO",
+      "libelleTypeVote": "scrutin public ordinaire",
+      "typeMajorite": "majorité absolue des suffrages exprimés"
+    },
+    "sort": {
+      "code": "adopté",
+      "libelle": "l'Assemblée nationale a adopté"
+    },
+    "titre": "Titre fictif du scrutin 900001 (fixture)",
+    "demandeur": {
+      "texte": "Président de groupe (fixture)"
+    },
+    "objet": {
+      "libelle": "Objet fictif (fixture)",
+      "dossierLegislatif": null
+    },
+    "modePublicationDesVotes": "DecompteNominatif",
+    "lieuVote": "Hémicycle",
+    "syntheseVote": {
+      "nombreVotants": "1",
+      "suffragesExprimes": "1",
+      "decompte": {
+        "nonVotants": "0",
+        "pour": "1",
+        "contre": "0",
+        "abstentions": "0",
+        "nonVotantsVolontaires": "0"
+      }
+    },
+    "ventilationVotes": {
+      "organe": {
+        "organeRef": "PO900010",
+        "groupes": {
+          "groupe": [
+            {
+              "organeRef": "PO900002",
+              "nombreMembresGroupe": "20",
+              "vote": {
+                "positionMajoritaire": "pour",
+                "decompteVoix": {
+                  "pour": "1",
+                  "contre": "0",
+                  "abstentions": "0",
+                  "nonVotants": "0"
+                },
+                "decompteNominatif": {
+                  "pours": {
+                    "votant": {
+                      "acteurRef": "PA900002",
+                      "mandatRef": "PM900002B",
+                      "parDelegation": "false"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

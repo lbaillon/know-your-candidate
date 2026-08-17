@@ -1,0 +1,50 @@
+{
+  "acteur": {
+    "uid": "PA900015",
+    "etatCivil": {
+      "ident": {
+        "civ": "Mme",
+        "prenom": "Odile",
+        "nom": "Ferracci"
+      },
+      "dateDeces": {
+        "@xsi:nil": "true"
+      }
+    },
+    "uri_hatvp": {
+      "@xsi:nil": "true"
+    },
+    "mandats": {
+      "mandat": [
+        {
+          "uid": "PM900015A",
+          "typeOrgane": "GP",
+          "dateDebut": {
+            "@xsi:nil": "true"
+          },
+          "dateFin": "2021-01-01",
+          "infosQualite": {
+            "codeQualite": "Membre"
+          },
+          "organes": {
+            "organeRef": "PO900001"
+          },
+          "legislature": "17"
+        },
+        {
+          "uid": "PM900015B",
+          "typeOrgane": "GP",
+          "dateDebut": "2021-01-01",
+          "dateFin": "2020-01-01",
+          "infosQualite": {
+            "codeQualite": "Membre"
+          },
+          "organes": {
+            "organeRef": "PO900002"
+          },
+          "legislature": "17"
+        }
+      ]
+    }
+  }
+}
