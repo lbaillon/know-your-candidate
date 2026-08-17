@@ -62,6 +62,11 @@ impl AnClient {
     /// Télécharge une archive `.zip`, en flux, sans jamais écrire de contenu décompressé sur
     /// disque : seul le corps compressé (tel que reçu) va au cache. `force_refetch` ignore le
     /// cache et l'ETag connu — utilisé quand un job le demande explicitement.
+    ///
+    /// Le chemin HTTP lui-même (envoi de la requête, gestion du 304) n'est vérifié qu'à la main,
+    /// lors de l'exécution réelle des jobs (F10, docs/plans/phase-1.1-fix.md) : monter un serveur
+    /// de test pour deux en-têtes ne vaut pas son coût. Seule la décision `etag_a_envoyer`, qui ne
+    /// dépend ni du disque ni du réseau, est testée unitairement ci-dessous.
     pub async fn fetch_zip(
         &self,
         url: &str,
@@ -69,14 +74,12 @@ impl AnClient {
     ) -> anyhow::Result<FetchedArchive> {
         let cache = self.cache_paths(url);
 
-        let cached_etag = if force_refetch {
-            None
-        } else {
-            match &cache {
-                Some((_, etag_path)) => tokio::fs::read_to_string(etag_path).await.ok(),
-                None => None,
-            }
+        let etag_en_cache = match &cache {
+            Some((_, etag_path)) => tokio::fs::read_to_string(etag_path).await.ok(),
+            None => None,
         };
+        let cached_etag =
+            etag_a_envoyer(force_refetch, etag_en_cache.as_deref()).map(str::to_string);
 
         let mut request = self.http.get(url);
         if let Some(etag) = &cached_etag {
@@ -129,6 +132,13 @@ impl AnClient {
     }
 }
 
+/// Fonction pure : quel ETag envoyer dans `If-None-Match` (F10, docs/plans/phase-1.1-fix.md).
+/// `force_refetch` ignore systématiquement le cache — la seule décision qui compte, isolée du
+/// disque et du réseau pour être testée directement.
+fn etag_a_envoyer(force_refetch: bool, etag_en_cache: Option<&str>) -> Option<&str> {
+    if force_refetch { None } else { etag_en_cache }
+}
+
 fn to_hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
@@ -148,6 +158,21 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn etag_a_envoyer_ignore_le_cache_si_force_refetch() {
+        assert_eq!(etag_a_envoyer(true, Some("\"abc\"")), None);
+    }
+
+    #[test]
+    fn etag_a_envoyer_utilise_le_cache_sinon() {
+        assert_eq!(etag_a_envoyer(false, Some("\"abc\"")), Some("\"abc\""));
+    }
+
+    #[test]
+    fn etag_a_envoyer_sans_cache_ni_force_refetch() {
+        assert_eq!(etag_a_envoyer(false, None), None);
+    }
 
     #[test]
     fn sha256_hex_is_stable_and_deterministic() {

@@ -498,7 +498,7 @@ Vocabulaire fermé des `kind`, à définir comme constantes dans `anomaly.rs` pl
 | `mandat_inclus` | une plage de mandat en contient une autre, même personne et même organe | 85 |
 | `mandat_charniere` | deux mandats consécutifs d'un même organe partagent leur date de charnière | 10 |
 | `mandat_chevauchement` | chevauchement résiduel entre deux organes différents (pseudo-groupe non-inscrit exclu du contrôle, voir data-sources.md) — **signalé, les deux mandats sont conservés** (D1.16) | ~74, dominé par la scission UMP/R-UMP de 2012 |
-| `groupe_fantome` | ligne de groupe portant `PO0` | 146 lignes, 14 scrutins |
+| `groupe_fantome` | ligne de groupe portant `PO0`, **ou** dont l'`organeRef` est absent du référentiel (F10, docs/plans/phase-1.1-fix.md — c'est ce qui rattrape les groupes sénatoriaux du Congrès, comportement correct dès la phase 1 mais que ce tableau ne décrivait pas) | 146 lignes, 14 scrutins |
 | `cause_non_vote_inconnue` | code hors `PSE`, `PAN`, `MG` | 0 |
 | `bloc_nominatif_inconnu` | nom de bloc hors singulier et pluriel connus | 0 |
 | `compteurs_incoherents` | `total nominatif <> nombreVotants + nonVotants` | 1 (`VTANR5L17V1`) |
