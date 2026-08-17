@@ -4,6 +4,8 @@ pub mod ingest_acteurs;
 pub mod ingest_scrutins;
 pub mod noop;
 pub mod queue;
+pub mod refresh_views;
+pub mod seed_candidates;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, PoisonError};
@@ -302,6 +304,8 @@ async fn execute(ctx: &JobContext, job: &queue::ClaimedJob) -> anyhow::Result<()
         "ingest_scrutins" => ingest_scrutins::run(ctx, &job.payload).await,
         "enrich_wikidata" => enrich_wikidata::run(ctx, &job.payload).await,
         "assign_slugs" => assign_slugs::run(ctx, &job.payload).await,
+        "seed_candidates" => seed_candidates::run(ctx, &job.payload).await,
+        "refresh_views" => refresh_views::run(ctx, &job.payload).await,
         other => anyhow::bail!("type de job inconnu : {other}"),
     }
 }

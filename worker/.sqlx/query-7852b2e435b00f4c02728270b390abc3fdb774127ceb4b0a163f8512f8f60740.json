@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO candidate (person_id, statut, source_url, source_date, note)\n        SELECT person_id, statut::candidate_statut, source_url, source_date, note\n        FROM UNNEST($1::bigint[], $2::text[], $3::text[], $4::date[], $5::text[])\n            AS t(person_id, statut, source_url, source_date, note)\n        ON CONFLICT (person_id) DO UPDATE SET\n            statut      = EXCLUDED.statut,\n            source_url  = EXCLUDED.source_url,\n            source_date = EXCLUDED.source_date,\n            note        = EXCLUDED.note,\n            updated_at  = now()\n        WHERE candidate.statut IS DISTINCT FROM EXCLUDED.statut\n           OR candidate.source_url IS DISTINCT FROM EXCLUDED.source_url\n           OR candidate.source_date IS DISTINCT FROM EXCLUDED.source_date\n           OR candidate.note IS DISTINCT FROM EXCLUDED.note\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TextArray",
+        "TextArray",
+        "DateArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7852b2e435b00f4c02728270b390abc3fdb774127ceb4b0a163f8512f8f60740"
+}

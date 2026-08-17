@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM candidate WHERE person_id <> ALL($1::bigint[]) RETURNING person_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "person_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "candidate",
+            "name": "person_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "60cc5e409485dd8b78fac0becaf9b2a3e803c753406e6f2d7b7b3adaaf2ad137"
+}

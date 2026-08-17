@@ -1,0 +1,32 @@
+# Liste éditoriale des candidat·es à l'élection présidentielle de 2027.
+#
+# Chaque entrée est un choix éditorial : elle doit porter une source publique et vérifiable, et la
+# date à laquelle cette source a été publiée. Une candidature annoncée par un tiers ne suffit pas ;
+# on cite la déclaration, pas le commentaire qu'on en fait.
+#
+# Identification : `an_uid` pour toute personne passée par l'Assemblée depuis la XIe législature —
+# c'est le cas le plus fiable, la personne existe déjà en base. `wikidata_qid` sinon : le job crée
+# alors la personne, avec ce seul identifiant.
+#
+# statut : declare | pressenti | retire
+#
+# Liste volontairement réduite à deux entrées à ce stade (voir docs/plans/phase-2-api-ui.md :
+# « la liste complète est un travail éditorial, pas un travail d'implémentation »), choisies pour
+# que leur source soit indiscutable et pour exercer les deux chemins d'identification — dont le cas
+# qui casse, une personne jamais élue à l'Assemblée.
+
+[[candidate]]
+an_uid = "PA2150"
+statut = "declare"
+source_url = "https://lcp.fr/actualites/presidentielle-jean-luc-melenchon-officialise-sa-candidature-pour-2027-435851"
+source_date = 2026-05-03
+note = "Candidature officialisée au 20 heures de TF1 le 3 mai 2026, quatrième campagne consécutive"
+
+[[candidate]]
+wikidata_qid = "Q439490"
+prenom = "Nathalie"
+nom = "Arthaud"
+statut = "declare"
+source_url = "https://www.ici.fr/infos/politique/presidentielle-2027-nathalie-arthaud-annonce-sa-candidature-pour-lutte-ouvriere-8888318"
+source_date = 2025-12-08
+note = "Candidature votée par le congrès de Lutte ouvrière, porte-parole du parti et jamais élue à l'Assemblée nationale"
