@@ -142,8 +142,25 @@ async fn drain_queue(
             }
         };
 
-        run_one_job(pool, worker_id, claimed, current_job, shutdown).await;
+        // F3 : l'issue est ignorée volontairement ici — un job qui échoue ne doit jamais tuer le
+        // worker normal, contrairement à `drain_once` qui, lui, la fait remonter.
+        let _ = run_one_job(pool, worker_id, claimed, current_job, shutdown).await;
     }
+}
+
+/// Issue d'un job déjà pris, rendue par `run_one_job` — voir F3, docs/plans/phase-1.1-fix.md :
+/// `drain_queue` (boucle normale) l'ignore et continue, `drain_once` l'accumule pour faire échouer
+/// la commande en sortie si un job n'a pas terminé en `done`.
+enum JobOutcome {
+    Done,
+    Failed { error: String },
+    Released,
+}
+
+struct JobResult {
+    job_id: i64,
+    job_type: String,
+    outcome: JobOutcome,
 }
 
 /// Exécute un job déjà pris. Sur arrêt demandé, laisse une grâce de 30 s avant de relâcher le job
@@ -154,8 +171,9 @@ async fn run_one_job(
     claimed: queue::ClaimedJob,
     current_job: &CurrentJob,
     shutdown: &mut watch::Receiver<bool>,
-) {
+) -> JobResult {
     let job_id = claimed.id;
+    let job_type = claimed.job_type.clone();
     set_current_job_id(current_job, Some(job_id));
 
     let ctx = JobContext {
@@ -186,16 +204,20 @@ async fn run_one_job(
 
     set_current_job_id(current_job, None);
 
-    match outcome {
+    let outcome = match outcome {
         Some(Ok(())) => {
             if let Err(err) = queue::complete_job(pool, job_id, worker_id).await {
                 tracing::error!(error = %err, job_id, "échec du passage en done");
             }
+            JobOutcome::Done
         }
         Some(Err(err)) => {
             tracing::warn!(error = %err, job_id, "échec du job");
             if let Err(err) = queue::fail_job(pool, job_id, worker_id, &err.to_string()).await {
                 tracing::error!(error = %err, job_id, "échec de l'écriture de l'erreur");
+            }
+            JobOutcome::Failed {
+                error: err.to_string(),
             }
         }
         None => {
@@ -203,7 +225,14 @@ async fn run_one_job(
             if let Err(err) = queue::release_job(pool, job_id, worker_id).await {
                 tracing::error!(error = %err, job_id, "échec du relâchement du job");
             }
+            JobOutcome::Released
         }
+    };
+
+    JobResult {
+        job_id,
+        job_type,
+        outcome,
     }
 }
 
@@ -212,17 +241,46 @@ async fn run_one_job(
 /// « Déclencher un job sans route publique »). Réutilise `run_one_job` telle quelle : mêmes
 /// garanties de garde de propriété et de report d'échec qu'en fonctionnement normal, avec un canal
 /// d'arrêt qui ne se déclenche jamais.
+///
+/// F3 (docs/plans/phase-1.1-fix.md) : vide la file **jusqu'au bout** même si un job échoue, pour
+/// ne pas masquer les erreurs suivantes derrière la première, puis rend `Err` en nommant tous les
+/// jobs qui n'ont pas terminé en `done` — sans quoi `main` sort en code 0 et `make ingest` se
+/// termine « avec succès » alors qu'une législature entière peut manquer.
 pub async fn drain_once(pool: &PgPool, worker_id: &str) -> anyhow::Result<()> {
     let current_job: CurrentJob = Arc::new(Mutex::new(None));
     let (_never_shuts_down, mut shutdown) = watch::channel(false);
+    let mut failures: Vec<JobResult> = Vec::new();
     loop {
         let claimed = match queue::claim_next_job(pool, worker_id).await? {
             Some(job) => job,
             None => break,
         };
-        run_one_job(pool, worker_id, claimed, &current_job, &mut shutdown).await;
+        let result = run_one_job(pool, worker_id, claimed, &current_job, &mut shutdown).await;
+        if !matches!(result.outcome, JobOutcome::Done) {
+            failures.push(result);
+        }
     }
-    Ok(())
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let detail = failures
+        .iter()
+        .map(|f| {
+            let reason = match &f.outcome {
+                JobOutcome::Failed { error } => format!("échoué : {error}"),
+                JobOutcome::Released => "relâché (arrêt pendant l'exécution)".to_string(),
+                JobOutcome::Done => unreachable!("filtré ci-dessus"),
+            };
+            format!("{} (id={}) {reason}", f.job_type, f.job_id)
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    anyhow::bail!(
+        "{} job(s) n'ont pas terminé en done : {detail}",
+        failures.len()
+    );
 }
 
 async fn execute(ctx: &JobContext, job: &queue::ClaimedJob) -> anyhow::Result<()> {
