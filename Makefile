@@ -1,4 +1,4 @@
-.PHONY: dev lint typecheck test migrate db-up
+.PHONY: dev lint typecheck test migrate db-up ingest
 
 DATABASE_URL ?= postgresql://kyc:kyc@localhost:5432/kyc
 
@@ -41,3 +41,15 @@ test: db-up
 
 migrate:
 	sqlx migrate run --source db/migrations --database-url "$(DATABASE_URL)"
+
+# Enchaîne le référentiel puis les trois législatures dans l'ordre (D. spike : ingest_acteurs
+# avant ingest_scrutins, voir docs/plans/phase-1-ingestion.md), puis vide la file en une seule
+# exécution (`run-once`) plutôt que de laisser un worker tourner indéfiniment derrière. Compte en
+# dizaines de minutes sur les trois législatures complètes — c'est attendu, pas un hang.
+ingest: db-up
+	$(MAKE) migrate
+	cd worker && cargo run --release -- enqueue ingest_acteurs
+	cd worker && cargo run --release -- enqueue ingest_scrutins '{"legislature": 15}'
+	cd worker && cargo run --release -- enqueue ingest_scrutins '{"legislature": 16}'
+	cd worker && cargo run --release -- enqueue ingest_scrutins '{"legislature": 17}'
+	cd worker && cargo run --release -- run-once

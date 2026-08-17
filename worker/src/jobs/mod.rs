@@ -207,6 +207,24 @@ async fn run_one_job(
     }
 }
 
+/// Vide la file une fois puis rend la main, sans écoute `LISTEN` ni battement de cœur — pour
+/// `cargo run -- run-once`, qui sert `make ingest` (voir docs/plans/phase-1-ingestion.md,
+/// « Déclencher un job sans route publique »). Réutilise `run_one_job` telle quelle : mêmes
+/// garanties de garde de propriété et de report d'échec qu'en fonctionnement normal, avec un canal
+/// d'arrêt qui ne se déclenche jamais.
+pub async fn drain_once(pool: &PgPool, worker_id: &str) -> anyhow::Result<()> {
+    let current_job: CurrentJob = Arc::new(Mutex::new(None));
+    let (_never_shuts_down, mut shutdown) = watch::channel(false);
+    loop {
+        let claimed = match queue::claim_next_job(pool, worker_id).await? {
+            Some(job) => job,
+            None => break,
+        };
+        run_one_job(pool, worker_id, claimed, &current_job, &mut shutdown).await;
+    }
+    Ok(())
+}
+
 async fn execute(ctx: &JobContext, job: &queue::ClaimedJob) -> anyhow::Result<()> {
     match job.job_type.as_str() {
         "noop" => noop::run(ctx, &job.payload).await,
