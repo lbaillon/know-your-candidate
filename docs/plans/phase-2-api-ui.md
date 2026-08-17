@@ -379,6 +379,20 @@ Le job `seed_candidates` :
    éditorial. À écrire dans le journal du run ;
 6. journalise dans `ingestion_run` : entrées lues, créées, mises à jour, retirées, personnes créées.
 
+**Pourquoi un fichier tenu à la main et pas une ingestion** — la question mérite sa réponse écrite,
+parce qu'elle changera. Il n'existe aujourd'hui **aucune source officielle des candidatures** : se
+déclarer candidat·e n'est pas un acte administratif, l'État n'en tient pas registre. Deux sources
+officielles apparaîtront début 2027, toutes deux du Conseil constitutionnel : la **publication des
+parrainages** pendant la période de recueil (intégrale et bihebdomadaire depuis la loi organique de
+2016), puis la **liste définitive arrêtée et publiée au Journal officiel**, environ un mois avant le
+premier tour. Jusque-là, la seule source défendable est la déclaration de la personne elle-même — d'où
+`source_url` + `source_date` : la ligne n'affirme pas « X est candidat », elle affirme « le JJ/MM/AAAA,
+X a déclaré sa candidature ». Quand la liste officielle existera, elle deviendra la source primaire et
+le seed n'aura plus à porter que ce qu'elle ne dit pas (les candidatures annoncées puis non validées) ;
+un statut supplémentaire, distinguant la déclaration de soi de la validation par le Conseil, sera alors
+justifié. Ne pas le prévoir maintenant : un statut sans donnée derrière est un statut qu'on remplira
+mal.
+
 Livrer le fichier avec **deux ou trois entrées réelles au maximum**, choisies parce que leur source est
 indiscutable, dont **au moins une personne sans mandat à l'Assemblée** — c'est le cas qui casse, il doit
 être exercé dès le premier jour. La liste complète est un travail éditorial, pas un travail
