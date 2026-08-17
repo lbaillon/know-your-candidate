@@ -109,23 +109,24 @@ async fn normalizes_inclusion_and_charniere_and_journalizes_them(pool: PgPool) {
     assert!(!inclus_ecarte, "le mandat inclus doit être écarté");
 }
 
-/// Chevauchement réel entre deux organes différents (`PA900012`, voir fixtures/README.md) :
-/// toujours journalisé. **Attendu à écarter/mettre à jour par F5** (docs/plans/phase-1.1-fix.md,
-/// D1.16) : aujourd'hui la plage la plus courte est encore retirée de `mandat` ; après F5 les
-/// deux mandats doivent coexister. Ne pas retoucher cette note en dehors du commit F5.
+/// D1.16 (F5, docs/plans/phase-1.1-fix.md) : un chevauchement réel entre deux organes différents
+/// est conservé et journalisé, jamais tranché silencieusement à l'ingestion.
 #[sqlx::test(migrations = "../db/migrations")]
-async fn real_cross_organe_overlap_is_journalized(pool: PgPool) {
+async fn real_cross_organe_overlap_is_journalized_but_kept(pool: PgPool) {
     let (run_id, counters) = run_fixture(&pool).await;
 
     assert_eq!(counters["normalisation_chevauchements"], 1);
 
-    let longer_retained: bool = sqlx::query_scalar!(
-        "SELECT EXISTS(SELECT 1 FROM mandat WHERE an_uid = 'PM900012A') AS \"exists!\""
+    let both_retained: i64 = sqlx::query_scalar!(
+        "SELECT count(*) AS \"count!\" FROM mandat WHERE an_uid IN ('PM900012A', 'PM900012B')"
     )
     .fetch_one(&pool)
     .await
     .unwrap();
-    assert!(longer_retained, "le mandat le plus long doit toujours être conservé");
+    assert_eq!(
+        both_retained, 2,
+        "les deux mandats d'une scission réelle entre deux vrais groupes doivent coexister"
+    );
 
     let anomaly_count: i64 = sqlx::query_scalar!(
         r#"
@@ -163,12 +164,11 @@ async fn overlap_with_non_inscrit_is_kept_without_anomaly(pool: PgPool) {
 async fn mandat_en_cours_is_kept_as_is(pool: PgPool) {
     run_fixture(&pool).await;
 
-    let fin: Option<String> = sqlx::query_scalar(
-        "SELECT upper(period)::text FROM mandat WHERE an_uid = 'PM900014A'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let fin: Option<String> =
+        sqlx::query_scalar("SELECT upper(period)::text FROM mandat WHERE an_uid = 'PM900014A'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(fin, None, "un mandat en cours n'a pas de borne supérieure");
 }
 

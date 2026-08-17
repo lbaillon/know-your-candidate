@@ -105,8 +105,10 @@ Trois pièges mesurés :
   contradiction et est donc **exclu** du contrôle de chevauchement inter-organes ; (2) la **scission
   UMP / Rassemblement-UMP de novembre 2012 à janvier 2013** (crise Copé-Fillon), où l'AN a recensé environ
   73 député·es simultanément membres des deux groupes — un fait politique réel, pas une anomalie de saisie.
-  Ce second cas reste un chevauchement au sens du plan : la plage la plus courte (le groupe éphémère
-  « Rassemblement-UMP ») est écartée et journalisée (`mandat_chevauchement`) ;
+  Ce second cas reste un chevauchement au sens du plan : les **deux** mandats sont conservés — trancher
+  laquelle des deux appartenances est vraie serait une interprétation, pas un fait brut (D1.16,
+  [phase-1.1-fix.md](plans/phase-1.1-fix.md), F5) — et journalisés (`mandat_chevauchement`), avec le plus
+  court des deux (le groupe éphémère « Rassemblement-UMP ») nommé dans l'anomalie à titre indicatif ;
 - **`dateFin` est incluse dans le mandat.** Ce n'est pas une convention supposée, c'est la source qui
   l'établit : sur les votes tombant exactement un jour de fin de mandat, **870 confirment le groupe qui se
   termine ce jour-là et aucun ne confirme le suivant**. Une plage se construit donc en

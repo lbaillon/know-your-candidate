@@ -239,6 +239,7 @@ du code, elle le dit plutôt que de la contourner.
 | D1.13 | Où lire la licence d'une photo Commons ? | **API `imageinfo` / `extmetadata` de Commons**, par lots de 50 fichiers. Une photo sans licence exploitable = pas de photo |
 | D1.14 | Convention de bornes des plages | **`daterange(debut, fin + 1, '[)')`** : la date de fin est incluse dans le mandat, la source l'établit (870 votes le confirment, 0 le contredisent) |
 | D1.15 | Qui gagne sur le groupe au moment du vote ? | **Le fichier de scrutin**, toujours. Le référentiel se contredit sur 324 votes du corpus (mandats de non-inscrit d'un jour). Les mandats ne servent qu'à combler les 14 scrutins au groupe `PO0` |
+| D1.16 | Que faire d'un chevauchement de mandats de groupe entre **organes différents** ? | **Conserver les deux mandats et journaliser** `mandat_chevauchement` — c'est ce que la contrainte `EXCLUDE (personne, organe)` (voir « Le référentiel » ci-dessus) permet déjà, et la raison pour laquelle elle a été écrite ainsi plutôt que sur (personne, type). Écarter la plage la plus courte serait trancher une contradiction, une interprétation qui relève de la phase 4, pas de l'ingestion (revue de la phase 1, voir [phase-1.1-fix.md](phase-1.1-fix.md), F5) |
 
 ## Plan d'exécution
 
@@ -496,7 +497,7 @@ Vocabulaire fermé des `kind`, à définir comme constantes dans `anomaly.rs` pl
 | `acteur_inconnu` | un vote cite un `acteurRef` absent du référentiel | 2 |
 | `mandat_inclus` | une plage de mandat en contient une autre, même personne et même organe | 85 |
 | `mandat_charniere` | deux mandats consécutifs d'un même organe partagent leur date de charnière | 10 |
-| `mandat_chevauchement` | chevauchement résiduel entre deux organes différents (pseudo-groupe non-inscrit exclu du contrôle, voir data-sources.md) | ~74, dominé par la scission UMP/R-UMP de 2012 |
+| `mandat_chevauchement` | chevauchement résiduel entre deux organes différents (pseudo-groupe non-inscrit exclu du contrôle, voir data-sources.md) — **signalé, les deux mandats sont conservés** (D1.16) | ~74, dominé par la scission UMP/R-UMP de 2012 |
 | `groupe_fantome` | ligne de groupe portant `PO0` | 146 lignes, 14 scrutins |
 | `cause_non_vote_inconnue` | code hors `PSE`, `PAN`, `MG` | 0 |
 | `bloc_nominatif_inconnu` | nom de bloc hors singulier et pluriel connus | 0 |
@@ -564,7 +565,8 @@ Pas de paramètre de législature : `AMO30` est global.
    - deux plages consécutives partageant leur date de charnière : la fin de la première est ramenée à la
      veille (`mandat_charniere`) ;
    - un chevauchement qui subsiste entre deux organes différents est journalisé
-     (`mandat_chevauchement`) et la plage la plus courte n'est pas insérée.
+     (`mandat_chevauchement`) et **les deux mandats sont conservés** (D1.16) : la base accepte la
+     donnée et signale, elle ne tranche pas laquelle des deux plages est vraie.
 7. Clôturer le run avec ses compteurs.
 
 Attendus au premier passage : **3 117 personnes**, **≥ 63 organes `GP`**, **58 organes `PARPOL`**,
@@ -585,8 +587,10 @@ prendre ces chiffres comme des planchers et signaler un écart important plutôt
       `abstentions`/`abstention`, `nonVotants`. Tout autre nom de bloc est une anomalie
       `bloc_nominatif_inconnu` — sans cette règle, le scrutin du Congrès s'ingère à zéro vote sans erreur ;
    f. résoudre le groupe : celui de la ligne du fichier, sauf `PO0` ; dans ce cas, chercher le mandat `GP`
-      de la personne couvrant la date du scrutin, poser `groupe_from_mandat = true`, et si plusieurs
-      mandats couvrent la date, prendre celui dont la date de début est la plus tardive ;
+      de la personne couvrant la date du scrutin, poser `groupe_from_mandat = true` **seulement si un
+      mandat a effectivement été trouvé**, et si plusieurs mandats couvrent la date — cas devenu plus
+      fréquent depuis D1.16, qui conserve les chevauchements de mandats entre organes différents au lieu
+      de les écarter — prendre celui dont la date de début est la plus tardive ;
    g. si l'`acteurRef` est inconnu, créer une `person` réduite à son `an_uid` et journaliser
       `acteur_inconnu` — on ne perd pas un vote ;
    h. vérifier `total nominatif = nombreVotants + nonVotants`, journaliser l'écart sans échouer ;

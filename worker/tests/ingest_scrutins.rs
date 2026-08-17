@@ -111,10 +111,7 @@ async fn parses_congres_singular_blocks_and_untracked_organe_type(pool: PgPool) 
     .fetch_one(&pool)
     .await
     .unwrap();
-    assert_eq!(
-        votes, 4,
-        "les votes du Congrès ne doivent pas être ignorés"
-    );
+    assert_eq!(votes, 4, "les votes du Congrès ne doivent pas être ignorés");
 
     let chambre: String = sqlx::query_scalar!(
         r#"SELECT chambre::text AS "chambre!" FROM scrutin WHERE an_uid = 'VTCGR5L16V900001'"#
@@ -215,7 +212,10 @@ async fn groupe_from_mandat_reflects_whether_a_mandat_was_actually_found(pool: P
         groupe_organe_id, None,
         "aucun mandat de groupe : pas de résolution possible"
     );
-    assert!(groupe_from_mandat, "bug F4 : encore vrai inconditionnellement avant le correctif");
+    assert!(
+        groupe_from_mandat,
+        "bug F4 : encore vrai inconditionnellement avant le correctif"
+    );
 
     let (groupe_organe_id, groupe_from_mandat): (Option<i64>, bool) = sqlx::query_as(
         r#"
@@ -386,7 +386,10 @@ async fn since_filters_by_date_scrutin_without_touching_the_rest(pool: PgPool) {
         .fetch_one(&pool)
         .await
         .unwrap();
-        assert!(exists, "{uid} est antérieur à `since` mais était déjà en base");
+        assert!(
+            exists,
+            "{uid} est antérieur à `since` mais était déjà en base"
+        );
     }
 
     let _ = run_id;
