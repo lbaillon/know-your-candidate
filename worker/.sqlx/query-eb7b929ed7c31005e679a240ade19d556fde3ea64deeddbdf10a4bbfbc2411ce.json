@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        INSERT INTO ingestion_run (source, status, started_at)\n        VALUES ($1, 'running', now())\n        RETURNING id\n        ",
+  "query": "\n        INSERT INTO ingestion_run (source, status, started_at, job_id, params)\n        VALUES ($1, 'running', now(), $2, $3)\n        RETURNING id\n        ",
   "describe": {
     "columns": [
       {
@@ -17,12 +17,14 @@
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Text",
+        "Int8",
+        "Jsonb"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "60a5d57d259d236c15ed4dc1e2bdae08a6d99788c9468ad162b63f72815c7acb"
+  "hash": "eb7b929ed7c31005e679a240ade19d556fde3ea64deeddbdf10a4bbfbc2411ce"
 }

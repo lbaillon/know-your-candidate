@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE ingestion_run\n        SET status = 'done', counters = $2, finished_at = now(), url = $3, content_hash = $4\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Jsonb",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e1f3e0c7138413d260a1f8f76adffa48b9e77a345f67e3df316b4a823be07069"
+}

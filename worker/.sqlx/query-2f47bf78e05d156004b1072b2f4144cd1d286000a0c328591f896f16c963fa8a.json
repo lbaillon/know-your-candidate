@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO ingestion_anomaly (ingestion_run_id, kind, subject_uid, detail)\n            SELECT * FROM UNNEST($1::bigint[], $2::text[], $3::text[], $4::jsonb[])\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TextArray",
+        "TextArray",
+        "JsonbArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2f47bf78e05d156004b1072b2f4144cd1d286000a0c328591f896f16c963fa8a"
+}

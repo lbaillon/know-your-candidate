@@ -17,12 +17,17 @@ const BATCH_SIZE: usize = 1000;
 
 /// `ON CONFLICT ... DO NOTHING` : la clé unique porte le hash (voir migration 0002), un payload
 /// identique à ce qui est déjà archivé n'ajoute donc jamais de ligne.
-pub async fn archive_documents(
+///
+/// Prend des références plutôt que des `RawDocument` possédés : avec ~8 000 scrutins tenus en
+/// mémoire par ailleurs pour l'écriture par lots, cloner chaque payload une deuxième fois rien que
+/// pour l'archivage double inutilement le pic mémoire du job.
+pub async fn archive_documents<'a>(
     pool: &PgPool,
     source: &str,
     url: &str,
-    docs: &[RawDocument],
+    docs: impl IntoIterator<Item = &'a RawDocument>,
 ) -> sqlx::Result<()> {
+    let docs: Vec<&RawDocument> = docs.into_iter().collect();
     for batch in docs.chunks(BATCH_SIZE) {
         let sources: Vec<&str> = batch.iter().map(|_| source).collect();
         let uids: Vec<&str> = batch.iter().map(|d| d.uid.as_str()).collect();

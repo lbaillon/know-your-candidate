@@ -15,6 +15,7 @@ use crate::an::document::{RawDocument, archive_documents, fetch_latest_document_
 use crate::an::http::{AnClient, sha256_hex};
 use crate::an::open_zip;
 use crate::an::scrutin::{self, ParsedScrutin};
+use crate::anomaly::{self, AnomalyRecord};
 use crate::run;
 
 use super::JobContext;
@@ -26,6 +27,10 @@ const PROGRESS_EVERY: usize = 500;
 /// Nombre de lignes par lot `UNNEST` — largement sous la limite de paramètres bind de Postgres
 /// (65535) même pour la table `vote`, la plus large en colonnes.
 const INSERT_BATCH: usize = 2000;
+/// Les trois seules causes de non-vote connues (voir data-sources.md) : président de séance,
+/// président de l'Assemblée, membre du Gouvernement. Un code inédit est une anomalie, pas une
+/// erreur d'ingestion.
+const KNOWN_CAUSES_NON_VOTE: [&str; 3] = ["PSE", "PAN", "MG"];
 
 /// La 14e législature n'a pas de détail nominatif sur la moitié de ses scrutins (D1.7) : elle
 /// n'est pas ingérable en l'état et reste hors périmètre v1.
@@ -57,11 +62,11 @@ pub async fn run(ctx: &JobContext, payload: &Value) -> anyhow::Result<()> {
         .and_then(Value::as_bool)
         .unwrap_or(false);
 
-    let run_id = run::start(&ctx.pool, "an_scrutins").await?;
+    let run_id = run::start(&ctx.pool, "an_scrutins", ctx.job_id, payload.clone()).await?;
 
-    match ingest(ctx, legislature, since, force_refetch).await {
-        Ok(counters) => {
-            run::finish_ok(&ctx.pool, run_id, counters).await?;
+    match ingest(ctx, run_id, legislature, since, force_refetch).await {
+        Ok((counters, url, content_hash)) => {
+            run::finish_ok(&ctx.pool, run_id, counters, &url, Some(&content_hash)).await?;
             Ok(())
         }
         Err(err) => {
@@ -83,10 +88,11 @@ struct IngestStats {
 
 async fn ingest(
     ctx: &JobContext,
+    run_id: i64,
     legislature: i16,
     since: Option<NaiveDate>,
     force_refetch: bool,
-) -> anyhow::Result<Value> {
+) -> anyhow::Result<(Value, String, String)> {
     let pool = &ctx.pool;
     let url = scrutin_url(legislature)?;
     let client = AnClient::new(cache_dir())?;
@@ -102,20 +108,21 @@ async fn ingest(
     let bytes = archive.bytes.clone();
     let docs = tokio::task::spawn_blocking(move || read_scrutin_docs(bytes, since)).await??;
 
-    let raw_owned: Vec<RawDocument> = docs
-        .iter()
-        .map(|(raw, _)| RawDocument {
-            uid: raw.uid.clone(),
-            payload: raw.payload.clone(),
-            content_hash: raw.content_hash.clone(),
-        })
-        .collect();
-    archive_documents(pool, "an_scrutin", &url, &raw_owned).await?;
-    drop(raw_owned);
+    archive_documents(pool, "an_scrutin", &url, docs.iter().map(|(raw, _)| raw)).await?;
     let document_ids = fetch_latest_document_ids(pool, "an_scrutin").await?;
 
     let mut person_ids = fetch_person_ids(pool).await?;
-    let acteurs_inconnus = resolve_unknown_acteurs(pool, &docs, &mut person_ids).await?;
+    let unknown_uids = resolve_unknown_acteurs(pool, &docs, &mut person_ids).await?;
+    let acteurs_inconnus = unknown_uids.len();
+    let acteur_anomalies: Vec<AnomalyRecord> = unknown_uids
+        .into_iter()
+        .map(|uid| AnomalyRecord {
+            kind: anomaly::ACTEUR_INCONNU,
+            subject_uid: Some(uid),
+            detail: serde_json::json!({}),
+        })
+        .collect();
+    anomaly::record_many(pool, run_id, &acteur_anomalies).await?;
     let organe_ids = fetch_organe_ids(pool).await?;
 
     let mut stats = IngestStats {
@@ -132,6 +139,7 @@ async fn ingest(
     for (processed, chunk) in docs.chunks(PROGRESS_EVERY).enumerate() {
         write_chunk(
             pool,
+            run_id,
             chunk,
             &document_ids,
             &person_ids,
@@ -151,17 +159,20 @@ async fn ingest(
         }
     }
 
-    Ok(serde_json::json!({
-        "legislature": legislature,
-        "scrutins": stats.scrutins,
-        "votes": stats.votes,
-        "mises_au_point": stats.mises_au_point,
-        "acteurs_inconnus": stats.acteurs_inconnus,
-        "groupes_fantomes": stats.groupes_fantomes,
-        "blocs_nominatifs_inconnus": stats.blocs_nominatifs_inconnus,
-        "compteurs_incoherents": stats.compteurs_incoherents,
-        "content_hash": archive.content_hash,
-    }))
+    Ok((
+        serde_json::json!({
+            "legislature": legislature,
+            "scrutins": stats.scrutins,
+            "votes": stats.votes,
+            "mises_au_point": stats.mises_au_point,
+            "acteurs_inconnus": stats.acteurs_inconnus,
+            "groupes_fantomes": stats.groupes_fantomes,
+            "blocs_nominatifs_inconnus": stats.blocs_nominatifs_inconnus,
+            "compteurs_incoherents": stats.compteurs_incoherents,
+        }),
+        url,
+        archive.content_hash,
+    ))
 }
 
 fn cache_dir() -> Option<std::path::PathBuf> {
@@ -235,7 +246,7 @@ async fn resolve_unknown_acteurs(
     pool: &PgPool,
     docs: &[(RawDocument, ParsedScrutin)],
     person_ids: &mut HashMap<String, i64>,
-) -> anyhow::Result<usize> {
+) -> anyhow::Result<Vec<String>> {
     let mut missing: HashSet<&str> = HashSet::new();
     for (_, scrutin) in docs {
         for groupe in &scrutin.groupes {
@@ -253,7 +264,7 @@ async fn resolve_unknown_acteurs(
     }
 
     if missing.is_empty() {
-        return Ok(0);
+        return Ok(Vec::new());
     }
 
     let uids: Vec<&str> = missing.into_iter().collect();
@@ -270,7 +281,6 @@ async fn resolve_unknown_acteurs(
         .await?;
     }
 
-    let count = uids.len();
     for batch in uids.chunks(INSERT_BATCH) {
         let rows = sqlx::query!(
             "SELECT an_uid, id FROM person WHERE an_uid = ANY($1::text[])",
@@ -283,7 +293,7 @@ async fn resolve_unknown_acteurs(
         }
     }
 
-    Ok(count)
+    Ok(uids.into_iter().map(String::from).collect())
 }
 
 /// Le mandat de siège (`ASSEMBLEE`) ne sert qu'à distinguer un titulaire d'un suppléant (D. spike) ;
@@ -371,6 +381,7 @@ struct MiseAuPointRow {
 #[allow(clippy::too_many_arguments)]
 async fn write_chunk(
     pool: &PgPool,
+    run_id: i64,
     chunk: &[(RawDocument, ParsedScrutin)],
     document_ids: &HashMap<String, i64>,
     person_ids: &HashMap<String, i64>,
@@ -381,6 +392,7 @@ async fn write_chunk(
     let mut groupe_rows = Vec::new();
     let mut vote_rows = Vec::new();
     let mut mise_au_point_rows = Vec::new();
+    let mut anomalies: Vec<AnomalyRecord> = Vec::new();
 
     for (_, parsed) in chunk {
         let Some(&source_document_id) = document_ids.get(&parsed.an_uid) else {
@@ -393,13 +405,15 @@ async fn write_chunk(
         let total_nominatif = parsed.total_nominatif();
         if total_nominatif != parsed.nombre_votants + parsed.non_votants {
             stats.compteurs_incoherents += 1;
-            tracing::warn!(
-                scrutin = %parsed.an_uid,
-                total_nominatif,
-                nombre_votants = parsed.nombre_votants,
-                non_votants = parsed.non_votants,
-                "compteurs_incoherents"
-            );
+            anomalies.push(AnomalyRecord {
+                kind: anomaly::COMPTEURS_INCOHERENTS,
+                subject_uid: Some(parsed.an_uid.clone()),
+                detail: serde_json::json!({
+                    "total_nominatif": total_nominatif,
+                    "nombre_votants": parsed.nombre_votants,
+                    "non_votants": parsed.non_votants,
+                }),
+            });
         }
 
         scrutin_rows.push(ScrutinRow {
@@ -438,11 +452,11 @@ async fn write_chunk(
         for (rang, groupe) in parsed.groupes.iter().enumerate() {
             if !groupe.blocs_inconnus.is_empty() {
                 stats.blocs_nominatifs_inconnus += 1;
-                tracing::warn!(
-                    scrutin = %parsed.an_uid,
-                    blocs = ?groupe.blocs_inconnus,
-                    "bloc_nominatif_inconnu"
-                );
+                anomalies.push(AnomalyRecord {
+                    kind: anomaly::BLOC_NOMINATIF_INCONNU,
+                    subject_uid: Some(parsed.an_uid.clone()),
+                    detail: serde_json::json!({"blocs": groupe.blocs_inconnus}),
+                });
             }
 
             let is_fantome = groupe
@@ -451,6 +465,11 @@ async fn write_chunk(
                 .is_none_or(|u| u == "PO0" || !organe_ids.contains_key(u));
             if is_fantome {
                 stats.groupes_fantomes += 1;
+                anomalies.push(AnomalyRecord {
+                    kind: anomaly::GROUPE_FANTOME,
+                    subject_uid: Some(parsed.an_uid.clone()),
+                    detail: serde_json::json!({"organe_uid": groupe.organe_uid, "rang": rang}),
+                });
             }
             let groupe_organe_id = groupe
                 .organe_uid
@@ -482,6 +501,19 @@ async fn write_chunk(
                 } else {
                     (groupe_organe_id, false)
                 };
+
+                if let Some(cause) = &vote.cause_non_vote
+                    && !KNOWN_CAUSES_NON_VOTE.contains(&cause.as_str())
+                {
+                    anomalies.push(AnomalyRecord {
+                        kind: anomaly::CAUSE_NON_VOTE_INCONNUE,
+                        subject_uid: Some(parsed.an_uid.clone()),
+                        detail: serde_json::json!({
+                            "acteur_uid": vote.acteur_uid,
+                            "cause": cause,
+                        }),
+                    });
+                }
 
                 vote_rows.push(VoteRow {
                     scrutin_an_uid: parsed.an_uid.clone(),
@@ -522,6 +554,7 @@ async fn write_chunk(
     upsert_groupes(pool, &groupe_rows, &scrutin_ids).await?;
     upsert_votes(pool, &vote_rows, &scrutin_ids).await?;
     upsert_mise_au_point(pool, &mise_au_point_rows, &scrutin_ids).await?;
+    anomaly::record_many(pool, run_id, &anomalies).await?;
 
     Ok(())
 }

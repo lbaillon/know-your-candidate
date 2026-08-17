@@ -2,6 +2,7 @@
 //! tests d'intégration de `tests/` puissent appeler directement les modules (notamment `jobs::queue`).
 
 pub mod an;
+pub mod anomaly;
 pub mod config;
 pub mod db;
 pub mod heartbeat;

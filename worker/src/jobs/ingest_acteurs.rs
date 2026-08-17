@@ -12,6 +12,7 @@ use crate::an::acteur::{self, MandatGroupe, NormalizationEvent, ParsedActeur, Pa
 use crate::an::document::{RawDocument, archive_documents};
 use crate::an::http::{AnClient, sha256_hex};
 use crate::an::open_zip;
+use crate::anomaly::{self, AnomalyRecord};
 use crate::run;
 
 use super::JobContext;
@@ -26,11 +27,11 @@ pub async fn run(ctx: &JobContext, payload: &Value) -> anyhow::Result<()> {
         .and_then(Value::as_bool)
         .unwrap_or(false);
 
-    let run_id = run::start(&ctx.pool, "an_amo30").await?;
+    let run_id = run::start(&ctx.pool, "an_amo30", ctx.job_id, payload.clone()).await?;
 
-    match ingest(&ctx.pool, force_refetch).await {
-        Ok(counters) => {
-            run::finish_ok(&ctx.pool, run_id, counters).await?;
+    match ingest(&ctx.pool, run_id, force_refetch).await {
+        Ok((counters, content_hash)) => {
+            run::finish_ok(&ctx.pool, run_id, counters, AMO30_URL, Some(&content_hash)).await?;
             Ok(())
         }
         Err(err) => {
@@ -40,7 +41,11 @@ pub async fn run(ctx: &JobContext, payload: &Value) -> anyhow::Result<()> {
     }
 }
 
-async fn ingest(pool: &PgPool, force_refetch: bool) -> anyhow::Result<Value> {
+async fn ingest(
+    pool: &PgPool,
+    run_id: i64,
+    force_refetch: bool,
+) -> anyhow::Result<(Value, String)> {
     let client = AnClient::new(cache_dir())?;
     let archive = client.fetch_zip(AMO30_URL, force_refetch).await?;
 
@@ -72,20 +77,24 @@ async fn ingest(pool: &PgPool, force_refetch: bool) -> anyhow::Result<Value> {
     upsert_persons(pool, &acteurs).await?;
     let person_ids = fetch_person_ids(pool).await?;
 
-    let mandat_stats = upsert_mandats(pool, &acteurs, &organe_ids, &person_ids).await?;
+    let (mandat_stats, anomalies) =
+        upsert_mandats(pool, &acteurs, &organe_ids, &person_ids).await?;
+    anomaly::record_many(pool, run_id, &anomalies).await?;
 
-    Ok(serde_json::json!({
-        "organes": organes.len(),
-        "personnes": acteurs.len(),
-        "mandats_geres": mandat_stats.geres,
-        "mandats_ignores_organe_inconnu": mandat_stats.organe_inconnu,
-        "mandats_ignores_date_debut_manquante": mandat_stats.date_debut_manquante,
-        "mandats_ignores_date_fin_avant_debut": mandat_stats.date_fin_avant_debut,
-        "normalisation_inclusions": mandat_stats.inclusions,
-        "normalisation_charnieres": mandat_stats.charnieres,
-        "normalisation_chevauchements": mandat_stats.chevauchements,
-        "content_hash": archive.content_hash,
-    }))
+    Ok((
+        serde_json::json!({
+            "organes": organes.len(),
+            "personnes": acteurs.len(),
+            "mandats_geres": mandat_stats.geres,
+            "mandats_ignores_organe_inconnu": mandat_stats.organe_inconnu,
+            "mandats_ignores_date_debut_manquante": mandat_stats.date_debut_manquante,
+            "mandats_ignores_date_fin_avant_debut": mandat_stats.date_fin_avant_debut,
+            "normalisation_inclusions": mandat_stats.inclusions,
+            "normalisation_charnieres": mandat_stats.charnieres,
+            "normalisation_chevauchements": mandat_stats.chevauchements,
+        }),
+        archive.content_hash,
+    ))
 }
 
 fn cache_dir() -> Option<std::path::PathBuf> {
@@ -324,9 +333,10 @@ async fn upsert_mandats(
     acteurs: &[ParsedActeur],
     organe_ids: &HashMap<String, OrganeInfo>,
     person_ids: &HashMap<String, i64>,
-) -> anyhow::Result<MandatStats> {
+) -> anyhow::Result<(MandatStats, Vec<AnomalyRecord>)> {
     let mut stats = MandatStats::default();
     let mut a_inserer: Vec<MandatARetenir> = Vec::new();
+    let mut anomalies: Vec<AnomalyRecord> = Vec::new();
 
     for acteur in acteurs {
         let Some(&person_id) = person_ids.get(&acteur.an_uid) else {
@@ -379,11 +389,25 @@ async fn upsert_mandats(
 
         let normalized = acteur::normalize_gp_mandats(gp_mandats);
         for event in &normalized.events {
-            match event {
-                NormalizationEvent::Inclus { .. } => stats.inclusions += 1,
-                NormalizationEvent::Charniere { .. } => stats.charnieres += 1,
-                NormalizationEvent::Chevauchement { .. } => stats.chevauchements += 1,
-            }
+            let (kind, an_uid) = match event {
+                NormalizationEvent::Inclus { an_uid } => {
+                    stats.inclusions += 1;
+                    (anomaly::MANDAT_INCLUS, an_uid)
+                }
+                NormalizationEvent::Charniere { an_uid } => {
+                    stats.charnieres += 1;
+                    (anomaly::MANDAT_CHARNIERE, an_uid)
+                }
+                NormalizationEvent::Chevauchement { an_uid } => {
+                    stats.chevauchements += 1;
+                    (anomaly::MANDAT_CHEVAUCHEMENT, an_uid)
+                }
+            };
+            anomalies.push(AnomalyRecord {
+                kind,
+                subject_uid: Some(an_uid.clone()),
+                detail: serde_json::json!({"person_an_uid": acteur.an_uid}),
+            });
         }
 
         for retenu in normalized.retained {
@@ -469,5 +493,5 @@ async fn upsert_mandats(
         .await?;
     }
 
-    Ok(stats)
+    Ok((stats, anomalies))
 }
