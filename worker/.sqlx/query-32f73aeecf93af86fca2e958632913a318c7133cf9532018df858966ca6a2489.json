@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT url, licence, auteur FROM person_photo WHERE person_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "person_photo",
+            "name": "url"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "licence",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "person_photo",
+            "name": "licence"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "auteur",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "person_photo",
+            "name": "auteur"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "32f73aeecf93af86fca2e958632913a318c7133cf9532018df858966ca6a2489"
+}

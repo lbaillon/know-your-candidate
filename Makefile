@@ -43,13 +43,16 @@ migrate:
 	sqlx migrate run --source db/migrations --database-url "$(DATABASE_URL)"
 
 # Enchaîne le référentiel puis les trois législatures dans l'ordre (D. spike : ingest_acteurs
-# avant ingest_scrutins, voir docs/plans/phase-1-ingestion.md), puis vide la file en une seule
+# avant ingest_scrutins, voir docs/plans/phase-1-ingestion.md), puis enrich_wikidata (a besoin des
+# `person` du référentiel, F2c docs/plans/phase-1.1-fix.md), puis vide la file en une seule
 # exécution (`run-once`) plutôt que de laisser un worker tourner indéfiniment derrière. Compte en
-# dizaines de minutes sur les trois législatures complètes — c'est attendu, pas un hang.
+# dizaines de minutes sur les trois législatures complètes — c'est attendu, pas un hang. `run-once`
+# sort en code non nul si l'un des jobs échoue (F3) : `make ingest` s'arrête donc avec lui.
 ingest: db-up
 	$(MAKE) migrate
 	cd worker && cargo run --release -- enqueue ingest_acteurs
 	cd worker && cargo run --release -- enqueue ingest_scrutins '{"legislature": 15}'
 	cd worker && cargo run --release -- enqueue ingest_scrutins '{"legislature": 16}'
 	cd worker && cargo run --release -- enqueue ingest_scrutins '{"legislature": 17}'
+	cd worker && cargo run --release -- enqueue enrich_wikidata
 	cd worker && cargo run --release -- run-once

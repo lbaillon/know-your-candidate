@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT wikidata_qid FROM person WHERE an_uid = 'PA1'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "wikidata_qid",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "person",
+            "name": "wikidata_qid"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "14efeeaa576207a4c1d937a73fa2c0e7e05353bab043b8509f69fe86a0ba1da1"
+}

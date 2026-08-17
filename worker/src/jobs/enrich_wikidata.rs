@@ -1,9 +1,10 @@
 //! Job `enrich_wikidata { person_uids? }` — voir docs/plans/phase-1-ingestion.md. Une seule
 //! requête SPARQL, jointure exacte sur `P4123` (suffixe numérique de l'`an_uid`). L'AN gagne
-//! toujours : en cas de QID ambigu pour un même `P4123`, rien n'est écrit et l'anomalie est
-//! journalisée (D. spike). La licence des photos se lit ensuite sur Commons, par lots de 50.
+//! toujours : en cas de QID ambigu pour un même `P4123` **ou** un `P4123` ambigu pour un même QID,
+//! rien n'est écrit côté de l'ambiguïté et l'anomalie est journalisée (D. spike, F2a,
+//! docs/plans/phase-1.1-fix.md). La licence des photos se lit ensuite sur Commons, par lots de 50.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 use percent_encoding::percent_decode_str;
@@ -59,6 +60,88 @@ struct WikidataHit {
     image_url: Option<String>,
 }
 
+/// Un couple `(an_uid, qid)` retenu après résolution des ambiguïtés — voir `resolve_wikidata_hits`.
+struct ResolvedHit<'a> {
+    an_uid: &'a str,
+    qid: &'a str,
+    image_url: Option<&'a str>,
+}
+
+struct WikidataResolution<'a> {
+    resolved: Vec<ResolvedHit<'a>>,
+    ambiguities: Vec<AnomalyRecord>,
+}
+
+/// Fonction pure : groupe les résultats SPARQL par `an_uid` **et** par `qid`, dans les deux sens
+/// (F2a, docs/plans/phase-1.1-fix.md). L'AN gagne toujours, Wikidata ne tranche jamais un conflit
+/// à notre place :
+///
+/// - un `an_uid` revendiqué par plusieurs `qid` (le cas déjà couvert avant F2a) : rien n'est écrit
+///   pour cet `an_uid` ;
+/// - un `qid` revendiqué par plusieurs `an_uid` (le cas miroir, manqué avant F2a — c'est lui qui
+///   fait violer l'unicité de `person.wikidata_qid`) : rien n'est écrit pour aucun des `an_uid`
+///   concernés.
+///
+/// Dans les deux cas, l'anomalie journalisée précise de quel côté vient l'ambiguïté.
+fn resolve_wikidata_hits(hits: &[WikidataHit]) -> WikidataResolution<'_> {
+    let mut by_an_uid: HashMap<&str, Vec<&WikidataHit>> = HashMap::new();
+    let mut an_uids_by_qid: HashMap<&str, HashSet<&str>> = HashMap::new();
+    for hit in hits {
+        by_an_uid.entry(hit.an_uid.as_str()).or_default().push(hit);
+        an_uids_by_qid
+            .entry(hit.qid.as_str())
+            .or_default()
+            .insert(hit.an_uid.as_str());
+    }
+
+    let mut resolved = Vec::new();
+    let mut ambiguities = Vec::new();
+
+    // Ordre déterministe : indispensable pour que les tests (et les runs successifs) obtiennent
+    // toujours le même ordre d'anomalies.
+    let mut an_uids: Vec<&&str> = by_an_uid.keys().collect();
+    an_uids.sort_unstable();
+
+    for an_uid in an_uids {
+        let group = &by_an_uid[an_uid];
+        let distinct_qids: HashSet<&str> = group.iter().map(|h| h.qid.as_str()).collect();
+        if distinct_qids.len() > 1 {
+            let mut qids: Vec<&str> = distinct_qids.into_iter().collect();
+            qids.sort_unstable();
+            ambiguities.push(AnomalyRecord {
+                kind: anomaly::WIKIDATA_QID_AMBIGU,
+                subject_uid: Some(an_uid.to_string()),
+                detail: serde_json::json!({"cote": "an_uid", "an_uid": an_uid, "qids": qids}),
+            });
+            continue;
+        }
+
+        let hit = group[0];
+        let an_uids_claiming_qid = &an_uids_by_qid[hit.qid.as_str()];
+        if an_uids_claiming_qid.len() > 1 {
+            let mut autres: Vec<&str> = an_uids_claiming_qid.iter().copied().collect();
+            autres.sort_unstable();
+            ambiguities.push(AnomalyRecord {
+                kind: anomaly::WIKIDATA_QID_AMBIGU,
+                subject_uid: Some(an_uid.to_string()),
+                detail: serde_json::json!({"cote": "qid", "qid": hit.qid, "an_uids": autres}),
+            });
+            continue;
+        }
+
+        resolved.push(ResolvedHit {
+            an_uid,
+            qid: hit.qid.as_str(),
+            image_url: hit.image_url.as_deref(),
+        });
+    }
+
+    WikidataResolution {
+        resolved,
+        ambiguities,
+    }
+}
+
 async fn ingest(
     pool: &PgPool,
     run_id: i64,
@@ -72,41 +155,23 @@ async fn ingest(
     let hits = fetch_wikidata(&client).await?;
     tracing::info!(count = hits.len(), "résultats SPARQL reçus");
 
-    // Regroupement par an_uid : un P4123 ambigu (plusieurs QID) ne doit rien écrire.
-    let mut by_an_uid: HashMap<String, Vec<&WikidataHit>> = HashMap::new();
-    for hit in &hits {
-        by_an_uid.entry(hit.an_uid.clone()).or_default().push(hit);
-    }
-
-    let person_filter: Option<std::collections::HashSet<&str>> =
+    let person_filter: Option<HashSet<&str>> =
         person_uids_filter.map(|uids| uids.iter().map(String::as_str).collect());
 
-    let mut anomalies: Vec<AnomalyRecord> = Vec::new();
-    let mut resolved: Vec<(&str, &str)> = Vec::new(); // (an_uid, qid)
-    let mut photo_candidates: Vec<(&str, &str)> = Vec::new(); // (an_uid, image_url)
+    let personnes_uniques: HashSet<&str> = hits.iter().map(|h| h.an_uid.as_str()).collect();
+    let resolution = resolve_wikidata_hits(&hits);
 
-    for (an_uid, group) in &by_an_uid {
+    let mut resolved: Vec<(&str, &str)> = Vec::new();
+    let mut photo_candidates: Vec<(&str, &str)> = Vec::new();
+    for hit in &resolution.resolved {
         if let Some(filter) = &person_filter
-            && !filter.contains(an_uid.as_str())
+            && !filter.contains(hit.an_uid)
         {
             continue;
         }
-
-        let distinct_qids: std::collections::HashSet<&str> =
-            group.iter().map(|h| h.qid.as_str()).collect();
-        if distinct_qids.len() > 1 {
-            anomalies.push(AnomalyRecord {
-                kind: anomaly::WIKIDATA_QID_AMBIGU,
-                subject_uid: Some(an_uid.clone()),
-                detail: serde_json::json!({"qids": distinct_qids}),
-            });
-            continue;
-        }
-
-        let hit = group[0];
-        resolved.push((an_uid.as_str(), hit.qid.as_str()));
-        if let Some(image_url) = &hit.image_url {
-            photo_candidates.push((an_uid.as_str(), image_url.as_str()));
+        resolved.push((hit.an_uid, hit.qid));
+        if let Some(image_url) = hit.image_url {
+            photo_candidates.push((hit.an_uid, image_url));
         }
     }
 
@@ -114,12 +179,12 @@ async fn ingest(
 
     let photo_stats = enrich_photos(&client, pool, run_id, &photo_candidates).await?;
 
-    anomaly::record_many(pool, run_id, &anomalies).await?;
+    anomaly::record_many(pool, run_id, &resolution.ambiguities).await?;
 
     Ok(serde_json::json!({
         "resultats_sparql": hits.len(),
-        "personnes_uniques": by_an_uid.len(),
-        "qid_ambigus": anomalies.len(),
+        "personnes_uniques": personnes_uniques.len(),
+        "qid_ambigus": resolution.ambiguities.len(),
         "qid_mis_a_jour": updated_qids,
         "photos_candidates": photo_candidates.len(),
         "photos_enregistrees": photo_stats.enregistrees,
@@ -167,7 +232,7 @@ async fn fetch_wikidata(client: &reqwest::Client) -> anyhow::Result<Vec<Wikidata
     Ok(hits)
 }
 
-async fn update_wikidata_qids(pool: &PgPool, resolved: &[(&str, &str)]) -> sqlx::Result<u64> {
+pub async fn update_wikidata_qids(pool: &PgPool, resolved: &[(&str, &str)]) -> sqlx::Result<u64> {
     let mut total = 0u64;
     for batch in resolved.chunks(UPDATE_BATCH) {
         let an_uids: Vec<&str> = batch.iter().map(|(a, _)| *a).collect();
@@ -190,11 +255,22 @@ async fn update_wikidata_qids(pool: &PgPool, resolved: &[(&str, &str)]) -> sqlx:
     Ok(total)
 }
 
-/// Titre de fichier Commons extrait d'une URL `Special:FilePath/<fichier encodé>`.
+/// Titre de fichier Commons extrait d'une URL `Special:FilePath/<fichier encodé>`. Normalise les
+/// soulignés en espaces **après** le percent-décodage (F2b, docs/plans/phase-1.1-fix.md) : l'API
+/// Commons rend `page.title` avec des espaces (`File:Nom Du Fichier.jpg`), alors que l'URL `P18`
+/// les porte en soulignés (`Special:FilePath/Nom_Du_Fichier.jpg`) — sans cette normalisation, la
+/// jointure sur le titre échoue et la photo est perdue sans qu'aucune anomalie ne le signale.
 fn commons_title_from_image_url(image_url: &str) -> Option<String> {
     let filename = image_url.rsplit('/').next()?;
     let decoded = percent_decode_str(filename).decode_utf8().ok()?;
-    Some(format!("File:{decoded}"))
+    Some(format!("File:{}", normalize_commons_title(&decoded)))
+}
+
+/// Même normalisation appliquée à `page.title` côté lecture, par symétrie défensive (F2b) : la
+/// correspondance ne doit dépendre d'aucun des deux côtés pour porter un souligné au lieu d'un
+/// espace.
+fn normalize_commons_title(title: &str) -> String {
+    title.replace('_', " ")
 }
 
 #[derive(Default)]
@@ -226,13 +302,43 @@ struct CommonsMetaValue {
     value: Value,
 }
 
-struct PhotoRow {
-    person_id: i64,
-    url: String,
-    commons_file: String,
+pub struct PhotoRow {
+    pub person_id: i64,
+    pub url: String,
+    pub commons_file: String,
+    pub licence: String,
+    pub licence_url: Option<String>,
+    pub auteur: Option<String>,
+}
+
+struct LicenceInfo {
     licence: String,
     licence_url: Option<String>,
     auteur: Option<String>,
+}
+
+/// Fonction pure : lit `LicenseShortName`/`LicenseUrl`/`Artist` dans l'`extmetadata` d'une réponse
+/// Commons. `None` couvre les trois cas « pas de licence exploitable » : `extmetadata` absent,
+/// `LicenseShortName` absent, ou présent mais vide (jamais vu, gardé par prudence via `and_then`).
+fn read_licence(extmetadata: Option<&HashMap<String, CommonsMetaValue>>) -> Option<LicenceInfo> {
+    let meta = extmetadata?;
+    let licence = meta
+        .get("LicenseShortName")
+        .and_then(|v| v.value.as_str())
+        .map(str::to_string)?;
+    let licence_url = meta
+        .get("LicenseUrl")
+        .and_then(|v| v.value.as_str())
+        .map(str::to_string);
+    let auteur = meta
+        .get("Artist")
+        .and_then(|v| v.value.as_str())
+        .map(str::to_string);
+    Some(LicenceInfo {
+        licence,
+        licence_url,
+        auteur,
+    })
 }
 
 async fn enrich_photos(
@@ -252,15 +358,28 @@ async fn enrich_photos(
     let mut anomalies: Vec<AnomalyRecord> = Vec::new();
 
     // Chaque titre Commons est associé à son an_uid pour ré-attribuer la réponse groupée.
+    // `attendues` (F2b) : tout an_uid dont un titre a pu être construit, pour détecter en fin de
+    // lot celles que la réponse Commons n'a jamais couvertes (retirées, renommées, requête
+    // partiellement vide...) plutôt que de les laisser disparaître sans anomalie.
     let mut title_to_an_uid: HashMap<String, &str> = HashMap::new();
     let mut titles: Vec<String> = Vec::new();
+    let mut attendues: HashSet<&str> = HashSet::new();
     for (an_uid, image_url) in candidates {
         let Some(title) = commons_title_from_image_url(image_url) else {
+            stats.sans_licence += 1;
+            anomalies.push(AnomalyRecord {
+                kind: anomaly::PHOTO_SANS_LICENCE,
+                subject_uid: Some(an_uid.to_string()),
+                detail: serde_json::json!({"raison": "URL Commons sans nom de fichier exploitable"}),
+            });
             continue;
         };
         title_to_an_uid.insert(title.clone(), an_uid);
         titles.push(title);
+        attendues.insert(an_uid);
     }
+
+    let mut recues: HashSet<&str> = HashSet::new();
 
     for batch in titles.chunks(COMMONS_BATCH) {
         let joined = batch.join("|");
@@ -281,9 +400,10 @@ async fn enrich_photos(
 
         let Some(query) = parsed.query else { continue };
         for page in query.pages.into_values() {
-            let Some(&an_uid) = title_to_an_uid.get(&page.title) else {
+            let Some(&an_uid) = title_to_an_uid.get(&normalize_commons_title(&page.title)) else {
                 continue;
             };
+            recues.insert(an_uid);
             let Some(&person_id) = person_ids.get(an_uid) else {
                 continue;
             };
@@ -296,45 +416,37 @@ async fn enrich_photos(
                 });
                 continue;
             };
-            let Some(meta) = &info.extmetadata else {
+            let Some(licence_info) = read_licence(info.extmetadata.as_ref()) else {
                 stats.sans_licence += 1;
                 anomalies.push(AnomalyRecord {
                     kind: anomaly::PHOTO_SANS_LICENCE,
                     subject_uid: Some(an_uid.to_string()),
-                    detail: serde_json::json!({"raison": "pas d'extmetadata"}),
+                    detail: serde_json::json!({"raison": "pas de licence exploitable dans extmetadata"}),
                 });
                 continue;
             };
-            let licence = meta
-                .get("LicenseShortName")
-                .and_then(|v| v.value.as_str())
-                .map(str::to_string);
-            let Some(licence) = licence else {
-                stats.sans_licence += 1;
-                anomalies.push(AnomalyRecord {
-                    kind: anomaly::PHOTO_SANS_LICENCE,
-                    subject_uid: Some(an_uid.to_string()),
-                    detail: serde_json::json!({"raison": "pas de LicenseShortName"}),
-                });
-                continue;
-            };
-
-            let licence_url = meta
-                .get("LicenseUrl")
-                .and_then(|v| v.value.as_str())
-                .map(str::to_string);
-            let auteur = meta
-                .get("Artist")
-                .and_then(|v| v.value.as_str())
-                .map(str::to_string);
 
             rows.push(PhotoRow {
                 person_id,
                 url: info.url,
                 commons_file: page.title.clone(),
-                licence,
-                licence_url,
-                auteur,
+                licence: licence_info.licence,
+                licence_url: licence_info.licence_url,
+                auteur: licence_info.auteur,
+            });
+        }
+    }
+
+    // F2b : un an_uid attendu mais jamais retrouvé dans une réponse Commons est une perte muette
+    // tant qu'elle n'est pas journalisée — le titre a pu être retiré, renommé, ou la requête a pu
+    // omettre certaines entrées du lot.
+    for &an_uid in &attendues {
+        if !recues.contains(an_uid) {
+            stats.sans_licence += 1;
+            anomalies.push(AnomalyRecord {
+                kind: anomaly::PHOTO_SANS_LICENCE,
+                subject_uid: Some(an_uid.to_string()),
+                detail: serde_json::json!({"raison": "titre Commons absent de la réponse"}),
             });
         }
     }
@@ -366,7 +478,7 @@ async fn fetch_person_ids<'a>(
 
 /// Pas de photo sans licence affichable (D1.13, contrainte NOT NULL sur `licence`) : les lignes
 /// arrivées ici ont déjà toutes une licence exploitable.
-async fn upsert_photos(pool: &PgPool, rows: &[PhotoRow]) -> sqlx::Result<()> {
+pub async fn upsert_photos(pool: &PgPool, rows: &[PhotoRow]) -> sqlx::Result<()> {
     for batch in rows.chunks(UPDATE_BATCH) {
         let person_ids: Vec<i64> = batch.iter().map(|r| r.person_id).collect();
         let urls: Vec<&str> = batch.iter().map(|r| r.url.as_str()).collect();
@@ -404,4 +516,156 @@ async fn upsert_photos(pool: &PgPool, rows: &[PhotoRow]) -> sqlx::Result<()> {
         .await?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    fn hit(an_uid: &str, qid: &str, image_url: Option<&str>) -> WikidataHit {
+        WikidataHit {
+            qid: qid.to_string(),
+            an_uid: an_uid.to_string(),
+            image_url: image_url.map(String::from),
+        }
+    }
+
+    // --- resolve_wikidata_hits ---------------------------------------------------------------
+
+    #[test]
+    fn resolve_cas_nominal() {
+        let hits = vec![hit("PA1", "Q1", Some("https://x/Special:FilePath/A.jpg"))];
+        let result = resolve_wikidata_hits(&hits);
+        assert_eq!(result.resolved.len(), 1);
+        assert_eq!(result.resolved[0].an_uid, "PA1");
+        assert_eq!(result.resolved[0].qid, "Q1");
+        assert!(result.ambiguities.is_empty());
+    }
+
+    #[test]
+    fn resolve_deux_qid_pour_un_meme_an_uid() {
+        let hits = vec![hit("PA1", "Q1", None), hit("PA1", "Q2", None)];
+        let result = resolve_wikidata_hits(&hits);
+        assert!(result.resolved.is_empty());
+        assert_eq!(result.ambiguities.len(), 1);
+        assert_eq!(result.ambiguities[0].kind, anomaly::WIKIDATA_QID_AMBIGU);
+        assert_eq!(
+            result.ambiguities[0].detail["cote"].as_str(),
+            Some("an_uid")
+        );
+    }
+
+    /// F2a : le cas miroir manqué avant le correctif — un même QID revendiqué par deux `P4123`
+    /// (donc deux `an_uid`) produit deux lignes `resolved` visant deux personnes différentes, ce
+    /// qui violerait l'unicité de `person.wikidata_qid` si on les laissait passer.
+    #[test]
+    fn resolve_deux_an_uid_pour_un_meme_qid() {
+        let hits = vec![hit("PA1", "Q1", None), hit("PA2", "Q1", None)];
+        let result = resolve_wikidata_hits(&hits);
+        assert!(
+            result.resolved.is_empty(),
+            "aucun des deux côtés n'est écrit"
+        );
+        assert_eq!(result.ambiguities.len(), 2);
+        assert!(
+            result
+                .ambiguities
+                .iter()
+                .all(|a| a.detail["cote"].as_str() == Some("qid"))
+        );
+        let subjects: HashSet<&str> = result
+            .ambiguities
+            .iter()
+            .filter_map(|a| a.subject_uid.as_deref())
+            .collect();
+        assert_eq!(subjects, HashSet::from(["PA1", "PA2"]));
+    }
+
+    #[test]
+    fn resolve_hit_sans_p18_est_retenu_sans_candidat_photo() {
+        let hits = vec![hit("PA1", "Q1", None)];
+        let result = resolve_wikidata_hits(&hits);
+        assert_eq!(result.resolved.len(), 1);
+        assert_eq!(result.resolved[0].image_url, None);
+    }
+
+    // --- commons_title_from_image_url --------------------------------------------------------
+
+    #[test]
+    fn commons_title_url_percent_encodee() {
+        let url = "https://commons.wikimedia.org/wiki/Special:FilePath/Jean%20Dupont.jpg";
+        assert_eq!(
+            commons_title_from_image_url(url).as_deref(),
+            Some("File:Jean Dupont.jpg")
+        );
+    }
+
+    /// F2b : le bug corrigé — l'URL `P18` porte des soulignés, `page.title` rend des espaces.
+    #[test]
+    fn commons_title_url_a_soulignes_est_normalisee_en_espaces() {
+        let url = "https://commons.wikimedia.org/wiki/Special:FilePath/Jean_Dupont.jpg";
+        assert_eq!(
+            commons_title_from_image_url(url).as_deref(),
+            Some("File:Jean Dupont.jpg")
+        );
+    }
+
+    /// `rsplit('/').next()` rend toujours `Some`, y compris une chaîne vide (segment final vide
+    /// sur une URL qui se termine par `/`) : la seule façon dont la fonction rend `None` est un
+    /// pourcentage-encodage invalide, pas une URL « sans nom de fichier » au sens littéral.
+    #[test]
+    fn commons_title_url_percent_encodage_invalide() {
+        assert_eq!(
+            commons_title_from_image_url("https://x/Special:FilePath/%FF%FE"),
+            None
+        );
+    }
+
+    #[test]
+    fn commons_title_url_segment_final_vide() {
+        assert_eq!(
+            commons_title_from_image_url("https://x/Special:FilePath/"),
+            Some("File:".to_string())
+        );
+    }
+
+    // --- read_licence --------------------------------------------------------------------------
+
+    fn meta_value(s: &str) -> CommonsMetaValue {
+        CommonsMetaValue {
+            value: Value::String(s.to_string()),
+        }
+    }
+
+    #[test]
+    fn read_licence_shortname_present() {
+        let mut meta = HashMap::new();
+        meta.insert("LicenseShortName".to_string(), meta_value("CC BY-SA 4.0"));
+        meta.insert(
+            "LicenseUrl".to_string(),
+            meta_value("https://creativecommons.org/licenses/by-sa/4.0/"),
+        );
+        meta.insert("Artist".to_string(), meta_value("Jean Dupont"));
+
+        let info = read_licence(Some(&meta)).expect("licence exploitable");
+        assert_eq!(info.licence, "CC BY-SA 4.0");
+        assert_eq!(
+            info.licence_url.as_deref(),
+            Some("https://creativecommons.org/licenses/by-sa/4.0/")
+        );
+        assert_eq!(info.auteur.as_deref(), Some("Jean Dupont"));
+    }
+
+    #[test]
+    fn read_licence_shortname_absent() {
+        let mut meta = HashMap::new();
+        meta.insert("Artist".to_string(), meta_value("Jean Dupont"));
+        assert!(read_licence(Some(&meta)).is_none());
+    }
+
+    #[test]
+    fn read_licence_extmetadata_absent() {
+        assert!(read_licence(None).is_none());
+    }
 }
