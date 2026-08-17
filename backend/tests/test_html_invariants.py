@@ -10,7 +10,7 @@ import lxml.html
 import pytest
 from httpx import AsyncClient
 
-PAGE_ROUTES = ["/", "/methodologie", "/sources"]
+PAGE_ROUTES = ["/", "/deputes", "/methodologie", "/sources"]
 
 # tag -> attribut qui déclenche une requête au chargement de la page.
 _EXTERNAL_RESOURCE_ATTRS = {

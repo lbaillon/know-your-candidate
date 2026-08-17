@@ -1,0 +1,6 @@
+{% from "macros/person_card.html.jinja" import person_card %}
+{% for candidate in candidates %}
+  {{ person_card(candidate, candidate.candidature) }}
+{% else %}
+  <li class="empty-state">Aucun·e candidat·e ne correspond à cette recherche.</li>
+{% endfor %}

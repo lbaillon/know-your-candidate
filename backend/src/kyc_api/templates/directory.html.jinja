@@ -1,0 +1,37 @@
+{% extends "base.html.jinja" %}
+
+{% block title %}Annuaire des député·es — Know Your Candidate{% endblock %}
+
+{% block content %}
+  <h1>Annuaire des personnes ingérées</h1>
+  <p>
+    Toute personne dont les données ont été ingérées depuis l'Assemblée nationale, candidate ou
+    non à la présidentielle 2027 — voir <a href="/methodologie">la méthodologie</a>.
+  </p>
+
+  <form class="search-form" action="/deputes" method="get" role="search">
+    <div>
+      <label for="q">Rechercher par nom</label>
+      <input type="search" id="q" name="q" value="{{ q or '' }}"
+             hx-get="/fragments/deputes" hx-target="#annuaire" hx-swap="innerHTML"
+             hx-trigger="input changed delay:300ms, search" hx-include="#legislature"
+             hx-push-url="true">
+    </div>
+    <div>
+      <label for="legislature">Législature</label>
+      <select id="legislature" name="legislature"
+              hx-get="/fragments/deputes" hx-target="#annuaire" hx-swap="innerHTML"
+              hx-trigger="change" hx-include="#q" hx-push-url="true">
+        <option value="" {{ "selected" if not legislature else "" }}>Toutes</option>
+        {% for leg in [15, 16, 17] %}
+          <option value="{{ leg }}" {{ "selected" if legislature == leg else "" }}>{{ leg }}e législature</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit">Rechercher</button>
+  </form>
+
+  <div id="annuaire">
+    {% include "_directory_list.html.jinja" %}
+  </div>
+{% endblock %}

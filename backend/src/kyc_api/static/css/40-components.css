@@ -30,4 +30,92 @@
     margin-top: var(--space-md);
     padding-top: var(--space-sm);
   }
+
+  /* Recherche et filtres (accueil, annuaire). Fonctionnent sans JS : hx-* est une amélioration
+   * progressive, le formulaire soumet vers la page équivalente sans lui (D2.8, « Stratégie de
+   * test »). */
+  .search-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+  }
+  .search-form label {
+    display: block;
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--space-xs);
+  }
+  .search-form input,
+  .search-form select {
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.25rem;
+  }
+  .search-form button {
+    padding: var(--space-xs) var(--space-md);
+    border: 1px solid var(--color-accent);
+    border-radius: 0.25rem;
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
+    cursor: pointer;
+  }
+
+  /* Grille de candidat·es (accueil) et annuaire : sous 32rem, une seule colonne (D2.11). */
+  .person-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    gap: var(--space-lg);
+    margin-top: var(--space-lg);
+  }
+  .person-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+  .person-card__photo-link {
+    display: block;
+  }
+  .person-card__photo {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+  .person-card__photo--placeholder {
+    display: block;
+  }
+  .person-card__credit {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+  .person-card__name {
+    font-weight: 700;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+  .person-card__name:hover {
+    text-decoration: underline;
+  }
+  .person-card__statut,
+  .person-card__groupe,
+  .person-card__votes {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    color: var(--color-text-muted);
+  }
+
+  .pagination {
+    display: flex;
+    gap: var(--space-md);
+    align-items: center;
+    margin-top: var(--space-lg);
+  }
 }

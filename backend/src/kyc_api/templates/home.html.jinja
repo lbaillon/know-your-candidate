@@ -1,0 +1,24 @@
+{% extends "base.html.jinja" %}
+
+{% block title %}Know Your Candidate{% endblock %}
+
+{% block content %}
+  <h1>Know Your Candidate</h1>
+  <p>
+    Fiches factuelles sur les candidat·es à la présidentielle française de 2027, dérivées de leurs
+    votes à l'Assemblée nationale et de ceux de leurs partis successifs — voir
+    <a href="/methodologie">la méthodologie</a>.
+  </p>
+
+  <form class="search-form" action="/" method="get" role="search">
+    <label for="q">Rechercher un·e candidat·e</label>
+    <input type="search" id="q" name="q" value="{{ q or '' }}"
+           hx-get="/fragments/recherche" hx-target="#candidats" hx-swap="innerHTML"
+           hx-trigger="input changed delay:300ms, search" hx-push-url="true">
+    <button type="submit">Rechercher</button>
+  </form>
+
+  <ul class="person-grid" id="candidats">
+    {% include "_search_results.html.jinja" %}
+  </ul>
+{% endblock %}

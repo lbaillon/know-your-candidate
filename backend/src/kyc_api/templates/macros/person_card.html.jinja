@@ -1,0 +1,37 @@
+{% macro person_card(person, candidature=None) %}
+{% set thumb = thumbnail_url(person.commons_file) %}
+<li class="person-card">
+  <a class="person-card__photo-link" href="/personne/{{ person.slug }}">
+    {% if thumb %}
+      {# alt="" volontaire : le nom est déjà écrit juste après, un alt qui le répète ferait
+         entendre l'information deux fois à un lecteur d'écran (D2.9). Ne pas « corriger ». #}
+      <img class="person-card__photo" src="{{ thumb }}" width="400" height="400" alt=""
+           loading="lazy" decoding="async" referrerpolicy="no-referrer">
+    {% else %}
+      <span class="person-card__photo person-card__photo--placeholder" aria-hidden="true"></span>
+    {% endif %}
+  </a>
+  {% if thumb %}
+    {# Auteur et licence à côté de la photo : obligation CC-BY-SA, pas une politesse (D2.9). #}
+    <p class="person-card__credit">
+      {{ person.auteur or "auteur inconnu" }}{% if person.licence %},
+      {% if person.licence_url %}<a href="{{ person.licence_url }}">{{ person.licence }}</a>{% else %}{{ person.licence }}{% endif %}
+      {% endif %}
+    </p>
+  {% endif %}
+  <a class="person-card__name" href="/personne/{{ person.slug }}">
+    {{ display_name(person.prenom, person.nom) }}
+  </a>
+  {% if candidature %}
+    <p class="person-card__statut">{{ candidate_statut_label(candidature.statut) }}</p>
+  {% endif %}
+  {% if person.groupe %}
+    <p class="person-card__groupe">
+      {% if person.groupe.non_inscrit %}{{ NON_INSCRIT_LABEL }}{% else %}{{ person.groupe.libelle_abrege or person.groupe.libelle }}{% endif %}
+    </p>
+  {% endif %}
+  <p class="person-card__votes">
+    {{ person.votes_total }} vote{{ "s" if person.votes_total != 1 else "" }} connu{{ "s" if person.votes_total != 1 else "" }} à l'Assemblée
+  </p>
+</li>
+{% endmacro %}

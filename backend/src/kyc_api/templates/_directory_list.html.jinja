@@ -1,0 +1,10 @@
+{% from "macros/person_card.html.jinja" import person_card %}
+{% from "macros/pagination.html.jinja" import pagination as pagination_nav %}
+<ul class="person-grid">
+  {% for person in persons %}
+    {{ person_card(person) }}
+  {% else %}
+    <li class="empty-state">Aucune personne ne correspond à cette recherche.</li>
+  {% endfor %}
+</ul>
+{{ pagination_nav(pagination, "/deputes", q, legislature) }}
