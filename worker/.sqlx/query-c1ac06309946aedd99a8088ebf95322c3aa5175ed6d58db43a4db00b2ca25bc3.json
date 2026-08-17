@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "REFRESH MATERIALIZED VIEW person_apercu",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "c1ac06309946aedd99a8088ebf95322c3aa5175ed6d58db43a4db00b2ca25bc3"
+}

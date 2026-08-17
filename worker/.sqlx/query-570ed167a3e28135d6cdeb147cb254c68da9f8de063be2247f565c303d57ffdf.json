@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO person_slug (slug, person_id, is_current) VALUES ('jean-dupont', $1, true)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "570ed167a3e28135d6cdeb147cb254c68da9f8de063be2247f565c303d57ffdf"
+}

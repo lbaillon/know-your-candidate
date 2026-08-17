@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO candidate (person_id, statut, source_url, source_date) VALUES ($1, 'declare', '   ', '2026-01-01')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "be13c8f1d12e7c7b487332fd459c6cfda660c2669ae8a89d4ca59454550de8a4"
+}

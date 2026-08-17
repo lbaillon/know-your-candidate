@@ -230,9 +230,13 @@ fn read_scrutin_docs(
 }
 
 async fn fetch_person_ids(pool: &PgPool) -> sqlx::Result<HashMap<String, i64>> {
-    let rows = sqlx::query!("SELECT an_uid, id FROM person")
-        .fetch_all(pool)
-        .await?;
+    // Depuis la migration 0005, `person.an_uid` est nullable (une candidate sans mandat n'en a
+    // pas) : cette fonction ne réconcilie que les acteurs référencés par un scrutin, tous porteurs
+    // d'un `an_uid`, d'où le filtre explicite plutôt qu'un `Option` propagé jusqu'aux appelants.
+    let rows =
+        sqlx::query!(r#"SELECT an_uid AS "an_uid!", id FROM person WHERE an_uid IS NOT NULL"#)
+            .fetch_all(pool)
+            .await?;
     Ok(rows.into_iter().map(|r| (r.an_uid, r.id)).collect())
 }
 
@@ -287,7 +291,7 @@ async fn resolve_unknown_acteurs(
 
     for batch in uids.chunks(INSERT_BATCH) {
         let rows = sqlx::query!(
-            "SELECT an_uid, id FROM person WHERE an_uid = ANY($1::text[])",
+            r#"SELECT an_uid AS "an_uid!", id FROM person WHERE an_uid = ANY($1::text[])"#,
             batch as _,
         )
         .fetch_all(pool)

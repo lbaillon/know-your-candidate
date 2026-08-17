@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT votes_total AS \"votes_total!\" FROM person_apercu WHERE person_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "votes_total!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "person_apercu",
+            "name": "votes_total"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "6dab632e1421aa8bf16a954a81cf9e1ba3e087d22696d4a054e95e6ef40f5b58"
+}

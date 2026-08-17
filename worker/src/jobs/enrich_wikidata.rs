@@ -489,7 +489,7 @@ async fn fetch_person_ids<'a>(
     let mut out = HashMap::new();
     for batch in uids.chunks(UPDATE_BATCH) {
         let rows = sqlx::query!(
-            "SELECT an_uid, id FROM person WHERE an_uid = ANY($1::text[])",
+            r#"SELECT an_uid AS "an_uid!", id FROM person WHERE an_uid = ANY($1::text[])"#,
             batch as _,
         )
         .fetch_all(pool)

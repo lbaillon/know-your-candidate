@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT an_uid, id FROM person",
+  "query": "SELECT an_uid AS \"an_uid!\", id FROM person WHERE an_uid = ANY($1::text[])",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "an_uid",
+        "name": "an_uid!",
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -27,12 +27,14 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "TextArray"
+      ]
     },
     "nullable": [
-      false,
+      true,
       false
     ]
   },
-  "hash": "3055d5cee6695d12f447d54415b5c71e7e1324bee73bfb7c810cf325255034ec"
+  "hash": "aa927e4bef07caff234098c5b1c9d89cf7e8595bdf9fdf1b5e90992fba5a8695"
 }
