@@ -1,0 +1,51 @@
+/*
+ * Remise à zéro. Ce fichier est le seul à déclarer l'ordre des @layer (D2.6) : les fichiers
+ * suivants n'ouvrent que des couches déjà déclarées ici, dans cet ordre de cascade.
+ */
+
+@layer reset, tokens, base, layout, components, utilities;
+
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body,
+  h1,
+  h2,
+  h3,
+  h4,
+  p,
+  figure,
+  blockquote,
+  dl,
+  dd {
+    margin: 0;
+  }
+
+  ul[class],
+  ol[class] {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  img,
+  picture {
+    max-width: 100%;
+    display: block;
+  }
+
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+  }
+}

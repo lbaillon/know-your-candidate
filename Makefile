@@ -1,6 +1,12 @@
-.PHONY: dev lint typecheck test migrate db-up ingest
+.PHONY: dev lint typecheck test migrate db-up ingest css
 
 DATABASE_URL ?= postgresql://kyc:kyc@localhost:5432/kyc
+
+CSS_DIR := backend/src/kyc_api/static/css
+CSS_OUTPUT := backend/src/kyc_api/static/style.css
+# Tri lexicographique : les préfixes numériques (00-, 10-, ..., 50-) ont tous deux chiffres, donc
+# l'ordre lexicographique est l'ordre de cascade voulu (D2.6).
+CSS_SOURCES := $(sort $(wildcard $(CSS_DIR)/*.css))
 
 # `podman compose up -d` rend la main avant que Postgres accepte les connexions ; au premier
 # démarrage à froid, ça fait échouer `make migrate` en « connection refused ». `--wait` aide mais
@@ -21,14 +27,25 @@ db-up:
 	echo "PostgreSQL ne répond pas après 30 s. Vérifier 'podman compose logs postgres'." >&2; \
 	exit 1
 
-dev: db-up
+dev: db-up css
 	$(MAKE) migrate
 	@trap 'kill 0' EXIT; \
 	(cd worker && cargo run) & \
 	(cd backend && uv run uvicorn kyc_api.main:app --reload --port 8000) & \
 	wait
 
-lint:
+# `style.css` est GÉNÉRÉ (voir sa bannière) et commité : `make lint` le régénère puis vérifie que
+# rien n'a changé, sinon la CI ne peut jamais être verte avec une feuille périmée (D2.6). Personne
+# n'a besoin de se souvenir de lancer `make css` avant de committer.
+css:
+	@{ \
+		echo '/* FICHIER GÉNÉRÉ par `make css` — ne pas éditer directement, éditer $(CSS_DIR)/*.css */'; \
+		echo; \
+		cat $(CSS_SOURCES); \
+	} > $(CSS_OUTPUT)
+
+lint: css
+	git diff --exit-code -- $(CSS_OUTPUT)
 	cd backend && uv run ruff check . && uv run ruff format --check .
 	cd worker && cargo fmt --check && cargo clippy --all-targets -- -D warnings
 

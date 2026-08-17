@@ -1,59 +1,269 @@
+/* FICHIER GÉNÉRÉ par `make css` — ne pas éditer directement, éditer backend/src/kyc_api/static/css/*.css */
+
 /*
- * Phase 0 : feuille délibérément pauvre. L'architecture front (structure, échelles, palette,
- * responsive, frise des appartenances) se conçoit en phase 2 — voir docs/plans/phase-2-api-ui.md.
- * Ne rien ajouter ici au-delà de ce qui rend une page lisible.
+ * Remise à zéro. Ce fichier est le seul à déclarer l'ordre des @layer (D2.6) : les fichiers
+ * suivants n'ouvrent que des couches déjà déclarées ici, dans cet ordre de cascade.
  */
 
-:root {
-  --color-text: #1a1a1a;
-  --color-background: #ffffff;
-  --color-border: #d0d0d0;
-  --color-accent: #0a5c36;
-  --color-error: #a4262c;
+@layer reset, tokens, base, layout, components, utilities;
 
-  --space-sm: 0.5rem;
-  --space-md: 1rem;
-  --space-lg: 2rem;
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-  --font-size-base: 1rem;
-  --font-size-h1: 1.75rem;
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body,
+  h1,
+  h2,
+  h3,
+  h4,
+  p,
+  figure,
+  blockquote,
+  dl,
+  dd {
+    margin: 0;
+  }
+
+  ul[class],
+  ol[class] {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  img,
+  picture {
+    max-width: 100%;
+    display: block;
+  }
+
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+  }
 }
+/*
+ * Jetons : palette neutre par construction (D2.11 — une seule couleur d'accent, non politique ;
+ * les couleurs de parti viendront d'une table documentée en phase 4, pas d'ici), échelle
+ * typographique, échelle d'espacement, largeurs de contenu. Contraste vérifié : texte 4.5:1
+ * minimum, bordures porteuses de sens 3:1.
+ *
+ * Points de rupture en commentaire, pas en variable : une media query ne prend pas de `var()`.
+ *   --breakpoint-frise-repliee: 40rem  (la frise des appartenances passe en liste chronologique)
+ *   --breakpoint-grille-candidats: 32rem
+ */
 
-body {
-  color: var(--color-text);
-  background: var(--color-background);
-  font-family: system-ui, sans-serif;
-  font-size: var(--font-size-base);
-  line-height: 1.5;
-  margin: 0;
+@layer tokens {
+  :root {
+    --color-text: #1a1a1a;
+    --color-text-muted: #4b4b4b;
+    --color-background: #ffffff;
+    --color-surface: #f6f6f4;
+    --color-border: #cfcfc9;
+    --color-border-strong: #767670;
+    --color-accent: #0a5c36;
+    --color-accent-contrast: #ffffff;
+    --color-error: #a4262c;
+    --color-focus: #0a5c36;
+
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 2rem;
+    --space-xl: 3rem;
+
+    --font-family-base: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.25rem;
+    --font-size-h3: 1.375rem;
+    --font-size-h2: 1.75rem;
+    --font-size-h1: 2.25rem;
+    --line-height-base: 1.5;
+    --line-height-tight: 1.25;
+
+    --content-width: 70rem;
+    --content-width-narrow: 42rem;
+  }
 }
+/*
+ * Éléments HTML nus : typographie, liens, focus visible, tableaux (utilisés par le Markdown rendu
+ * de /methodologie et /sources).
+ */
 
-header {
-  padding: var(--space-md);
-  border-bottom: 1px solid var(--color-border);
+@layer base {
+  body {
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-base);
+    color: var(--color-text);
+    background: var(--color-background);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    line-height: var(--line-height-tight);
+    font-weight: 700;
+  }
+  h1 {
+    font-size: var(--font-size-h1);
+  }
+  h2 {
+    font-size: var(--font-size-h2);
+    margin-top: var(--space-lg);
+  }
+  h3 {
+    font-size: var(--font-size-h3);
+    margin-top: var(--space-md);
+  }
+
+  p {
+    margin-top: var(--space-md);
+  }
+
+  a {
+    color: var(--color-accent);
+  }
+
+  /* Contraste des bordures porteuses de sens : 3:1 minimum (D2.11). */
+  :focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: var(--space-md);
+  }
+  th,
+  td {
+    border-bottom: 1px solid var(--color-border-strong);
+    padding: var(--space-xs) var(--space-sm);
+    text-align: left;
+  }
 }
+/*
+ * Structure de page : lien d'évitement, en-tête, pied de page, conteneur principal.
+ */
 
-header a {
-  color: var(--color-text);
-  text-decoration: none;
-  font-weight: bold;
+@layer layout {
+  .skip-link {
+    position: absolute;
+    left: -999px;
+    top: 0;
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
+    padding: var(--space-sm) var(--space-md);
+    z-index: 100;
+  }
+  .skip-link:focus {
+    left: var(--space-sm);
+    top: var(--space-sm);
+  }
+
+  .site-header {
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--color-border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+  }
+  .site-header__brand {
+    color: var(--color-text);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: var(--font-size-lg);
+  }
+  .site-header__nav {
+    display: flex;
+    gap: var(--space-md);
+  }
+
+  main {
+    padding: var(--space-lg) var(--space-md);
+    max-width: var(--content-width);
+    margin: 0 auto;
+  }
+  main.content-narrow {
+    max-width: var(--content-width-narrow);
+  }
+
+  .site-footer {
+    padding: var(--space-lg) var(--space-md);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    max-width: var(--content-width);
+    margin: 0 auto;
+  }
+  .site-footer__links {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-sm);
+  }
 }
+/*
+ * Composants. Nommage BEM allégé : `.bloc`, `.bloc__element`, `.bloc--variante`.
+ */
 
-main {
-  padding: var(--space-lg);
-  max-width: 40rem;
+@layer components {
+  /* Suivi de progression d'un job (phase 0). Non montée publiquement depuis la phase 1.1 (F11) :
+   * la route qui la servait a été supprimée, cette phase reprend les gabarits derrière le
+   * back-office de la phase 3 (voir docs/plans/phase-2-api-ui.md, « Ce que la phase 2 ne fait
+   * pas »). Les règles restent ici, non mortes, pour ce moment-là.
+   */
+  .job-status {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+    border: 1px solid var(--color-border-strong);
+  }
+  .job-status__error {
+    color: var(--color-error);
+  }
+
+  /* Rendu du Markdown de docs/methodology.md et docs/data-sources.md (/methodologie, /sources). */
+  .doc-content h1:first-child {
+    margin-top: 0;
+  }
+
+  /* Chaque bloc de contenu affiche sa source (CLAUDE.md, « Sensibilité du sujet »). */
+  .source-note {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    border-top: 1px solid var(--color-border);
+    margin-top: var(--space-md);
+    padding-top: var(--space-sm);
+  }
 }
+/*
+ * Utilitaires ponctuels. À garder minimal — ce n'est pas un système utilitaire complet.
+ */
 
-h1 {
-  font-size: var(--font-size-h1);
-}
-
-.job-status {
-  margin-top: var(--space-md);
-  padding: var(--space-md);
-  border: 1px solid var(--color-border);
-}
-
-.job-status__error {
-  color: var(--color-error);
+@layer utilities {
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }

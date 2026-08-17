@@ -1,0 +1,13 @@
+{% extends "base.html.jinja" %}
+
+{% block title %}{{ title }} — Know Your Candidate{% endblock %}
+
+{% block content %}
+  {# Pas de <h1> ici : docs/methodology.md et docs/data-sources.md portent chacun leur propre
+     titre `# ...` en première ligne, qui devient l'unique <h1> de la page une fois rendu — en
+     ajouter un second violerait l'invariant « exactement un h1 » (voir test_html_invariants.py).
+     html_content vient de documents.render_document, jamais d'une entrée utilisateur. #}
+  <div class="doc-content">
+    {{ html_content | safe }}
+  </div>
+{% endblock %}

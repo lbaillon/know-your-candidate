@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from kyc_api.config import settings
+from kyc_api.http_cache import HttpCacheMiddleware
 from kyc_api.routers import health, pages
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -23,6 +24,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Know Your Candidate", lifespan=lifespan)
+    app.add_middleware(HttpCacheMiddleware)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(health.router)
     app.include_router(pages.router)

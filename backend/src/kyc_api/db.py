@@ -18,6 +18,10 @@ class Queryable(Protocol):
 
     async def fetchval(self, query: str, *args: object, timeout: float | None = None) -> object: ...
 
+    async def fetch(
+        self, query: str, *args: object, timeout: float | None = None
+    ) -> list[asyncpg.Record]: ...
+
     async def execute(self, query: str, *args: object, timeout: float | None = None) -> str: ...
 
 

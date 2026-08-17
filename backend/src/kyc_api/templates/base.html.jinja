@@ -9,11 +9,28 @@
   <script src="/static/htmx.min.js"></script>
 </head>
 <body>
-  <header>
-    <a href="/">Know Your Candidate</a>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+  <header class="site-header">
+    <a class="site-header__brand" href="/">Know Your Candidate</a>
+    <nav class="site-header__nav" aria-label="Navigation principale">
+      <a href="/methodologie">Méthodologie</a>
+      <a href="/sources">Sources</a>
+    </nav>
   </header>
-  <main>
+  <main id="contenu">
     {% block content %}{% endblock %}
   </main>
+  <footer class="site-footer">
+    <p>
+      Données de l'Assemblée nationale sous
+      <a href="https://www.etalab.gouv.fr/licence-ouverte-open-licence/" rel="license">Licence Ouverte (Etalab)</a>
+      · données Wikidata sous
+      <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.fr" rel="license">CC0</a>.
+    </p>
+    <p class="site-footer__links">
+      <a href="/methodologie">Méthodologie</a>
+      <a href="/sources">Sources des données</a>
+    </p>
+  </footer>
 </body>
 </html>
