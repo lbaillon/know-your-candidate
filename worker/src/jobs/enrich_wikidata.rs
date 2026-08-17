@@ -324,13 +324,20 @@ struct LicenceInfo {
 }
 
 /// Fonction pure : lit `LicenseShortName`/`LicenseUrl`/`Artist` dans l'`extmetadata` d'une réponse
-/// Commons. `None` couvre les trois cas « pas de licence exploitable » : `extmetadata` absent,
-/// `LicenseShortName` absent, ou présent mais vide (jamais vu, gardé par prudence via `and_then`).
+/// Commons. `None` couvre les quatre cas « pas de licence exploitable » : `extmetadata` absent,
+/// `LicenseShortName` absent, d'un type autre qu'une chaîne, ou vide.
+///
+/// Le filtre sur le vide est ce qui donne son sens à la contrainte `NOT NULL` de `person_photo`
+/// (D1.13, « une photo sans licence exploitable = pas de photo ») : une chaîne vide la satisfait
+/// tout en affichant une photo sans licence lisible, ce qui est précisément ce qu'on s'interdit.
+/// Jamais observé sur Commons — 0 `photo_sans_licence` sur les 1 599 photos mesurées le
+/// 17 août 2026 — mais une garantie qui ne tient qu'à l'amabilité de la source n'en est pas une.
 fn read_licence(extmetadata: Option<&HashMap<String, CommonsMetaValue>>) -> Option<LicenceInfo> {
     let meta = extmetadata?;
     let licence = meta
         .get("LicenseShortName")
         .and_then(|v| v.value.as_str())
+        .filter(|s| !s.trim().is_empty())
         .map(str::to_string)?;
     let licence_url = meta
         .get("LicenseUrl")
@@ -683,5 +690,31 @@ mod tests {
     #[test]
     fn read_licence_extmetadata_absent() {
         assert!(read_licence(None).is_none());
+    }
+
+    /// Une `LicenseShortName` vide satisferait le `NOT NULL` de `person_photo` tout en affichant
+    /// une photo sans licence lisible — exactement ce que D1.13 interdit. Elle doit donc valoir
+    /// « pas de licence exploitable », au même titre qu'une clé absente.
+    #[test]
+    fn read_licence_shortname_vide_ou_blanche() {
+        for vide in ["", "   "] {
+            let mut meta = HashMap::new();
+            meta.insert("LicenseShortName".to_string(), meta_value(vide));
+            assert!(
+                read_licence(Some(&meta)).is_none(),
+                "{vide:?} n'est pas une licence exploitable"
+            );
+        }
+    }
+
+    /// `extmetadata` est du JSON libre : `LicenseShortName` peut porter autre chose qu'une chaîne.
+    #[test]
+    fn read_licence_shortname_pas_une_chaine() {
+        let mut meta = HashMap::new();
+        meta.insert(
+            "LicenseShortName".to_string(),
+            CommonsMetaValue { value: Value::Null },
+        );
+        assert!(read_licence(Some(&meta)).is_none());
     }
 }
