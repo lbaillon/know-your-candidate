@@ -66,7 +66,7 @@ pub async fn run(ctx: &JobContext, payload: &Value) -> anyhow::Result<()> {
 
     match ingest(ctx, run_id, legislature, since, force_refetch).await {
         Ok((counters, url, content_hash)) => {
-            run::finish_ok(&ctx.pool, run_id, counters, &url, Some(&content_hash)).await?;
+            run::finish_ok(&ctx.pool, run_id, counters, Some(&url), Some(&content_hash)).await?;
             Ok(())
         }
         Err(err) => {

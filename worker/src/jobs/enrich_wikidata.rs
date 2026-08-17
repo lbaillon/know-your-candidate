@@ -43,7 +43,7 @@ pub async fn run(ctx: &JobContext, payload: &Value) -> anyhow::Result<()> {
 
     match ingest(&ctx.pool, run_id, person_uids.as_deref()).await {
         Ok(counters) => {
-            run::finish_ok(&ctx.pool, run_id, counters, SPARQL_ENDPOINT, None).await?;
+            run::finish_ok(&ctx.pool, run_id, counters, Some(SPARQL_ENDPOINT), None).await?;
             Ok(())
         }
         Err(err) => {

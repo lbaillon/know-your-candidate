@@ -18,6 +18,7 @@ pub const COMPTEURS_INCOHERENTS: &str = "compteurs_incoherents";
 pub const PHOTO_SANS_LICENCE: &str = "photo_sans_licence";
 #[allow(dead_code)] // utilisé par enrich_wikidata
 pub const WIKIDATA_QID_AMBIGU: &str = "wikidata_qid_ambigu";
+pub const SLUG_DERIVE_D_IDENTIFIANT: &str = "slug_derive_d_identifiant";
 
 pub struct AnomalyRecord {
     pub kind: &'static str,

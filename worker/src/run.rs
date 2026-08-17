@@ -22,11 +22,14 @@ pub async fn start(
     .await
 }
 
+/// `url` est `None` pour les jobs de la phase 2 qui ne touchent aucune source distante
+/// (`assign_slugs`, `seed_candidates`, `refresh_views`) — `ingestion_run.url` est nullable
+/// précisément pour ce cas (migration 0004).
 pub async fn finish_ok(
     pool: &PgPool,
     run_id: i64,
     counters: serde_json::Value,
-    url: &str,
+    url: Option<&str>,
     content_hash: Option<&str>,
 ) -> sqlx::Result<()> {
     sqlx::query!(

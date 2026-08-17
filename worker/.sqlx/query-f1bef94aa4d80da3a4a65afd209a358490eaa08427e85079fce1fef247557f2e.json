@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT p.id, p.an_uid, p.wikidata_qid, p.prenom, p.nom\n        FROM person p\n        LEFT JOIN person_slug s ON s.person_id = p.id AND s.is_current\n        WHERE s.person_id IS NULL\n        ORDER BY p.id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "person",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "an_uid",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "person",
+            "name": "an_uid"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "wikidata_qid",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "person",
+            "name": "wikidata_qid"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "prenom",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "person",
+            "name": "prenom"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "nom",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "person",
+            "name": "nom"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "f1bef94aa4d80da3a4a65afd209a358490eaa08427e85079fce1fef247557f2e"
+}

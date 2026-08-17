@@ -9,3 +9,4 @@ pub mod heartbeat;
 pub mod jobs;
 pub mod run;
 pub mod shutdown;
+pub mod slug;
