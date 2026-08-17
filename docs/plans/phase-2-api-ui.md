@@ -1,6 +1,6 @@
 # Phase 2 — Pages publiques
 
-**Statut : 📝 à relire** · Dépend de : phases 0 et 1 · Bloque : rien (mais éclaire les phases 3 et 4)
+**Statut : ✅ validé** · Dépend de : phases 0 et 1 · Bloque : rien (mais éclaire les phases 3 et 4)
 
 ## Objectif
 
