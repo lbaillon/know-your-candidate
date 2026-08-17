@@ -56,8 +56,9 @@ Le point qui mérite d'être écrit plutôt que retenu : **`.env.example` contie
 le développement local**, et composer les variables d'environnement de production en partant de l'exemple
 est le réflexe le plus naturel du monde. La checklist existe pour que ce réflexe ne coûte rien :
 
-- aucun échafaudage de développement n'est actif en production. En phase 2 les routes de démonstration
-  auront disparu du code, mais tant qu'elles existent, `ENABLE_DEV_ROUTES` doit valoir `false` ;
+- aucun échafaudage de développement n'est actif en production. Les routes de démonstration de la
+  phase 0 (`POST /dev/jobs`, réglage `ENABLE_DEV_ROUTES`) ont disparu du code dès la phase 1.1
+  (F11, [phase-1.1-fix.md](phase-1.1-fix.md)) plutôt que d'attendre la phase 2 ;
 - `WORKER_ID` est fourni par l'orchestrateur et unique par instance (un identifiant fixe casse la reprise
   des jobs zombies — voir [phase 0.1](phase-0.1-fix.md), F8) ;
 - aucun secret ne provient de `.env.example` ;

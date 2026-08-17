@@ -32,7 +32,7 @@ src/kyc_api/
   templating.py            instance Jinja2Templates partagée
   routers/
     health.py               /healthz
-    dev.py                   page d'accueil + boucle de jobs de démonstration
+    pages.py                 page d'accueil
   templates/
   static/
 tests/

@@ -22,10 +22,5 @@ class Settings(BaseSettings):
     # docs/plans/phase-0-socle.md), qui expire un worker après 1 minute sans battement.
     worker_stale_after_seconds: int = 60
 
-    # `POST /dev/jobs` n'est pas authentifiée : à partir de la phase 5, où `main` se déploie
-    # automatiquement, la laisser montée par défaut serait un déni de service trivial. Défaut sûr,
-    # activé explicitement en local et dans les tests (voir F9, docs/plans/phase-0.1-fix.md).
-    enable_dev_routes: bool = False
-
 
 settings = Settings()

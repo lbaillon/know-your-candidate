@@ -72,13 +72,13 @@ phase, avec le mainteneur, avant d'écrire les gabarits** — sans quoi il s'ins
 6. API JSON en miroir des pages.
 7. Passe accessibilité et performance (mesurer le temps de rendu des pages, viser une page candidat en
    moins de 100 ms côté serveur).
-8. **Supprimer les routes de démonstration de la phase 0** (`POST /dev/jobs` et la page qui va avec).
-   Elles existaient pour prouver que la chaîne worker fonctionnait ; les vraies pages les rendent
-   inutiles. On les **supprime**, on ne se contente pas de les laisser derrière `enable_dev_routes` : un
-   échafaudage protégé par un drapeau finit toujours par être activé « temporairement ».
-   Le fragment de suivi de progression, lui, n'est pas jetable — il est repris par le back-office de la
-   [phase 3](phase-3-categorisation.md) pour suivre les imports et les ingestions. Le déplacer, pas le
-   détruire.
+8. ~~Supprimer les routes de démonstration de la phase 0~~ — **fait par anticipation en phase 1.1**
+   (F11, [phase-1.1-fix.md](phase-1.1-fix.md)) : `POST /dev/jobs` créait un job depuis une route
+   publique non authentifiée, ce que CLAUDE.md interdit sans condition ; ça n'avait pas de raison
+   d'attendre la phase 2. `routers/dev.py`, son montage, et le réglage `enable_dev_routes` ont déjà
+   disparu. Les gabarits de suivi de progression (`dev_job.html.jinja`, `_job_status.html.jinja`)
+   sont volontairement restés, non montés : c'est cette étape qui les reprend, derrière le
+   back-office de la [phase 3](phase-3-categorisation.md). Le déplacer, pas le détruire.
 
 ## Décisions à trancher
 
@@ -103,7 +103,7 @@ phase, avec le mainteneur, avant d'écrire les gabarits** — sans quoi il s'ins
 - Aucune requête vers un domaine tiers au chargement d'une page.
 - Une page candidat se rend en moins de 100 ms côté serveur sur des données réelles.
 - **Il ne reste aucune route de démonstration dans le code**, et le réglage `enable_dev_routes` a disparu
-  avec elles.
+  avec elles — vérifié dès la phase 1.1 (F11), pas seulement ici.
 
 ## Risques
 

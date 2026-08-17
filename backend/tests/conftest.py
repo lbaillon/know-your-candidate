@@ -17,10 +17,6 @@ TEST_DATABASE_URL = os.environ.get(
 # La config est lue au chargement du module kyc_api.config (import plus bas) : les variables
 # doivent donc être posées avant tout import de kyc_api.
 os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
-# Les routes de démonstration sont désactivées par défaut (voir F9, docs/plans/phase-0.1-fix.md) ;
-# les tests en ont besoin, donc on les réactive explicitement ici plutôt que de dépendre du .env
-# du développeur.
-os.environ.setdefault("ENABLE_DEV_ROUTES", "true")
 
 from collections.abc import AsyncIterator  # noqa: E402
 from pathlib import Path  # noqa: E402

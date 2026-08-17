@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from kyc_api.config import settings
-from kyc_api.routers import dev, health, pages
+from kyc_api.routers import health, pages
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -26,9 +26,6 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(health.router)
     app.include_router(pages.router)
-    if settings.enable_dev_routes:
-        app.include_router(dev.router)
-        app.include_router(dev.fragments_router)
     return app
 
 

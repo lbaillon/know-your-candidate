@@ -5,10 +5,4 @@
 {% block content %}
   <h1>Socle technique</h1>
   <p>Phase 0 : aucune donnée réelle, seulement la plomberie backend / worker / PostgreSQL.</p>
-
-  {% if show_demo %}
-    <form method="post" action="/dev/jobs">
-      <button type="submit">Créer un job de démonstration</button>
-    </form>
-  {% endif %}
 {% endblock %}
