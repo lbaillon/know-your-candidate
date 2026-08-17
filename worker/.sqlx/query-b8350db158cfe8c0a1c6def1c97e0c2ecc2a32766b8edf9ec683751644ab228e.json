@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT EXISTS(\n            SELECT 1 FROM scrutin_groupe sg\n            JOIN scrutin s ON s.id = sg.scrutin_id\n            WHERE s.an_uid = 'VTCGR5L16V900001' AND sg.rang = 1 AND sg.organe_id IS NULL\n        ) AS \"exists!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b8350db158cfe8c0a1c6def1c97e0c2ecc2a32766b8edf9ec683751644ab228e"
+}

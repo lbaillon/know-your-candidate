@@ -187,10 +187,9 @@ async fn ghost_group_po0_produces_several_rows_and_an_anomaly(pool: PgPool) {
 }
 
 /// `PA900020` (sans mandat de groupe) et `PA900021` (avec un mandat de groupe couvrant la date)
-/// votent tous deux sur une ligne fantôme de VTANR5L17V900002 — voir fixtures/README.md.
-/// **Attendu à corriger par F4** (docs/plans/phase-1.1-fix.md) : `groupe_from_mandat` vaut encore
-/// `true` inconditionnellement aujourd'hui, y compris quand aucun mandat n'a été trouvé pour
-/// `PA900020`. Ne pas retoucher cette note en dehors du commit F4.
+/// votent tous deux sur une ligne fantôme de VTANR5L17V900002 — voir fixtures/README.md. F4
+/// (docs/plans/phase-1.1-fix.md) : `groupe_from_mandat` ne vaut `true` que si un mandat a
+/// effectivement été trouvé, jamais inconditionnellement sur une ligne fantôme.
 #[sqlx::test(migrations = "../db/migrations")]
 async fn groupe_from_mandat_reflects_whether_a_mandat_was_actually_found(pool: PgPool) {
     ingest_referentiel(&pool).await;
@@ -213,8 +212,8 @@ async fn groupe_from_mandat_reflects_whether_a_mandat_was_actually_found(pool: P
         "aucun mandat de groupe : pas de résolution possible"
     );
     assert!(
-        groupe_from_mandat,
-        "bug F4 : encore vrai inconditionnellement avant le correctif"
+        !groupe_from_mandat,
+        "aucun mandat trouvé : groupe_from_mandat ne doit pas prétendre à une reconstitution"
     );
 
     let (groupe_organe_id, groupe_from_mandat): (Option<i64>, bool) = sqlx::query_as(

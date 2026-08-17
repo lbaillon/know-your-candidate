@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT count(*) AS \"count!\" FROM ingestion_anomaly\n        WHERE ingestion_run_id = $1 AND kind = 'groupe_fantome' AND subject_uid = 'VTCGR5L16V900001'\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ed190a571819e5a4d91b5ce3a3d5642b477e90171e7537016beb69280b115b9d"
+}

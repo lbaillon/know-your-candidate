@@ -14,7 +14,7 @@ use sqlx::PgPool;
 use crate::an::document::{RawDocument, archive_documents, fetch_latest_document_ids};
 use crate::an::http::{AnClient, sha256_hex};
 use crate::an::open_zip;
-use crate::an::scrutin::{self, ParsedScrutin};
+use crate::an::scrutin::{self, ParsedGroupeVentilation, ParsedScrutin};
 use crate::anomaly::{self, AnomalyRecord};
 use crate::run;
 
@@ -309,25 +309,68 @@ async fn resolve_unknown_acteurs(
 
 /// Le mandat de siège (`ASSEMBLEE`) ne sert qu'à distinguer un titulaire d'un suppléant (D. spike) ;
 /// c'est le mandat de **groupe** qui comble un `organeRef` fantôme. Choisit le mandat dont la date
-/// de début est la plus tardive quand plusieurs couvrent la date (plan, étape `ingest_scrutins`).
-async fn resolve_groupe_from_mandat(
+/// de début est la plus tardive quand plusieurs couvrent la date (plan, étape `ingest_scrutins`) —
+/// règle inchangée par F8, seulement passée d'une requête par vote fantôme à une requête pour tout
+/// le lot courant (voir docs/plans/phase-1.1-fix.md, F8). Un couple sans ligne dans le résultat vaut
+/// « aucun mandat » : absent de la `HashMap` rendue, jamais une entrée à `None`.
+async fn resolve_groupes_from_mandats(
     pool: &PgPool,
-    person_id: i64,
-    date: NaiveDate,
-) -> sqlx::Result<Option<i64>> {
-    sqlx::query_scalar!(
+    keys: &HashSet<(i64, NaiveDate)>,
+) -> sqlx::Result<HashMap<(i64, NaiveDate), i64>> {
+    if keys.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let person_ids: Vec<i64> = keys.iter().map(|(person_id, _)| *person_id).collect();
+    let dates: Vec<NaiveDate> = keys.iter().map(|(_, date)| *date).collect();
+
+    let rows = sqlx::query!(
         r#"
-        SELECT organe_id
-        FROM mandat
-        WHERE person_id = $1 AND type_organe = 'GP' AND period @> $2::date
-        ORDER BY lower(period) DESC
-        LIMIT 1
+        SELECT DISTINCT ON (t.person_id, t.d) t.person_id AS "person_id!", t.d AS "d!", m.organe_id
+        FROM UNNEST($1::bigint[], $2::date[]) AS t(person_id, d)
+        JOIN mandat m ON m.person_id = t.person_id AND m.type_organe = 'GP' AND m.period @> t.d
+        ORDER BY t.person_id, t.d, lower(m.period) DESC
         "#,
-        person_id,
-        date,
+        &person_ids,
+        &dates,
     )
-    .fetch_optional(pool)
-    .await
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|r| ((r.person_id, r.d), r.organe_id))
+        .collect())
+}
+
+/// Couples `(person_id, date_scrutin)` dont le groupe est à reconstituer depuis les mandats pour ce
+/// lot : une ligne de groupe fantôme, par vote. Collecté en amont de la boucle d'écriture pour ne
+/// résoudre qu'en une seule requête (F8).
+fn mandat_lookup_keys(
+    chunk: &[(RawDocument, ParsedScrutin)],
+    person_ids: &HashMap<String, i64>,
+    organe_ids: &HashMap<String, i64>,
+) -> HashSet<(i64, NaiveDate)> {
+    let mut keys = HashSet::new();
+    for (_, parsed) in chunk {
+        for groupe in &parsed.groupes {
+            if !is_groupe_fantome(groupe, organe_ids) {
+                continue;
+            }
+            for vote in &groupe.votes {
+                if let Some(&person_id) = person_ids.get(&vote.acteur_uid) {
+                    keys.insert((person_id, parsed.date_scrutin));
+                }
+            }
+        }
+    }
+    keys
+}
+
+fn is_groupe_fantome(groupe: &ParsedGroupeVentilation, organe_ids: &HashMap<String, i64>) -> bool {
+    groupe
+        .organe_uid
+        .as_deref()
+        .is_none_or(|u| u == "PO0" || !organe_ids.contains_key(u))
 }
 
 struct ScrutinRow<'a> {
@@ -405,6 +448,12 @@ async fn write_chunk(
     let mut mise_au_point_rows = Vec::new();
     let mut anomalies: Vec<AnomalyRecord> = Vec::new();
 
+    // Résolu en une seule requête pour tout le lot (F8), plutôt qu'une requête par vote de groupe
+    // fantôme dans la boucle d'écriture ci-dessous.
+    let resolved_from_mandat =
+        resolve_groupes_from_mandats(pool, &mandat_lookup_keys(chunk, person_ids, organe_ids))
+            .await?;
+
     for (_, parsed) in chunk {
         let Some(&source_document_id) = document_ids.get(&parsed.an_uid) else {
             anyhow::bail!(
@@ -470,10 +519,7 @@ async fn write_chunk(
                 });
             }
 
-            let is_fantome = groupe
-                .organe_uid
-                .as_deref()
-                .is_none_or(|u| u == "PO0" || !organe_ids.contains_key(u));
+            let is_fantome = is_groupe_fantome(groupe, organe_ids);
             if is_fantome {
                 stats.groupes_fantomes += 1;
                 anomalies.push(AnomalyRecord {
@@ -506,9 +552,13 @@ async fn write_chunk(
                 };
 
                 let (resolved_organe_id, groupe_from_mandat) = if is_fantome {
-                    let mandat_organe_id =
-                        resolve_groupe_from_mandat(pool, person_id, parsed.date_scrutin).await?;
-                    (mandat_organe_id, true)
+                    // F4 : `groupe_from_mandat` ne vaut `true` que si un mandat a effectivement
+                    // été trouvé — un couple absent de `resolved_from_mandat` vaut « aucun
+                    // mandat », pas une reconstitution qui aurait abouti.
+                    let mandat_organe_id = resolved_from_mandat
+                        .get(&(person_id, parsed.date_scrutin))
+                        .copied();
+                    (mandat_organe_id, mandat_organe_id.is_some())
                 } else {
                     (groupe_organe_id, false)
                 };

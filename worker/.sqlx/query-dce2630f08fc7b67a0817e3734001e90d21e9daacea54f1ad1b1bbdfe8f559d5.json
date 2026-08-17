@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT count(*) AS \"count!\"\n        FROM scrutin_groupe sg\n        JOIN scrutin s ON s.id = sg.scrutin_id\n        WHERE s.an_uid = 'VTANR5L17V900002' AND sg.organe_id IS NULL\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "dce2630f08fc7b67a0817e3734001e90d21e9daacea54f1ad1b1bbdfe8f559d5"
+}

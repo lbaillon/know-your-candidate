@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT DISTINCT ON (t.person_id, t.d) t.person_id AS \"person_id!\", t.d AS \"d!\", m.organe_id\n        FROM UNNEST($1::bigint[], $2::date[]) AS t(person_id, d)\n        JOIN mandat m ON m.person_id = t.person_id AND m.type_organe = 'GP' AND m.period @> t.d\n        ORDER BY t.person_id, t.d, lower(m.period) DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "person_id!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "d!",
+        "type_info": "Date",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "organe_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "mandat",
+            "name": "organe_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "DateArray"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "480b4966b565ba168638b5618f14a9c82afbaa68b31b7b95297f06c4f7274f27"
+}
