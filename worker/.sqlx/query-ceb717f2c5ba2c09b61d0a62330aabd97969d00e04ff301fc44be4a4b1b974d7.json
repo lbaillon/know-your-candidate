@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT count(*) AS \"count!\" FROM ingestion_anomaly\n        WHERE ingestion_run_id = $1 AND kind = 'acteur_inconnu'\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ceb717f2c5ba2c09b61d0a62330aabd97969d00e04ff301fc44be4a4b1b974d7"
+}

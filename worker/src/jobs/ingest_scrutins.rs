@@ -93,7 +93,6 @@ async fn ingest(
     since: Option<NaiveDate>,
     force_refetch: bool,
 ) -> anyhow::Result<(Value, String, String)> {
-    let pool = &ctx.pool;
     let url = scrutin_url(legislature)?;
     let client = AnClient::new(cache_dir())?;
     let archive = client.fetch_zip(&url, force_refetch).await?;
@@ -105,10 +104,26 @@ async fn ingest(
         "archive des scrutins téléchargée"
     );
 
-    let bytes = archive.bytes.clone();
+    let counters =
+        ingest_bytes(ctx, run_id, legislature, since, &url, archive.bytes.clone()).await?;
+    Ok((counters, url, archive.content_hash))
+}
+
+/// Traitement pur d'une archive de scrutins déjà en mémoire — séparé de `ingest` pour permettre
+/// aux tests d'intégration de rejouer un extrait versionné sans réseau (voir
+/// `worker/tests/fixtures/README.md`). `url` ne sert qu'à l'archivage du brut (`source_document`).
+pub async fn ingest_bytes(
+    ctx: &JobContext,
+    run_id: i64,
+    legislature: i16,
+    since: Option<NaiveDate>,
+    url: &str,
+    bytes: bytes::Bytes,
+) -> anyhow::Result<Value> {
+    let pool = &ctx.pool;
     let docs = tokio::task::spawn_blocking(move || read_scrutin_docs(bytes, since)).await??;
 
-    archive_documents(pool, "an_scrutin", &url, docs.iter().map(|(raw, _)| raw)).await?;
+    archive_documents(pool, "an_scrutin", url, docs.iter().map(|(raw, _)| raw)).await?;
     let document_ids = fetch_latest_document_ids(pool, "an_scrutin").await?;
 
     let mut person_ids = fetch_person_ids(pool).await?;
@@ -159,20 +174,16 @@ async fn ingest(
         }
     }
 
-    Ok((
-        serde_json::json!({
-            "legislature": legislature,
-            "scrutins": stats.scrutins,
-            "votes": stats.votes,
-            "mises_au_point": stats.mises_au_point,
-            "acteurs_inconnus": stats.acteurs_inconnus,
-            "groupes_fantomes": stats.groupes_fantomes,
-            "blocs_nominatifs_inconnus": stats.blocs_nominatifs_inconnus,
-            "compteurs_incoherents": stats.compteurs_incoherents,
-        }),
-        url,
-        archive.content_hash,
-    ))
+    Ok(serde_json::json!({
+        "legislature": legislature,
+        "scrutins": stats.scrutins,
+        "votes": stats.votes,
+        "mises_au_point": stats.mises_au_point,
+        "acteurs_inconnus": stats.acteurs_inconnus,
+        "groupes_fantomes": stats.groupes_fantomes,
+        "blocs_nominatifs_inconnus": stats.blocs_nominatifs_inconnus,
+        "compteurs_incoherents": stats.compteurs_incoherents,
+    }))
 }
 
 fn cache_dir() -> Option<std::path::PathBuf> {

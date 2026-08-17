@@ -55,7 +55,18 @@ async fn ingest(
         "AMO30 téléchargée"
     );
 
-    let bytes = archive.bytes.clone();
+    let counters = ingest_bytes(pool, run_id, archive.bytes.clone()).await?;
+    Ok((counters, archive.content_hash))
+}
+
+/// Traitement pur d'une archive AMO30 déjà en mémoire — séparé de `ingest` pour permettre aux
+/// tests d'intégration de rejouer un extrait versionné sans réseau (voir
+/// `worker/tests/fixtures/README.md`).
+pub async fn ingest_bytes(
+    pool: &PgPool,
+    run_id: i64,
+    bytes: bytes::Bytes,
+) -> anyhow::Result<Value> {
     let (organe_docs, acteur_docs) =
         tokio::task::spawn_blocking(move || read_amo30_docs(bytes)).await??;
 
@@ -81,20 +92,17 @@ async fn ingest(
         upsert_mandats(pool, &acteurs, &organe_ids, &person_ids).await?;
     anomaly::record_many(pool, run_id, &anomalies).await?;
 
-    Ok((
-        serde_json::json!({
-            "organes": organes.len(),
-            "personnes": acteurs.len(),
-            "mandats_geres": mandat_stats.geres,
-            "mandats_ignores_organe_inconnu": mandat_stats.organe_inconnu,
-            "mandats_ignores_date_debut_manquante": mandat_stats.date_debut_manquante,
-            "mandats_ignores_date_fin_avant_debut": mandat_stats.date_fin_avant_debut,
-            "normalisation_inclusions": mandat_stats.inclusions,
-            "normalisation_charnieres": mandat_stats.charnieres,
-            "normalisation_chevauchements": mandat_stats.chevauchements,
-        }),
-        archive.content_hash,
-    ))
+    Ok(serde_json::json!({
+        "organes": organes.len(),
+        "personnes": acteurs.len(),
+        "mandats_geres": mandat_stats.geres,
+        "mandats_ignores_organe_inconnu": mandat_stats.organe_inconnu,
+        "mandats_ignores_date_debut_manquante": mandat_stats.date_debut_manquante,
+        "mandats_ignores_date_fin_avant_debut": mandat_stats.date_fin_avant_debut,
+        "normalisation_inclusions": mandat_stats.inclusions,
+        "normalisation_charnieres": mandat_stats.charnieres,
+        "normalisation_chevauchements": mandat_stats.chevauchements,
+    }))
 }
 
 fn cache_dir() -> Option<std::path::PathBuf> {

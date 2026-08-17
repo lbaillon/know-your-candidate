@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT subject_uid FROM ingestion_anomaly\n        WHERE ingestion_run_id = $1 AND kind = 'compteurs_incoherents'\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "subject_uid",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ingestion_anomaly",
+            "name": "subject_uid"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "17bf26fd911c518a9e2302c16bf8ac8f4d2dbb88060e99fdd547479646bb4be2"
+}

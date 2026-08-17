@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT chambre::text AS \"chambre!\" FROM scrutin WHERE an_uid = 'VTCGR5L16V1'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "chambre!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a3273cac92977af98774041aecf842b2878a168932370db55ca71575f7277ee6"
+}

@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT count(*) AS \"count!\"\n        FROM vote v\n        JOIN scrutin s ON s.id = v.scrutin_id\n        WHERE s.an_uid = 'VTCGR5L16V1'\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ccb8022c525942fe7291e4dd4862c72fd764335c235a1427141fef59fc31bd85"
+}
