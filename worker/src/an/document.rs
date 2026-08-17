@@ -56,7 +56,11 @@ pub async fn archive_documents<'a>(
 /// Renvoie l'id `source_document` **le plus récent** pour chaque `uid` de la source donnée — un
 /// même `uid` peut porter plusieurs lignes (une par `content_hash` observé), et c'est toujours la
 /// plus récente qui doit être référencée par `scrutin.source_document_id` /
-/// `vote_mise_au_point.source_document_id`.
+/// `vote_mise_au_point.source_document_id`. Départage sur `id DESC` (F7,
+/// docs/plans/phase-1.1-fix.md) : deux lignes du même `uid` archivées par la même instruction
+/// partagent leur `fetched_at` (`now()` est constant dans une transaction), et sans ce départage
+/// PostgreSQL choisit arbitrairement laquelle référencer — rendant le condensé d'idempotence
+/// instable de façon intermittente.
 pub async fn fetch_latest_document_ids(
     pool: &PgPool,
     source: &str,
@@ -66,7 +70,7 @@ pub async fn fetch_latest_document_ids(
         SELECT DISTINCT ON (uid) uid, id
         FROM source_document
         WHERE source = $1
-        ORDER BY uid, fetched_at DESC
+        ORDER BY uid, fetched_at DESC, id DESC
         "#,
         source,
     )

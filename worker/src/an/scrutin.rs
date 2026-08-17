@@ -270,7 +270,7 @@ pub fn parse_scrutin(payload: &Value) -> Option<ParsedScrutin> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use serde_json::json;

@@ -26,10 +26,18 @@ pub struct FetchedArchive {
     pub from_cache: bool,
 }
 
+/// Répertoire de cache des archives téléchargées, actif **si et seulement si** `AN_CACHE_DIR` est
+/// renseignée (D1.18, docs/plans/phase-1.1-fix.md, F6) : `None` sinon, y compris en production, où
+/// il n'y a pas de disque persistant à en attendre entre deux déploiements et où écrire ~300 Mo
+/// d'archives dans le répertoire courant du worker n'a rien d'anodin. Factorisée ici — les deux
+/// jobs qui construisaient chacun leur propre chemin la partagent désormais.
+pub fn cache_dir() -> Option<PathBuf> {
+    std::env::var("AN_CACHE_DIR").ok().map(PathBuf::from)
+}
+
 pub struct AnClient {
     http: reqwest::Client,
-    /// Répertoire de cache de développement (`worker/.cache/`). `None` en production : pas de
-    /// disque persistant à en attendre entre deux déploiements, autant ne pas y écrire.
+    /// `None` : cache désactivé (voir `cache_dir()`).
     cache_dir: Option<PathBuf>,
 }
 
@@ -100,7 +108,12 @@ impl AnClient {
         let content_hash = sha256_hex(&bytes);
 
         if let Some((body_path, etag_path)) = &cache {
-            tokio::fs::create_dir_all(self.cache_dir.as_ref().expect("cache_dir présent")).await?;
+            // F9 (docs/plans/phase-1.1-fix.md) : le répertoire parent de `body_path` est déjà le
+            // chemin qui prouve la présence du cache, pas besoin de retraverser `self.cache_dir`
+            // via un `.expect()` — `cache_paths` garantit que `body_path` a toujours un parent.
+            if let Some(parent) = body_path.parent() {
+                tokio::fs::create_dir_all(parent).await?;
+            }
             tokio::fs::write(body_path, &bytes).await?;
             if let Some(etag) = &etag {
                 tokio::fs::write(etag_path, etag).await?;

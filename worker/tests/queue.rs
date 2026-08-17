@@ -3,7 +3,7 @@
 //! migrations : pas besoin d'isolation manuelle ici.
 
 // Fichier entièrement composé de tests : `unwrap()` y est autorisé (voir CLAUDE.md).
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use kyc_worker::jobs::queue;
 use sqlx::PgPool;

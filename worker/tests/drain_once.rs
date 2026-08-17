@@ -2,7 +2,7 @@
 //! doit faire échouer `drain_once` (donc `make ingest`) après avoir vidé la file jusqu'au bout,
 //! jamais sortir en succès silencieux.
 
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use kyc_worker::jobs::drain_once;
 use sqlx::PgPool;

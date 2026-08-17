@@ -3,7 +3,7 @@
 //! n'est vérifié que par l'exécution réelle du job (F2c) : introduire une abstraction de client
 //! pour deux appels ne vaut pas son coût.
 
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use kyc_worker::jobs::enrich_wikidata::{PhotoRow, update_wikidata_qids, upsert_photos};
 use sqlx::PgPool;

@@ -6,7 +6,7 @@
 //! chevauchements réels (inclusions, charnières) est un problème applicatif du job `ingest_acteurs`,
 //! pas de cette migration.
 
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use sqlx::PgPool;
 

@@ -12,7 +12,7 @@ use serde_json::Value;
 use sqlx::PgPool;
 
 use crate::an::document::{RawDocument, archive_documents, fetch_latest_document_ids};
-use crate::an::http::{AnClient, sha256_hex};
+use crate::an::http::{AnClient, cache_dir, sha256_hex};
 use crate::an::open_zip;
 use crate::an::scrutin::{self, ParsedGroupeVentilation, ParsedScrutin};
 use crate::anomaly::{self, AnomalyRecord};
@@ -184,13 +184,6 @@ pub async fn ingest_bytes(
         "blocs_nominatifs_inconnus": stats.blocs_nominatifs_inconnus,
         "compteurs_incoherents": stats.compteurs_incoherents,
     }))
-}
-
-fn cache_dir() -> Option<std::path::PathBuf> {
-    std::env::var("AN_CACHE_DIR")
-        .ok()
-        .map(std::path::PathBuf::from)
-        .or_else(|| Some(std::path::PathBuf::from(".cache")))
 }
 
 /// Décompression et parsing — travail CPU, hors de l'exécuteur async (voir `ingest_acteurs`, même

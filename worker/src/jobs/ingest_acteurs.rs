@@ -10,7 +10,7 @@ use sqlx::PgPool;
 
 use crate::an::acteur::{self, MandatGroupe, NormalizationEvent, ParsedActeur, ParsedOrgane};
 use crate::an::document::{RawDocument, archive_documents};
-use crate::an::http::{AnClient, sha256_hex};
+use crate::an::http::{AnClient, cache_dir, sha256_hex};
 use crate::an::open_zip;
 use crate::anomaly::{self, AnomalyRecord};
 use crate::run;
@@ -103,13 +103,6 @@ pub async fn ingest_bytes(
         "normalisation_charnieres": mandat_stats.charnieres,
         "normalisation_chevauchements": mandat_stats.chevauchements,
     }))
-}
-
-fn cache_dir() -> Option<std::path::PathBuf> {
-    std::env::var("AN_CACHE_DIR")
-        .ok()
-        .map(std::path::PathBuf::from)
-        .or_else(|| Some(std::path::PathBuf::from(".cache")))
 }
 
 /// Décompression et lecture brute de l'archive — travail CPU, exécuté hors de l'exécuteur async
@@ -336,6 +329,15 @@ struct MandatARetenir {
     legislature: Option<i16>,
 }
 
+/// Un mandat non-GP (`ASSEMBLEE` ou `PARPOL`) dont `organe_id`, `debut` et `type_organe` ont déjà
+/// été validés par la boucle de filtrage — voir F9, docs/plans/phase-1.1-fix.md.
+struct MandatAutreValide<'a> {
+    mandat: &'a crate::an::acteur::ParsedMandat,
+    organe_id: i64,
+    type_organe: String,
+    debut: chrono::NaiveDate,
+}
+
 async fn upsert_mandats(
     pool: &PgPool,
     acteurs: &[ParsedActeur],
@@ -353,7 +355,7 @@ async fn upsert_mandats(
 
         let mut gp_mandats: Vec<MandatGroupe> = Vec::new();
         let mut gp_details: HashMap<String, &crate::an::acteur::ParsedMandat> = HashMap::new();
-        let mut autres: Vec<&crate::an::acteur::ParsedMandat> = Vec::new();
+        let mut autres: Vec<MandatAutreValide> = Vec::new();
 
         for mandat in &acteur.mandats {
             let Some(type_organe) = &mandat.type_organe else {
@@ -391,7 +393,16 @@ async fn upsert_mandats(
                 });
                 gp_details.insert(mandat.an_uid.clone(), mandat);
             } else {
-                autres.push(mandat);
+                // F9 (docs/plans/phase-1.1-fix.md) : organe_id, debut et type_organe sont déjà
+                // validés à cet endroit précis — les porter dans une structure dédiée fait de
+                // l'invariant un fait du type, plutôt qu'un `.expect()` maintenu à distance du
+                // filtrage qui le garantit.
+                autres.push(MandatAutreValide {
+                    mandat,
+                    organe_id: organe_info.id,
+                    type_organe: type_organe.clone(),
+                    debut,
+                });
             }
         }
 
@@ -435,18 +446,16 @@ async fn upsert_mandats(
             });
         }
 
-        for mandat in autres {
-            let organe_id = organe_ids[mandat.organe_uid.as_ref().expect("filtré ci-dessus")].id;
-            let debut = mandat.date_debut.expect("filtré ci-dessus");
+        for autre in autres {
             a_inserer.push(MandatARetenir {
-                an_uid: mandat.an_uid.clone(),
+                an_uid: autre.mandat.an_uid.clone(),
                 person_id,
-                organe_id,
-                type_organe: mandat.type_organe.clone().expect("filtré ci-dessus"),
-                debut,
-                fin: mandat.date_fin,
-                qualite: mandat.qualite.clone(),
-                legislature: mandat.legislature,
+                organe_id: autre.organe_id,
+                type_organe: autre.type_organe,
+                debut: autre.debut,
+                fin: autre.mandat.date_fin,
+                qualite: autre.mandat.qualite.clone(),
+                legislature: autre.mandat.legislature,
             });
         }
     }

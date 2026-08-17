@@ -1,7 +1,7 @@
 //! Tests de contrainte de la migration 0003 (scrutins) — voir
 //! docs/plans/phase-1-ingestion.md, section « Les scrutins (migration 0003) ».
 
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use sqlx::PgPool;
 
