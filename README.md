@@ -9,8 +9,9 @@ elle-même et par les partis auxquels elle a appartenu, période par période.
 Le postulat du projet : un programme de campagne est une promesse, un vote est un fait. On s'appuie donc
 d'abord sur les faits, et chaque conclusion affichée est **cliquable jusqu'au scrutin qui la justifie**.
 
-> Statut : 🚧 phase 0 (socle technique) implémentée, aucune donnée réelle. Les plans de réalisation sont
-> dans [docs/plans/](docs/plans/) et sont ouverts à la relecture.
+> Statut : 🚧 phases 0 et 1 (socle technique, ingestion) implémentées — scrutins et mandats des
+> législatures 15 à 17 en base, pas encore de page publique. Les plans de réalisation sont dans
+> [docs/plans/](docs/plans/) et sont ouverts à la relecture.
 
 ---
 

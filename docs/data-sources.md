@@ -7,6 +7,17 @@ sans source affichable n'entre pas en base.
 > [phase 1](plans/phase-1-ingestion.md)). Les chiffres de cette page sont mesurés, pas estimés. Les chemins
 > restent à revalider avant chaque campagne d'ingestion : l'Assemblée nationale réorganise ses archives, et
 > les noms de fichiers ne sont **pas** uniformes d'une législature à l'autre.
+>
+> **Confirmé par une ingestion complète réelle le 17 août 2026** (implémentation de la phase 1) :
+> `make ingest` a chargé le référentiel puis les trois législatures sans intervention, et les compteurs
+> obtenus reproduisent exactement ceux du spike — **4 417 scrutins / 472 631 votes** en 15e, **4 106
+> scrutins** en 16e, **8 434 scrutins / 1 270 476 votes** en 17e, `VTCGR5L16V1` avec ses **902 votes** en
+> `chambre = 'congres'`. Le total des trois législatures (472 631 + 603 813 + 1 270 476 = 2 346 920 votes,
+> Congrès inclus) correspond exactement à 2 346 018 (Assemblée) + 902 (Congrès) ci-dessus. Seul écart
+> apparent : le total brut de la 16e ingéré est **603 813**, pas 602 911 — la différence est exactement les
+> 902 votes du Congrès, que le chiffre du spike excluait implicitement. Vérification manuelle de trois
+> député·es (dont Charlotte Parmentier-Lecocq, 5 groupes différents sur la seule 17e législature) contre le
+> site de l'Assemblée : historique de groupe et position de vote strictement identiques.
 
 ## 1. Assemblée nationale — open data officiel (source principale)
 
@@ -181,6 +192,13 @@ déclaré.
 `total nominatif = nombreVotants + nonVotants`. L'unique écart est `VTANR5L17V1`, l'élection du président
 de l'Assemblée. Cette égalité fait un bon contrôle d'ingestion — à journaliser comme anomalie, pas à
 traiter comme une erreur fatale.
+
+Le spike n'avait vérifié cette égalité que sur la 17e. L'ingestion complète du 17 août 2026 l'a mesurée sur
+les trois législatures : **30 écarts sur la 15e, 4 sur la 16e**, en plus de l'unique cas de la 17e — tous
+journalisés comme `compteurs_incoherents`, aucun n'a fait échouer l'ingestion. De même, le groupe fantôme
+`PO0` (voir plus bas) touche aussi **9 lignes de la 16e**, pas seulement les 146 de la 17e mentionnées par
+le spike. Ces trois chiffres n'avaient jamais été mesurés avant l'implémentation de la phase 1 : le spike
+n'avait vérifié ces contrôles que sur la 17e législature.
 
 **Effectif et dénominateur** : la somme des `nombreMembresGroupe` d'un scrutin donne l'effectif de
 l'Assemblée à sa date (574 à 577 en 17e). Le dénominateur de la participation est donc **dans le fichier**,

@@ -139,8 +139,15 @@ make lint         # ruff check/format --check + cargo fmt --check + clippy -D wa
 make typecheck    # ty check (backend)
 make test         # pytest (backend) + cargo test (worker)
 make migrate      # sqlx migrate run sur DATABASE_URL
+make ingest       # référentiel (AMO30) puis législatures 15, 16, 17 dans l'ordre — plusieurs
+                   # dizaines de minutes, voir docs/plans/phase-1-ingestion.md
 ```
 
 Détail par composant : `cd backend && uv run <cmd>` (`ruff`, `ty`, `pytest`, `uvicorn kyc_api.main:app
 --reload`) ; `cd worker && cargo <cmd>` (`run`, `test`, `clippy --all-targets -- -D warnings`, `sqlx
 prepare` après toute modification d'une requête `sqlx::query!`/`query_as!`).
+
+Sous-commandes du binaire worker, pour déclencher un job sans route publique (voir
+docs/plans/phase-1-ingestion.md) : `cargo run -- enqueue <type> [payload_json]` insère un job ;
+`cargo run -- run-once` vide la file une fois et rend la main (c'est ce qu'utilise `make ingest`) ;
+sans argument, le binaire démarre la boucle de jobs normale.
