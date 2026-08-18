@@ -765,6 +765,33 @@ peuplée par `make ingest` :
 > volume de votes, ce qui confirme que le calcul de la frise (`timeline.py`, en mémoire) domine le
 > coût plus que la requête SQL des votes. Aucun index ajouté.
 
+> **Remesuré le 18/08/2026** (phase 2.1, F5/F6 — [phase-2.1-fix.md](phase-2.1-fix.md)) : `/personnes`
+> change de requête de recherche (colonne `recherche` normalisée plutôt que `ILIKE` sur `prenom`/`nom`
+> concaténés), donc remesuré avec le reste après `make ingest` rejoué en entier sur une base vierge
+> (3 120 personnes, 5 candidat·es, 2 346 920 votes — mêmes volumes qu'à la mesure initiale).
+>
+> `EXPLAIN (ANALYZE, BUFFERS)` sur la recherche de l'annuaire (`q=melenchon`, sans accent) :
+> **1,4 ms**, `Bitmap Index Scan on person_apercu_recherche_idx` — un `Seq Scan` avant la migration
+> `0006`. Liste des votes de Yaël Braun-Pivet, première page sans filtre : **20,2 ms** (contre
+> 30,5 ms à la mesure initiale, variance de cache plutôt qu'une régression — toujours sous les
+> 100 ms sans index supplémentaire).
+>
+> Temps de rendu côté serveur (20 appels par route, après une requête de chauffe, sur `uvicorn` en
+> local) :
+>
+> | Route | p50 | p95 |
+> | --- | --- | --- |
+> | `/` | 2,6 ms | 3,4 ms |
+> | `/personnes` (recherche accent-insensible, F5) | 4,5 ms | 5,3 ms |
+> | `/personne/jean-luc-melenchon` (mandats et votes réels) | 31,6 ms | 33,8 ms |
+> | `/personne/yael-braun-pivet` (9 832 votes, le cas le plus lourd) | 4,4 ms | 5,0 ms |
+> | `/personne/yael-braun-pivet/votes` (première page) | 4,7 ms | 5,8 ms |
+> | `/scrutin/16/2004` | 4,6 ms | 5,7 ms |
+>
+> `/personnes` reste sous les 10 ms malgré le changement de requête : l'index GIN trigramme sur la
+> colonne normalisée absorbe le coût que l'ancien `ILIKE` payait en `Seq Scan`. Toujours aucun index
+> ajouté au-delà de ceux posés par la migration `0006` elle-même.
+
 ### Ordre des commits
 
 Un commit par ligne, `main` vert à chaque fois.
