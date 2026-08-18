@@ -74,12 +74,20 @@ contournée.
 5. Page d'explication et détail du calcul.
 6. Recette sur 3 à 5 personnalités connues : le résultat est-il défendable, et surtout, l'explication
    est-elle convaincante pour quelqu'un qui n'est pas d'accord avec le résultat ?
+7. **Validation croisée de l'axe — `principal_axis`, reportée de la [phase 3](phase-3-categorisation.md)
+   (D3.10).** Dès qu'au moins 200 scrutins sont relus par un humain : extraire l'axe principal de la
+   matrice votants × scrutins et le confronter à l'ancrage des nuances du ministère de l'Intérieur. Deux
+   méthodes indépendantes qui se contredisent sur un scrutin sont le meilleur signal de relecture qu'on
+   ait, et c'est le seul contrôle qui puisse dire que l'ancrage officiel place un groupe au mauvais
+   endroit. La colonne `scrutin_axis_estimate.strategy` l'attend sans migration ; la clé étrangère vers
+   `group_axis` est à relâcher à ce moment-là. Si la phase 4 déborde, ce point part en
+   [phase 6](phase-6-backlog-v2.md) — nommé, pas oublié.
 
 ## Décisions à trancher
 
 | # | Question | Proposition |
 | --- | --- | --- |
-| D4.1 | Les catégorisations `heuristic` non relues comptent-elles dans un score affiché publiquement ? | **Non par défaut.** Un basculement d'affichage permet de les inclure, avec un avertissement visible. Mieux vaut peu de scores fiables que beaucoup de scores douteux |
+| D4.1 | Les catégorisations `import` non relues comptent-elles dans un score affiché publiquement ? | **Non par défaut.** Un basculement d'affichage permet de les inclure, avec un avertissement visible. Mieux vaut peu de scores fiables que beaucoup de scores douteux. (La phase 3 a supprimé la méthode `heuristic` que cette question visait à l'origine : l'heuristique mesure et ne catégorise plus, voir D3.7. Restent les lignes importées d'un travail hors ligne, relues ou non.) |
 | D4.2 | Seuil minimal de contributions | Proposition : 5 scrutins par thème, à réajuster une fois le volume réel connu |
 | D4.3 | Représentation visuelle | Curseur sur un axe avec intervalle d'incertitude, plutôt qu'une note ou une étoile. Aucune métaphore de notation |
 | D4.4 | Score de parti : tous les membres ou seulement les votes majoritaires ? | **Tous les membres**, avec un indicateur de cohésion. Une majorité écrasante et une division à 51 % ne se valent pas |
