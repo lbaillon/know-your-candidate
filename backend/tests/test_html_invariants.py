@@ -18,7 +18,7 @@ from httpx import AsyncClient
 
 import factories
 
-PAGE_ROUTES = ["/", "/deputes", "/methodologie", "/sources"]
+PAGE_ROUTES = ["/", "/personnes", "/methodologie", "/sources"]
 
 # tag -> attribut qui déclenche une requête au chargement de la page.
 _EXTERNAL_RESOURCE_ATTRS = {

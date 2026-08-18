@@ -25,8 +25,8 @@ async def recherche(request: Request, q: str | None = None, pool: Queryable = De
     )
 
 
-@router.get("/deputes")
-async def deputes(
+@router.get("/personnes")
+async def personnes(
     request: Request,
     q: str | None = None,
     legislature: int | None = None,

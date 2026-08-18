@@ -24,7 +24,7 @@ sources.
 | Route | Contenu |
 | --- | --- |
 | `/` | Grille des candidat·es : photo, nom, dernier groupe connu, nombre de votes connus. Recherche en HTMX |
-| `/deputes` | Annuaire des personnes ingérées : recherche, filtre par législature, pagination |
+| `/personnes` | Annuaire de toutes les personnes en base : recherche, filtre par législature, pagination |
 | `/personne/{slug}` | En-tête d'identité, frise des appartenances politiques, votes récents, zone « orientations » avec un état vide explicite en attendant la phase 4 |
 | `/personne/{slug}/votes` | Liste paginée et filtrable (thème quand il existera, période, position) |
 | `/scrutin/{legislature}/{numero}` | Détail d'un scrutin : titre, date, résultat, répartition par groupe, lien vers la source AN |
@@ -36,6 +36,12 @@ sources.
 > candidate à rien. Servir la fiche d'un·e député·e sous une URL qui la déclare candidate serait une
 > affirmation non sourcée — exactement ce que la méthodologie interdit. Être candidat·e est un **statut
 > affiché sur la fiche**, avec sa source et sa date, pas une propriété de son adresse.
+>
+> **`/personnes` et non `/deputes`** (changé le 18/08/2026, phase 2.1, F1 —
+> [phase-2.1-fix.md](phase-2.1-fix.md)) : l'annuaire liste aussi les personnes créées par le seed des
+> candidat·es depuis un QID Wikidata, qui n'ont jamais été député·es. `/deputes` l'affirmait dans
+> l'URL elle-même, en plus du `<title>` et de l'introduction — une affirmation fausse sur une personne
+> réelle en contexte électoral. Même raisonnement que ci-dessus, appliqué un cran plus tard.
 
 ## ⚠️ À concevoir ici, pas ailleurs : l'architecture front
 
@@ -101,7 +107,7 @@ d'implémentation** : si l'une s'avère fausse au contact du code, le dire et pr
 | # | Question | Décision |
 | --- | --- | --- |
 | D2.1 | Qui apparaît sur l'accueil en 2026 ? | Une table `candidate` alimentée par un **seed versionné** (`db/seeds/candidates.toml`), une ligne par personne avec son statut (`declare`, `pressenti`, `retire`), sa source et la date de cette source. Appliqué par un job worker, jamais par le backend : la sélection des candidat·es est un choix éditorial, il doit être explicite, sourcé et relisible en diff |
-| D2.2 | Les personnes non candidates sont-elles consultables ? | Oui, et pas seulement par URL directe : un **annuaire `/deputes`** les rend parcourables. Sans lui la phase 2 n'afficherait qu'une poignée de fiches largement vides, ce qui la priverait de sa raison d'être — voir les vraies données à l'écran |
+| D2.2 | Les personnes non candidates sont-elles consultables ? | Oui, et pas seulement par URL directe : un **annuaire `/personnes`** les rend parcourables. Sans lui la phase 2 n'afficherait qu'une poignée de fiches largement vides, ce qui la priverait de sa raison d'être — voir les vraies données à l'écran |
 | D2.3 | Slug d'URL | `prenom-nom`, suffixe numérique en cas d'homonymie. Table `person_slug` **historisée** : un slug attribué n'est jamais réattribué ni réécrit, les anciens restent et servent de table de redirection (301). La stabilité des liens sort du même mécanisme, sans seconde table |
 | D2.4 | CSS | Feuille écrite à la main, sans framework — cohérent avec « pas de bundler » |
 | D2.5 | Mise en cache HTTP | `Cache-Control` court + `ETag` sur les pages publiques ; à réévaluer en phase 5 |
@@ -128,7 +134,7 @@ noms) : identifiants Python, SQL, classes CSS et noms de gabarits **en anglais**
 domaine parlementaire qui n'ont pas d'équivalent propre (`scrutin`, `organe`, `mandat`, `groupe`,
 `legislature`). Donc `timeline`, pas `frise` ; `person`, pas `personne` ; `.timeline__segment`, pas
 `.frise__segment`. En revanche **les URL et tout le texte affiché sont en français** : `/personne/{slug}`,
-`/deputes`, `/methodologie`.
+`/personnes`, `/methodologie`.
 
 ### Ce que la phase 2 ne fait pas
 
@@ -459,7 +465,7 @@ Pages (HTML complet) :
 | Méthode et route | Contenu | Réponses |
 | --- | --- | --- |
 | `GET /` | Candidat·es (`candidate` ⋈ `person_apercu`), champ de recherche | 200 |
-| `GET /deputes?q=&legislature=&page=` | Annuaire paginé | 200 |
+| `GET /personnes?q=&legislature=&page=` | Annuaire paginé | 200 |
 | `GET /personne/{slug}` | Fiche | 200 · **301** vers le slug courant si `slug` est ancien · 404 |
 | `GET /personne/{slug}/votes?…` | Liste complète filtrable | 200 · 301 · 404 |
 | `GET /scrutin/{legislature}/{numero}` | Détail | 200 · 404 |
@@ -472,7 +478,7 @@ n'étendant pas `base.html.jinja`) :
 | Route | Rendu |
 | --- | --- |
 | `GET /fragments/recherche?q=` | `_search_results.html.jinja` |
-| `GET /fragments/deputes?q=&legislature=&page=` | `_directory_list.html.jinja` |
+| `GET /fragments/personnes?q=&legislature=&page=` | `_directory_list.html.jinja` |
 | `GET /fragments/personne/{slug}/votes?…` | `_vote_list.html.jinja` |
 
 **Chaque fragment a une page équivalente qui fonctionne sans JS.** La règle pratique : le `hx-get`
@@ -719,7 +725,7 @@ peuplée par `make ingest` :
 
 1. `EXPLAIN (ANALYZE, BUFFERS)` sur les trois requêtes les plus lourdes : liste des votes du·de la
    député·e le·la plus prolifique, fiche complète, page d'un scrutin à 577 votants ;
-2. temps de rendu côté serveur, 20 appels, p50 et p95, pour `/`, `/deputes`, `/personne/{slug}` et
+2. temps de rendu côté serveur, 20 appels, p50 et p95, pour `/`, `/personnes`, `/personne/{slug}` et
    `/scrutin/…` ;
 3. **consigner les chiffres obtenus dans le message du commit final et dans ce plan.** S'ils dépassent
    100 ms, ne pas contourner : trouver la requête coupable, et transformer le calcul en index, en
@@ -741,7 +747,7 @@ peuplée par `make ingest` :
 > | Route | p50 | p95 |
 > | --- | --- | --- |
 > | `/` | 3,4 ms | 4,8 ms |
-> | `/deputes` | 5,8 ms | 9,6 ms |
+> | `/personnes` | 5,8 ms | 9,6 ms |
 > | `/personne/jean-luc-melenchon` (mandats et votes réels) | 22,5 ms | 25,2 ms |
 > | `/personne/yael-braun-pivet` (9 832 votes, le cas le plus lourd) | 5,8 ms | 8,1 ms |
 > | `/personne/yael-braun-pivet/votes` (première page) | 5,1 ms | 6,4 ms |
