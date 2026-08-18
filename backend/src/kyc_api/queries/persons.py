@@ -81,10 +81,7 @@ def person_apercu_from_row(row: Record) -> PersonApercu:
 
 _DIRECTORY_WHERE = """
     pa.slug IS NOT NULL
-    AND (
-        $1::text IS NULL
-        OR (coalesce(pa.prenom, '') || ' ' || coalesce(pa.nom, '')) ILIKE '%' || $1 || '%'
-    )
+    AND ($1::text IS NULL OR pa.recherche LIKE '%' || kyc_unaccent(lower($1)) || '%')
     AND ($2::smallint IS NULL OR $2 = ANY(pa.legislatures))
 """
 

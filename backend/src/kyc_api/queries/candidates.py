@@ -15,10 +15,7 @@ async def list_candidates(pool: Queryable, *, q: str | None = None) -> list[Cand
         FROM candidate c
         JOIN person_apercu pa ON pa.person_id = c.person_id
         WHERE pa.slug IS NOT NULL
-          AND (
-              $1::text IS NULL
-              OR (coalesce(pa.prenom, '') || ' ' || coalesce(pa.nom, '')) ILIKE '%' || $1 || '%'
-          )
+          AND ($1::text IS NULL OR pa.recherche LIKE '%' || kyc_unaccent(lower($1)) || '%')
         ORDER BY pa.nom, pa.prenom, pa.person_id
         """,
         q,
