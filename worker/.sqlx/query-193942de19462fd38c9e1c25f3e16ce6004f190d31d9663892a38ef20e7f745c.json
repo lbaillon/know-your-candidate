@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE person SET wikidata_qid = 'Q1' WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "193942de19462fd38c9e1c25f3e16ce6004f190d31d9663892a38ef20e7f745c"
+}

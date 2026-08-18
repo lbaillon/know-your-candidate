@@ -3,11 +3,11 @@
 //! une ingestion distante — un fichier invalide fait échouer le job **avant toute écriture**,
 //! deviner n'a aucun sens pour une donnée qu'on tient à la main.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use serde::Deserialize;
 use serde_json::Value;
-use sqlx::PgPool;
+use sqlx::{PgConnection, PgPool};
 
 use crate::run;
 
@@ -20,13 +20,20 @@ const DEFAULT_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../db/seeds/can
 
 const KNOWN_STATUTS: [&str; 3] = ["declare", "pressenti", "retire"];
 
+// `deny_unknown_fields` sur les deux structures (F4, docs/plans/phase-2.1-fix.md) : une clé
+// inconnue — `[[candidats]]` au lieu de `[[candidate]]`, la faute la plus naturelle du monde en
+// français — n'est jamais une intention, toujours une faute de frappe. Sans ce drapeau, serde
+// l'ignorait silencieusement et `SeedFile::candidates` restait vide via son `#[serde(default)]`,
+// ce qui vidait `candidate` sans la moindre erreur.
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct SeedFile {
     #[serde(default, rename = "candidate")]
     candidates: Vec<RawEntry>,
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RawEntry {
     an_uid: Option<String>,
     wikidata_qid: Option<String>,
@@ -61,10 +68,16 @@ pub async fn run(ctx: &JobContext, payload: &Value) -> anyhow::Result<()> {
         .and_then(Value::as_str)
         .map(str::to_string)
         .unwrap_or_else(|| DEFAULT_PATH.to_string());
+    // F4 : vider `candidate` reste possible, mais devient un geste explicite plutôt que l'effet
+    // de bord d'un fichier vide ou mal nommé.
+    let allow_empty = payload
+        .get("allow_empty")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
 
     let run_id = run::start(&ctx.pool, "seed_candidates", ctx.job_id, payload.clone()).await?;
 
-    match seed(&ctx.pool, &path).await {
+    match seed(&ctx.pool, &path, allow_empty).await {
         Ok(counters) => {
             run::finish_ok(&ctx.pool, run_id, counters, None, None).await?;
             Ok(())
@@ -80,13 +93,35 @@ pub async fn run(ctx: &JobContext, payload: &Value) -> anyhow::Result<()> {
 /// de fixture — sur le modèle de `ingest_bytes` des autres jobs. Pas de `run_id` : ce job n'écrit
 /// aucune anomalie, ses seuls comptes rendus sont les compteurs renvoyés (journalisés par
 /// l'appelant via `run::finish_ok`).
-pub async fn seed(pool: &PgPool, path: &str) -> anyhow::Result<Value> {
+///
+/// Tout — résolution, upsert, suppression — vit dans une seule transaction (F7,
+/// docs/plans/phase-2.1-fix.md) : sans elle, un `an_uid` inconnu en cinquième entrée laissait en
+/// base les personnes déjà créées par les quatre premières.
+pub async fn seed(pool: &PgPool, path: &str, allow_empty: bool) -> anyhow::Result<Value> {
     let raw = std::fs::read_to_string(path)
         .map_err(|err| anyhow::anyhow!("lecture de {path} impossible : {err}"))?;
     let entries = parse_and_validate(&raw)?;
 
+    let mut tx = pool.begin().await?;
+
+    if entries.is_empty() && !allow_empty {
+        // F4 : un retrait massif ne doit jamais passer inaperçu dans les journaux, y compris
+        // quand on le refuse — `candidats_retires` apparaît donc dans le message d'erreur comme
+        // dans le succès.
+        let candidats_retires: i64 =
+            sqlx::query_scalar!(r#"SELECT count(*) AS "count!" FROM candidate"#)
+                .fetch_one(&mut *tx)
+                .await?;
+        anyhow::bail!(
+            "aucune entrée [[candidate]] dans {path} : refus de vider `candidate` \
+             (candidats_retires si confirmé : {candidats_retires}).\n\
+             Si le retrait de toutes les candidatures est voulu, relancer avec le payload \
+             {{\"allow_empty\": true}}."
+        );
+    }
+
     let existing_before: HashSet<i64> = sqlx::query_scalar!("SELECT person_id FROM candidate")
-        .fetch_all(pool)
+        .fetch_all(&mut *tx)
         .await?
         .into_iter()
         .collect();
@@ -94,8 +129,14 @@ pub async fn seed(pool: &PgPool, path: &str) -> anyhow::Result<Value> {
     let mut person_ids = Vec::with_capacity(entries.len());
     let mut personnes_creees = 0usize;
     for entry in &entries {
-        person_ids.push(resolve_person(pool, &entry.identifiant, &mut personnes_creees).await?);
+        person_ids.push(resolve_person(&mut tx, &entry.identifiant, &mut personnes_creees).await?);
     }
+
+    // F8 : deux identifiants différents peuvent désigner la même personne (an_uid et
+    // wikidata_qid) — la plupart des député·es portent les deux. Refuser explicitement plutôt
+    // que de laisser PostgreSQL rejeter l'upsert avec « command cannot affect row a second
+    // time », qui ne dit pas ce qui s'est passé.
+    reject_duplicate_persons(&entries, &person_ids)?;
 
     let statuts: Vec<&str> = entries.iter().map(|e| e.statut.as_str()).collect();
     let source_urls: Vec<&str> = entries.iter().map(|e| e.source_url.as_str()).collect();
@@ -125,7 +166,7 @@ pub async fn seed(pool: &PgPool, path: &str) -> anyhow::Result<Value> {
         &source_dates,
         &notes as _,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
 
     let candidats_crees = person_ids
@@ -141,8 +182,10 @@ pub async fn seed(pool: &PgPool, path: &str) -> anyhow::Result<Value> {
         "DELETE FROM candidate WHERE person_id <> ALL($1::bigint[]) RETURNING person_id",
         &person_ids,
     )
-    .fetch_all(pool)
+    .fetch_all(&mut *tx)
     .await?;
+
+    tx.commit().await?;
 
     Ok(serde_json::json!({
         "entrees_lues": entries.len(),
@@ -153,15 +196,40 @@ pub async fn seed(pool: &PgPool, path: &str) -> anyhow::Result<Value> {
     }))
 }
 
+/// Nomme les deux identifiants en cause plutôt que de laisser PostgreSQL échouer sur une
+/// contrainte : c'est tout l'intérêt de vérifier ici plutôt que de laisser filer jusqu'à
+/// l'upsert (F8).
+fn reject_duplicate_persons(entries: &[ValidEntry], person_ids: &[i64]) -> anyhow::Result<()> {
+    let mut seen: HashMap<i64, &Identifiant> = HashMap::new();
+    for (entry, person_id) in entries.iter().zip(person_ids) {
+        if let Some(previous) = seen.insert(*person_id, &entry.identifiant) {
+            anyhow::bail!(
+                "les identifiants {} et {} désignent la même personne (person_id {person_id}) : \
+                 entrées en conflit dans le fichier",
+                identifiant_repr(previous),
+                identifiant_repr(&entry.identifiant),
+            );
+        }
+    }
+    Ok(())
+}
+
+fn identifiant_repr(identifiant: &Identifiant) -> String {
+    match identifiant {
+        Identifiant::AnUid(an_uid) => format!("an_uid={an_uid}"),
+        Identifiant::Wikidata { qid, .. } => format!("wikidata_qid={qid}"),
+    }
+}
+
 async fn resolve_person(
-    pool: &PgPool,
+    conn: &mut PgConnection,
     identifiant: &Identifiant,
     personnes_creees: &mut usize,
 ) -> anyhow::Result<i64> {
     match identifiant {
         Identifiant::AnUid(an_uid) => {
             sqlx::query_scalar!("SELECT id FROM person WHERE an_uid = $1", an_uid)
-                .fetch_optional(pool)
+                .fetch_optional(&mut *conn)
                 .await?
                 .ok_or_else(|| {
                     anyhow::anyhow!(
@@ -173,7 +241,7 @@ async fn resolve_person(
         Identifiant::Wikidata { qid, prenom, nom } => {
             if let Some(id) =
                 sqlx::query_scalar!("SELECT id FROM person WHERE wikidata_qid = $1", qid)
-                    .fetch_optional(pool)
+                    .fetch_optional(&mut *conn)
                     .await?
             {
                 return Ok(id);
@@ -184,7 +252,7 @@ async fn resolve_person(
                 prenom,
                 nom,
             )
-            .fetch_one(pool)
+            .fetch_one(&mut *conn)
             .await?;
             *personnes_creees += 1;
             Ok(id)
