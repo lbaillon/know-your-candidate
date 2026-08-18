@@ -10,10 +10,10 @@
 #
 # statut : declare | pressenti | retire
 #
-# Liste volontairement réduite à deux entrées à ce stade (voir docs/plans/phase-2-api-ui.md :
-# « la liste complète est un travail éditorial, pas un travail d'implémentation »), choisies pour
-# que leur source soit indiscutable et pour exercer les deux chemins d'identification — dont le cas
-# qui casse, une personne jamais élue à l'Assemblée.
+# Liste éditoriale, pas un travail d'implémentation (voir docs/plans/phase-2-api-ui.md) : chaque
+# ajout doit porter une source vérifiée en ouvrant réellement l'article cité, jamais recopiée de
+# mémoire. Les deux premières entrées ont été choisies aussi pour exercer les deux chemins
+# d'identification — dont le cas qui casse, une personne jamais élue à l'Assemblée.
 
 [[candidate]]
 an_uid = "PA2150"
@@ -30,3 +30,24 @@ statut = "declare"
 source_url = "https://www.ici.fr/infos/politique/presidentielle-2027-nathalie-arthaud-annonce-sa-candidature-pour-lutte-ouvriere-8888318"
 source_date = 2025-12-08
 note = "Candidature votée par le congrès de Lutte ouvrière, porte-parole du parti et jamais élue à l'Assemblée nationale"
+
+[[candidate]]
+an_uid = "PA2538"
+statut = "declare"
+source_url = "https://republicains.fr/actualites/2026/04/20/bruno-retailleau-largement-designe-comme-candidat-des-republicains-pour-lelection-presidentielle/"
+source_date = 2026-04-19
+note = "Désigné par 73,8 % des adhérents LR le 19 avril 2026 (article du parti daté du lendemain) ; désignation par le parti, non déclaration personnelle"
+
+[[candidate]]
+an_uid = "PA722190"
+statut = "declare"
+source_url = "https://lcp.fr/actualites/presidentielle-2027-gabriel-attal-officialise-sa-candidature-436721"
+source_date = 2026-05-22
+note = "Officialisation à Mur-de-Barrez (Aveyron), en clôture d'un débat citoyen"
+
+[[candidate]]
+an_uid = "PA720614"
+statut = "declare"
+source_url = "https://lcp.fr/actualites/ce-soir-je-suis-candidate-a-l-election-presidentielle-annonce-marine-le-pen-438886"
+source_date = 2026-07-07
+note = "« Ce soir, je suis candidate à l'élection présidentielle », JT de 20 h de TF1"
