@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO label_revision (scrutin_id, avant, apres, method, author_id)\n           VALUES ($1, '[]'::jsonb, '[]'::jsonb, 'manual', $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0bacbb15385067bffb6c51596bae387e09f0fe707504c0ef478e6e7c59b95e1f"
+}

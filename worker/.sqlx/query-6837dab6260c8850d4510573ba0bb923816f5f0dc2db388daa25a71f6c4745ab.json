@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO group_axis (version, description, grille_version, grille_date, source_url, content_hash, is_current)\n           VALUES ('v2', 'd', 'g2', '2026-02-01', 'https://example.org', 'hash2', true)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "6837dab6260c8850d4510573ba0bb923816f5f0dc2db388daa25a71f6c4745ab"
+}

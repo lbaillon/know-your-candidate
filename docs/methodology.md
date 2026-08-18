@@ -116,37 +116,44 @@ L'exemple donné au départ du projet — voter la taxe Zucman relève du pôle 
 pôle *maîtrise de la fiscalité* — est exactement le format attendu : un scrutin, un thème, un pôle, et une
 phrase qui explique le rattachement.
 
-## 5. Les trois méthodes de catégorisation
+## 5. Une mesure automatique, et deux méthodes de catégorisation
 
-Chaque catégorisation porte sa `method`, et l'UI l'affiche. Une catégorisation automatique n'a pas le même
-statut qu'une catégorisation relue.
+Une catégorisation (`scrutin_label`) est une opinion assumée par un humain : sa `method` ne vaut donc que
+`manual` ou `import`, jamais `heuristic` (D3.7, [phase 3](plans/phase-3-categorisation.md)). Derrière toute
+catégorisation publiée, il y a quelqu'un qui l'a écrite ou relue.
 
-### a. `heuristic` — première passe automatique
+Ce que l'automatique produit est une **mesure** (`scrutin_axis_estimate`), pas une catégorisation : elle
+est distincte en base, distincte dans l'affichage, et elle ne porte ni thème ni justification — un
+ordonnancement gauche-droite des groupes ne dit rien du fait qu'un texte parle de santé ou d'immigration.
 
-Objectif : dégrossir, pas conclure. Deux approches possibles, à trancher en
-[phase 3](plans/phase-3-categorisation.md) :
+### a. La mesure automatique — dégrossir, pas conclure
 
-- **Alignement sur des groupes de référence.** On compare le vote d'une personne à la position majoritaire
-  de chaque groupe parlementaire, et on situe la personne à partir d'un ordonnancement gauche-droite des
-  groupes. Cet ordonnancement est **dérivé de la grille des nuances politiques du ministère de
-  l'Intérieur**, seule source officielle publiée qui positionne les formations sur cet axe. Il vit dans un
-  fichier versionné où chaque ligne cite sa nuance, la version de la grille et sa date.
+Stratégie retenue en phase 3, `group_alignment` : on compare, pour un scrutin, la position moyenne du camp
+qui a voté pour à celle du camp qui a voté contre, chaque groupe parlementaire étant situé par un
+ordonnancement gauche-droite. Cet ordonnancement est **dérivé de la grille des nuances politiques du
+ministère de l'Intérieur**, seule source officielle publiée qui positionne les formations sur cet axe. Il
+vit dans un fichier versionné (`db/seeds/group_axis.toml`) où chaque ligne cite sa nuance, la version de la
+grille et sa date.
 
-  On le cite sans s'y soumettre : cette grille est établie par l'exécutif, elle classe donc aussi ses
-  opposants, elle change d'une élection à l'autre, et elle nuance des candidat·es plutôt que des groupes
-  parlementaires. Elle reste donc une **entrée documentée et contestable par PR**, pas une vérité.
-- **Axe dérivé des votes eux-mêmes.** On construit la matrice votants × scrutins et on en extrait l'axe
-  principal (approche classique en science politique). Avantage : aucune position politique n'est postulée
-  au départ. Inconvénient : l'axe obtenu est un artefact statistique qu'un humain doit nommer, et il ne
-  dit rien des thèmes.
+On le cite sans s'y soumettre : cette grille est établie par l'exécutif, elle classe donc aussi ses
+opposants, elle change d'une élection à l'autre, et elle nuance des candidat·es plutôt que des groupes
+parlementaires. Elle reste donc une **entrée documentée et contestable par PR**, pas une vérité.
 
-Dans les deux cas, le résultat est étiqueté « automatique, non relu » et le restera tant qu'un humain ne
-l'aura pas validé.
+Une seconde stratégie, `principal_axis` — axe extrait de la matrice votants × scrutins, sans postulat de
+départ — est envisagée en validation croisée à partir de la [phase 4](plans/phase-4-partis-scores.md),
+sous condition d'un volume minimal de catégorisations humaines relues.
+
+La mesure reste dans le back-office (D3.8) : elle pré-remplit le formulaire de saisie, ordonne la file de
+travail et sert de contrôle croisé une fois relue en nombre. Elle n'est **jamais publiée telle quelle** —
+publier des milliers de positions automatiques sur des votes parlementaires publierait du plausible et du
+faux à grande échelle sur un sujet sensible. Ce qui est publié, c'est la méthode ci-dessus et, une fois
+mesurable, le taux d'accord agrégé avec les catégorisations humaines.
 
 ### b. `manual` — saisie ou correction par un admin
 
 Via le back-office : thème, pôle, confiance, et **commentaire justifiant le rattachement**. Le commentaire
-n'est pas optionnel : c'est lui qui sera affiché en explication.
+n'est pas optionnel : c'est lui qui sera affiché en explication. La mesure automatique, quand elle existe,
+pré-remplit la position proposée mais jamais le thème — la machine ne sait pas de quoi parle un scrutin.
 
 ### c. `import` — export → travail hors ligne → réimport
 

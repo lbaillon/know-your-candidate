@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO theme (slug, libelle, description, libelle_pole_negatif, rang)\n           VALUES ('boiteux', 'Boiteux', 'description', 'seul', 1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "09ea780819b973ac32d48e4a37e22155e50c29b34e10e1f9c183c3310a86a780"
+}
