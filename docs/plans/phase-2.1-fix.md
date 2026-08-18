@@ -1,6 +1,6 @@
 # Phase 2.1 — Corrections des pages publiques
 
-**Statut : 📝 à relire** · Dépend de : phase 2 · Bloque : phase 3
+**Statut : ✅ validé** · Dépend de : phase 2 · Bloque : phase 3
 
 ## Objectif
 

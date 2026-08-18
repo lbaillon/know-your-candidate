@@ -11,7 +11,7 @@ moindre ligne de code.** C'est le seul processus imposé par le projet.
 | [0.1](phase-0.1-fix.md) | Corrections du socle relevées à la revue de la phase 0 | ✅ validé |
 | [1](phase-1-ingestion.md) | Ingestion des scrutins et des mandats depuis l'open data | ✅ validé |
 | [2](phase-2-api-ui.md) | Pages publiques : annuaire, fiche personne, page scrutin, API JSON | ✅ validé |
-| [2.1](phase-2.1-fix.md) | Corrections des pages publiques relevées à la revue de la phase 2 | 📝 à relire |
+| [2.1](phase-2.1-fix.md) | Corrections des pages publiques relevées à la revue de la phase 2 | ✅ validé |
 | [3](phase-3-categorisation.md) | Catégorisation : heuristique, back-office, export/import | 📝 à relire |
 | [4](phase-4-partis-scores.md) | Scores par thème, positions de parti par période, explications | 📝 à relire |
 | [5](phase-5-deploiement.md) | Déploiement, observabilité Logfire, sauvegardes | 📝 à relire |
