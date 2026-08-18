@@ -1,16 +1,16 @@
 {% macro person_card(person, candidature=None) %}
 {% set thumb = thumbnail_url(person.commons_file) %}
 <li class="person-card">
-  <a class="person-card__photo-link" href="/personne/{{ person.slug }}">
-    {% if thumb %}
-      {# alt="" volontaire : le nom est déjà écrit juste après, un alt qui le répète ferait
-         entendre l'information deux fois à un lecteur d'écran (D2.9). Ne pas « corriger ». #}
-      <img class="person-card__photo" src="{{ thumb }}" width="400" height="400" alt=""
-           loading="lazy" decoding="async" referrerpolicy="no-referrer">
-    {% else %}
-      <span class="person-card__photo person-card__photo--placeholder" aria-hidden="true"></span>
-    {% endif %}
-  </a>
+  {% if thumb %}
+    {# alt="" volontaire : le nom est déjà écrit juste après, un alt qui le répète ferait
+       entendre l'information deux fois à un lecteur d'écran (D2.9). Ne pas « corriger ». Pas de
+       lien autour de l'image non plus : le nom juste en dessous est déjà cliquable vers la même
+       cible, un second lien serait annoncé sans rien apporter (F3, docs/plans/phase-2.1-fix.md). #}
+    <img class="person-card__photo" src="{{ thumb }}" width="400" height="400" alt=""
+         loading="lazy" decoding="async" referrerpolicy="no-referrer">
+  {% else %}
+    <span class="person-card__photo person-card__photo--placeholder" aria-hidden="true"></span>
+  {% endif %}
   {% if thumb %}
     {# Auteur et licence à côté de la photo : obligation CC-BY-SA, pas une politesse (D2.9). #}
     <p class="person-card__credit">

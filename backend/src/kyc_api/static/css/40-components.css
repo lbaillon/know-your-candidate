@@ -73,9 +73,6 @@
     flex-direction: column;
     gap: var(--space-xs);
   }
-  .person-card__photo-link {
-    display: block;
-  }
   .person-card__photo {
     width: 100%;
     aspect-ratio: 1 / 1;

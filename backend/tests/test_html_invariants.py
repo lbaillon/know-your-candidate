@@ -96,6 +96,18 @@ def _check_no_external_resource_except_wikimedia(doc: lxml.html.HtmlElement, pat
             )
 
 
+def _check_every_link_has_an_accessible_name(doc: lxml.html.HtmlElement, path: str) -> None:
+    for link in doc.xpath("//a[@href]"):
+        text = " ".join(link.itertext()).strip()
+        has_img_alt = any((img.get("alt") or "").strip() for img in link.xpath(".//img"))
+        has_aria_label = bool((link.get("aria-label") or "").strip())
+        has_aria_labelledby = bool((link.get("aria-labelledby") or "").strip())
+        has_title = bool((link.get("title") or "").strip())
+        assert text or has_img_alt or has_aria_label or has_aria_labelledby or has_title, (
+            f"{path} : <a href={link.get('href')!r}> sans nom accessible"
+        )
+
+
 def _check_no_inline_script_or_disallowed_style(doc: lxml.html.HtmlElement, path: str) -> None:
     assert not doc.xpath("//script[not(@src)]"), f"{path} : <script> en ligne"
 
@@ -160,6 +172,11 @@ async def test_no_inline_script_or_style_attribute(client: AsyncClient, path: st
     _check_no_inline_script_or_disallowed_style(await _document(client, path), path)
 
 
+@pytest.mark.parametrize("path", PAGE_ROUTES)
+async def test_every_link_has_an_accessible_name(client: AsyncClient, path: str) -> None:
+    _check_every_link_has_an_accessible_name(await _document(client, path), path)
+
+
 # --- Routes qui exigent des données en base ---------------------------------------------------
 
 
@@ -193,6 +210,7 @@ async def test_person_page_satisfies_every_structural_invariant(
     _check_every_form_field_has_a_label(doc, path)
     _check_no_external_resource_except_wikimedia(doc, path)
     _check_no_inline_script_or_disallowed_style(doc, path)
+    _check_every_link_has_an_accessible_name(doc, path)
 
 
 async def test_votes_page_satisfies_every_structural_invariant(
@@ -213,6 +231,7 @@ async def test_votes_page_satisfies_every_structural_invariant(
     _check_every_form_field_has_a_label(doc, path)
     _check_no_external_resource_except_wikimedia(doc, path)
     _check_no_inline_script_or_disallowed_style(doc, path)
+    _check_every_link_has_an_accessible_name(doc, path)
 
 
 async def test_scrutin_page_satisfies_every_structural_invariant(
@@ -247,3 +266,4 @@ async def test_scrutin_page_satisfies_every_structural_invariant(
     _check_every_form_field_has_a_label(doc, path)
     _check_no_external_resource_except_wikimedia(doc, path)
     _check_no_inline_script_or_disallowed_style(doc, path)
+    _check_every_link_has_an_accessible_name(doc, path)
