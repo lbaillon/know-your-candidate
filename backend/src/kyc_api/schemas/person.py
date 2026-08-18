@@ -6,6 +6,8 @@ from datetime import date
 
 from pydantic import BaseModel
 
+from kyc_api.schemas.common import Source
+
 
 class GroupeApercu(BaseModel):
     """Le dernier groupe parlementaire connu d'une personne — pas « le groupe actuel » : voir la
@@ -51,3 +53,25 @@ class CandidateStatus(BaseModel):
 
 class CandidateCard(PersonApercu):
     candidature: CandidateStatus
+
+
+class PersonDetail(BaseModel):
+    """La fiche complète d'une personne (`GET /personne/{slug}`) : identité, sans agrégat de vote
+    (la frise et les votes récents sont chargés à part, voir queries/persons.py).
+    """
+
+    person_id: int
+    slug: str
+    civilite: str | None
+    prenom: str | None
+    nom: str | None
+    date_deces: date | None
+    an_uid: str | None
+    wikidata_qid: str | None
+    photo_url: str | None
+    commons_file: str | None
+    licence: str | None
+    licence_url: str | None
+    auteur: str | None
+    candidature: CandidateStatus | None
+    source: Source | None

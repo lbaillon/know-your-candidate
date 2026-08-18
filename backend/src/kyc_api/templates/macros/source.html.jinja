@@ -1,0 +1,8 @@
+{% macro source_note(source, label="Source") %}
+{% if source %}
+<p class="source-note">
+  {{ label }} : <a href="{{ source.url }}">document source</a>,
+  récupéré le {{ source.fetched_at.strftime("%d/%m/%Y") }}{% if source.licence %} — {{ source.licence }}{% endif %}.
+</p>
+{% endif %}
+{% endmacro %}

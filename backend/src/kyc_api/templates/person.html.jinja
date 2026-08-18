@@ -1,0 +1,69 @@
+{% extends "base.html.jinja" %}
+{% from "macros/timeline.html.jinja" import timeline_view %}
+{% from "macros/vote.html.jinja" import vote_item %}
+{% from "macros/source.html.jinja" import source_note %}
+
+{% block title %}{{ display_name(person.prenom, person.nom) }} — Know Your Candidate{% endblock %}
+
+{% block content %}
+  <article class="person-detail">
+    <header class="person-detail__header">
+      {% set thumb = thumbnail_url(person.commons_file) %}
+      {% if thumb %}
+        <img class="person-detail__photo" src="{{ thumb }}" width="400" height="400" alt=""
+             loading="lazy" decoding="async" referrerpolicy="no-referrer">
+        <p class="person-detail__credit">
+          {{ person.auteur or "auteur inconnu" }}{% if person.licence %},
+          {% if person.licence_url %}<a href="{{ person.licence_url }}">{{ person.licence }}</a>{% else %}{{ person.licence }}{% endif %}
+          {% endif %}
+        </p>
+      {% else %}
+        <span class="person-detail__photo person-detail__photo--placeholder" aria-hidden="true"></span>
+      {% endif %}
+      <h1>{{ display_name(person.prenom, person.nom) }}</h1>
+      {% if person.candidature %}
+        <p class="person-detail__statut">
+          {{ candidate_statut_label(person.candidature.statut) }} —
+          <a href="{{ person.candidature.source_url }}">source</a>,
+          le {{ person.candidature.source_date.strftime("%d/%m/%Y") }}
+          {%- if person.candidature.note %} ({{ person.candidature.note }}){% endif -%}
+        </p>
+      {% endif %}
+      {{ source_note(person.source, label="Identité") }}
+    </header>
+
+    <section class="person-detail__timeline" aria-labelledby="frise-titre">
+      <h2 id="frise-titre">Appartenances politiques</h2>
+      {{ timeline_view(timeline) }}
+    </section>
+
+    <section class="person-detail__votes" aria-labelledby="votes-titre">
+      <h2 id="votes-titre">Votes récents</h2>
+      {% if not has_ever_sat %}
+        <p class="empty-state">
+          Cette personne n'a jamais siégé à l'Assemblée nationale, ses votes personnels ne sont
+          donc pas disponibles.
+        </p>
+      {% elif recent_votes %}
+        <ul class="vote-list">
+          {% for vote in recent_votes %}
+            {{ vote_item(vote) }}
+          {% endfor %}
+        </ul>
+        <a href="/personne/{{ person.slug }}/votes">Voir tous les votes</a>
+      {% else %}
+        <p class="empty-state">
+          Aucun vote enregistré pour cette personne dans le corpus (législatures 15 à 17).
+        </p>
+      {% endif %}
+    </section>
+
+    <section class="person-detail__orientations" aria-labelledby="orientations-titre">
+      <h2 id="orientations-titre">Orientations</h2>
+      <p class="empty-state">
+        Les orientations thématiques de cette personne ne sont pas encore calculées : cette
+        fonctionnalité arrive en phase 4 — voir <a href="/methodologie">la méthodologie</a>.
+      </p>
+    </section>
+  </article>
+{% endblock %}

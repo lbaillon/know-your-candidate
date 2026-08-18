@@ -1,12 +1,16 @@
 """Pages publiques, toujours montées."""
 
-from fastapi import APIRouter, Depends, Request
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
 
 from kyc_api.db import Queryable, get_pool
 from kyc_api.documents import render_document
 from kyc_api.queries import candidates as candidates_queries
 from kyc_api.queries import persons as persons_queries
 from kyc_api.templating import templates
+from kyc_api.timeline import ASSEMBLEE, build_timeline
 
 router = APIRouter()
 
@@ -34,6 +38,41 @@ async def deputes(
         request,
         "directory.html.jinja",
         {"persons": persons, "pagination": pagination, "q": q, "legislature": legislature},
+    )
+
+
+@router.get("/personne/{slug}")
+async def person_detail(request: Request, slug: str, pool: Queryable = Depends(get_pool)):
+    resolution = await persons_queries.resolve_slug(pool, slug)
+    if resolution is None:
+        raise HTTPException(status_code=404)
+    if not resolution.is_current:
+        # 301 et non 302 : le slug ancien est réputé définitif (voir plan d'exécution, « Routes
+        # exactes »), pas un simple aléa temporaire.
+        return RedirectResponse(url=f"/personne/{resolution.current_slug}", status_code=301)
+
+    person = await persons_queries.get_person_detail(pool, resolution.person_id)
+    if person is None:
+        raise HTTPException(status_code=404)
+
+    segments = await persons_queries.get_timeline_segments(pool, resolution.person_id)
+    timeline = build_timeline(segments, today=date.today())
+    recent_votes = await persons_queries.get_recent_votes(pool, resolution.person_id)
+    # Le référentiel des mandats peut être en retard sur le fichier de scrutin — data-sources.md
+    # documente un cas où le rattachement au groupe se lit d'abord dans le vote, le mandat ne
+    # comblant que ce que le scrutin ne dit pas. Un vote réel est donc une preuve de présence à
+    # part entière, même sans mandat ASSEMBLEE capturé.
+    has_ever_sat = any(segment.piste == ASSEMBLEE for segment in segments) or bool(recent_votes)
+
+    return templates.TemplateResponse(
+        request,
+        "person.html.jinja",
+        {
+            "person": person,
+            "timeline": timeline,
+            "has_ever_sat": has_ever_sat,
+            "recent_votes": recent_votes,
+        },
     )
 
 

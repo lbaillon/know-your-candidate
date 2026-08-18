@@ -1,6 +1,18 @@
 """Modèles Pydantic partagés par plusieurs objets — voir docs/plans/phase-2-api-ui.md."""
 
+from datetime import datetime
+
 from pydantic import BaseModel
+
+
+class Source(BaseModel):
+    """Le pendant machine de « chaque bloc affiche sa source » (CLAUDE.md) : une réponse de
+    l'API doit pouvoir citer la donnée sans revenir sur le site (D2.10).
+    """
+
+    url: str
+    fetched_at: datetime
+    licence: str | None = None
 
 
 class Pagination(BaseModel):

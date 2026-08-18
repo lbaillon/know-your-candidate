@@ -118,4 +118,123 @@
     align-items: center;
     margin-top: var(--space-lg);
   }
+
+  /* Fiche personne (identité, frise, votes récents, orientations). */
+  .person-detail__header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: var(--space-lg);
+    align-items: start;
+  }
+  .person-detail__photo {
+    grid-row: span 2;
+    width: 8rem;
+    height: 8rem;
+    object-fit: cover;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+  .person-detail__credit {
+    grid-column: 1;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+  .person-detail__header h1 {
+    grid-column: 2;
+    margin: 0;
+  }
+  .person-detail__statut {
+    grid-column: 2;
+    color: var(--color-text-muted);
+  }
+  .person-detail__timeline,
+  .person-detail__votes,
+  .person-detail__orientations {
+    margin-top: var(--space-xl);
+  }
+
+  /* La frise (D2.7) : chaque piste est son propre `<ol>` en grille CSS, alignée sur la même
+   * échelle de colonnes (un mois par colonne) que la rangée d'années. Sous le point de rupture
+   * (--breakpoint-frise-repliee, 10-tokens.css), chaque `<ol>` repasse à une seule colonne et
+   * chaque segment occupe sa propre ligne : c'est la même liste, sans duplication de contenu. Les
+   * `style="grid-column: …"` calculés par timeline.py fixent la position dans le désordre visuel
+   * ; la largeur des pistes hors point de rupture vient d'ici, jamais de couleur.
+   */
+  .timeline {
+    margin-top: var(--space-md);
+  }
+  .timeline__scale,
+  .timeline__track {
+    display: grid;
+    gap: 2px;
+  }
+  .timeline__scale li {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    border-left: 1px solid var(--color-border);
+    padding-left: var(--space-xs);
+  }
+  .timeline__piste {
+    margin-top: var(--space-md);
+  }
+  .timeline__piste-title {
+    font-size: var(--font-size-base);
+    margin-bottom: var(--space-xs);
+  }
+  .timeline__track {
+    gap: 2px;
+  }
+  .timeline__segment {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-left: 4px solid var(--color-accent);
+    padding: var(--space-xs);
+    font-size: var(--font-size-sm);
+  }
+  .timeline__segment--non-inscrit {
+    border-left-style: dashed;
+    background: repeating-linear-gradient(
+      45deg,
+      var(--color-surface),
+      var(--color-surface) 6px,
+      var(--color-background) 6px,
+      var(--color-background) 12px
+    );
+  }
+  .timeline__empty {
+    color: var(--color-text-muted);
+  }
+
+  .vote-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+  }
+  .vote-item {
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-sm);
+  }
+  .vote-item__meta {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+}
+
+/* Point de rupture de la frise (--breakpoint-frise-repliee, 10-tokens.css) : hors @layer, pour
+ * gagner sur la spécificité des règles de `components` ci-dessus sans recourir à `!important`. */
+@media (max-width: 40rem) {
+  .timeline__scale {
+    display: none; /* la rangée d'échelle n'a plus de sens une fois les pistes repliées en liste */
+  }
+  .timeline__track {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: none !important;
+  }
+  .timeline__segment {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
 }

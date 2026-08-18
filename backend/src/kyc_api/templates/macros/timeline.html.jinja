@@ -1,0 +1,36 @@
+{% macro timeline_view(timeline) %}
+{% if timeline.total_columns == 0 %}
+  <p class="timeline__empty">
+    Cette personne n'a jamais siégé à l'Assemblée nationale : aucune appartenance politique n'est
+    connue par ce biais.
+  </p>
+{% else %}
+  {# D2.7 : seuls des styles de placement de grille CSS, calculés côté serveur par
+     timeline.py (fonction pure), sont en ligne ici — jamais de couleur ni de mise en page
+     arbitraire. Voir test_html_invariants.py pour l'exception documentée. #}
+  <div class="timeline">
+    <ol class="timeline__scale" aria-hidden="true"
+        style="grid-template-columns: repeat({{ timeline.total_columns }}, 1fr);">
+      {% for marker in timeline.years %}
+        <li class="timeline__scale-year" style="grid-column: {{ marker.column_start }} / {{ marker.column_end }};">{{ marker.year }}</li>
+      {% endfor %}
+    </ol>
+    {% for piste in timeline.pistes %}
+      {% if piste.segments %}
+        <section class="timeline__piste">
+          <h3 class="timeline__piste-title">{{ PISTE_TITLES[piste.key] }}</h3>
+          <ol class="timeline__track"
+              style="grid-template-columns: repeat({{ timeline.total_columns }}, 1fr); grid-template-rows: repeat({{ piste.row_count }}, auto);">
+            {% for placed in piste.segments %}
+              <li class="timeline__segment{{ ' timeline__segment--non-inscrit' if placed.segment.label.startswith(NON_INSCRIT_LABEL) else '' }}"
+                  style="grid-column: {{ placed.column_start }} / {{ placed.column_end }}; grid-row: {{ placed.row + 1 }};">
+                {{ placed.segment.label }}
+              </li>
+            {% endfor %}
+          </ol>
+        </section>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}
+{% endmacro %}

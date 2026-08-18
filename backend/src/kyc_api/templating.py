@@ -3,7 +3,14 @@ from typing import Any, cast
 
 from fastapi.templating import Jinja2Templates
 
-from kyc_api.labels import NON_INSCRIT_LABEL, candidate_statut_label
+from kyc_api.labels import (
+    CONGRES_LABEL,
+    NON_INSCRIT_LABEL,
+    PAR_DELEGATION_LABEL,
+    PISTE_TITLES,
+    candidate_statut_label,
+    vote_position_label,
+)
 from kyc_api.photos import thumbnail_url
 
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
@@ -25,3 +32,7 @@ _env_globals["thumbnail_url"] = thumbnail_url
 _env_globals["candidate_statut_label"] = candidate_statut_label
 _env_globals["display_name"] = display_name
 _env_globals["NON_INSCRIT_LABEL"] = NON_INSCRIT_LABEL
+_env_globals["PISTE_TITLES"] = PISTE_TITLES
+_env_globals["vote_position_label"] = vote_position_label
+_env_globals["PAR_DELEGATION_LABEL"] = PAR_DELEGATION_LABEL
+_env_globals["CONGRES_LABEL"] = CONGRES_LABEL

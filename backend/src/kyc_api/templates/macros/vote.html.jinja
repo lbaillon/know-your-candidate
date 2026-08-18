@@ -1,0 +1,11 @@
+{% macro vote_item(vote) %}
+<li class="vote-item">
+  <a class="vote-item__titre" href="/scrutin/{{ vote.legislature }}/{{ vote.numero }}">{{ vote.titre }}</a>
+  <p class="vote-item__meta">
+    {{ vote.date_scrutin.strftime("%d/%m/%Y") }} —
+    {{ vote_position_label(vote.position, vote.cause_non_vote) }}
+    {%- if vote.par_delegation %}, {{ PAR_DELEGATION_LABEL }}{% endif -%}
+    {%- if vote.chambre == "congres" %} ({{ CONGRES_LABEL }}){% endif -%}
+  </p>
+</li>
+{% endmacro %}
