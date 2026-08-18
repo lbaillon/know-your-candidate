@@ -27,6 +27,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # `make lint` régénère static/style.css et vérifie qu'il n'a pas bougé (D2.6) : sans ce
+      # contrôle en CI, un `style.css` périmé pourrait être poussé sans que personne ne le voie.
+      - name: Vérifier que static/style.css est à jour
+        run: make css && git diff --exit-code -- backend/src/kyc_api/static/style.css
+
       # Version complète et non `@v10` : `astral-sh/setup-uv` ne publie plus de tag majeur mobile
       # depuis `v6` (les refs `v8`, `v9`, `v10` n'existent pas). GitHub résout l'action à
       # l'initialisation du job, donc un ref introuvable fait échouer `python` avant même le

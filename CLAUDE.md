@@ -134,14 +134,18 @@ En cas de doute, `uname -r` tranche. La CI GitHub Actions tourne nativement sur 
 par aucun des deux cas.
 
 ```
-make dev          # podman compose up (Postgres), migrations, worker + backend
-make lint         # ruff check/format --check + cargo fmt --check + clippy -D warnings
+make dev          # podman compose up (Postgres), régénère style.css, migrations, worker + backend
+make css          # concatène backend/src/kyc_api/static/css/*.css dans style.css (D2.6) —
+                   # GÉNÉRÉ et commité, ne jamais éditer style.css à la main
+make lint         # régénère style.css et vérifie qu'il n'a pas bougé, ruff check/format --check,
+                   # cargo fmt --check + clippy -D warnings
 make typecheck    # ty check (backend)
 make test         # pytest (backend) + cargo test (worker)
 make migrate      # sqlx migrate run sur DATABASE_URL
-make ingest       # référentiel (AMO30), législatures 15/16/17, puis enrich_wikidata — plusieurs
-                   # dizaines de minutes, voir docs/plans/phase-1-ingestion.md. Sort en code non
-                   # nul si un job échoue (F3, docs/plans/phase-1.1-fix.md)
+make ingest       # référentiel (AMO30), législatures 15/16/17, enrich_wikidata, puis les jobs de
+                   # la phase 2 (seed_candidates, assign_slugs, refresh_views) — plusieurs dizaines
+                   # de minutes, voir docs/plans/phase-1-ingestion.md et phase-2-api-ui.md. Sort en
+                   # code non nul si un job échoue (F3, docs/plans/phase-1.1-fix.md)
 ```
 
 Détail par composant : `cd backend && uv run <cmd>` (`ruff`, `ty`, `pytest`, `uvicorn kyc_api.main:app

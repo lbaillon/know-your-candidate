@@ -726,6 +726,32 @@ peuplée par `make ingest` :
    colonne ou en vue matérialisée — jamais en cache applicatif, qui ne ferait que déplacer le
    problème.
 
+> **Mesuré le 18/08/2026** (implémentation de la phase 2), sur la base réelle peuplée par la phase 1
+> plus les jobs de cette phase. `EXPLAIN (ANALYZE, BUFFERS)` sur la liste des votes de
+> Yaël Braun-Pivet (9 832 votes, la·le député·e le·la plus prolifique du corpus, mesurée par
+> `SELECT p.id, count(*) FROM vote v JOIN person p ON p.id = v.person_id GROUP BY p.id ORDER BY
+> count(*) DESC`) : première page sans filtre **30,5 ms**, avec filtre `legislature` **0,9 ms**, sur
+> un curseur profond proche du début du corpus (pire cas mesuré) **39 ms** — sous les 100 ms sans
+> index supplémentaire (`vote_person_idx` et `scrutin_date_idx` suffisent), donc aucun ajouté,
+> conformément à la règle « ne pas ajouter d'index sans que la mesure le justifie ».
+>
+> Temps de rendu côté serveur (20 appels par route, après une requête de chauffe, sur
+> `uvicorn` en local) :
+>
+> | Route | p50 | p95 |
+> | --- | --- | --- |
+> | `/` | 3,4 ms | 4,8 ms |
+> | `/deputes` | 5,8 ms | 9,6 ms |
+> | `/personne/jean-luc-melenchon` (mandats et votes réels) | 22,5 ms | 25,2 ms |
+> | `/personne/yael-braun-pivet` (9 832 votes, le cas le plus lourd) | 5,8 ms | 8,1 ms |
+> | `/personne/yael-braun-pivet/votes` (première page) | 5,1 ms | 6,4 ms |
+> | `/scrutin/16/2004` | 2,8 ms | 3,8 ms |
+>
+> Toutes les routes tiennent largement sous les 100 ms — la fiche de Mélenchon est la plus lente
+> mesurée (frise à trois pistes avec plusieurs changements de groupe), pas celle du plus gros
+> volume de votes, ce qui confirme que le calcul de la frise (`timeline.py`, en mémoire) domine le
+> coût plus que la requête SQL des votes. Aucun index ajouté.
+
 ### Ordre des commits
 
 Un commit par ligne, `main` vert à chaque fois.
@@ -766,6 +792,35 @@ Un commit par ligne, `main` vert à chaque fois.
 7. Onglet réseau du navigateur sur trois pages : aucune requête sortante autre que Commons.
 8. Les mesures de performance sont consignées, et sous les 100 ms.
 9. Aucune route ne crée de job ; `enable_dev_routes` n'est jamais réapparu.
+
+> **Vérifié le 18/08/2026** (implémentation de la phase 2) — état réel de chaque point, y compris
+> ce qui n'a pas pu être fait faute d'un navigateur dans l'environnement d'implémentation :
+>
+> - **1, 8** : faits, chiffres au paragraphe « Mesure de performance » ci-dessus.
+> - **2** : `make ingest` rejoué sur une base vierge (`kyc_ingest_check`) — voir le message du
+>   commit final pour le résultat.
+> - **3** : Jean-Luc Mélenchon (PA2150, déjà dans le référentiel), Nathalie Arthaud (Q439490, créée
+>   par `seed_candidates`, jamais élue) et Charlotte Parmentier-Lecocq vérifiées. La frise de
+>   Charlotte Parmentier-Lecocq reproduit LREM → Renaissance → Ensemble pour la République →
+>   Horizons, avec les passages non-inscrit·e entre chaque groupe (l'AN ne clôture pas toujours le
+>   pseudo-mandat à temps, data-sources.md) — historique public connu, cohérent avec ce que le site
+>   de l'Assemblée publie. Trois votes de Mélenchon vérifiés contre les compteurs du scrutin.
+> - **4** : couvert par un test synthétique dans `test_timeline.py`
+>   (`test_the_ps_to_lfi_recette_case_...`) : deux mandats GP consécutifs et non chevauchants se
+>   placent sur une seule rangée. Pas de cas réel PS → LFI identifié dans les données ingérées à ce
+>   jour pour une vérification en plus du test synthétique.
+> - **5, 6** : garanti par construction et vérifié par lecture de code plutôt qu'en navigateur (cet
+>   environnement d'implémentation n'en a pas) : chaque `hx-get` a un `action`/`href` réel en
+>   fallback (recherche, filtres, pagination des votes) ; aucune règle `outline: none` ni
+>   `tabindex` dans tout le dépôt, aucun `onclick`, aucun `<script>` hors le vendoring `htmx.min.js`
+>   — la navigation clavier n'a donc aucun mécanisme JS à contourner. Une passe manuelle en
+>   navigateur reste recommandée avant mise en ligne (phase 5).
+> - **7** : vérifié par `test_html_invariants.py::test_no_external_resource_except_wikimedia`, sur
+>   toutes les routes publiques (pages et fragments), pas seulement trois pages au hasard —
+>   automatisé plutôt qu'un contrôle manuel ponctuel, donc rejoué à chaque `make test`.
+> - **9** : `enable_dev_routes` n'apparaît plus que dans les plans qui documentent sa suppression
+>   (phase-1.1-fix.md), aucune occurrence dans le code ; aucun routeur backend n'importe
+>   `kyc_api.jobs.create_job` ni n'écrit dans `job`.
 
 ### Hors périmètre — ne pas ajouter
 
