@@ -425,6 +425,47 @@ publiée le … » ; l'ajuster si besoin.
 
 ---
 
+## Découvert à la revue de la phase 2.1
+
+### F11 — La réécriture du scope ASGI de F9 n'est jamais défaite
+
+**Fichier** : `backend/src/kyc_api/http_cache.py`
+
+**Contexte** : la description de F9 ci-dessus était **fausse sur un point** et l'implémentation a eu
+raison contre elle. Le plan supposait qu'une route `@router.get(...)` acceptait `HEAD` et que la
+requête atteignait le middleware avec un 200 non caché ; en réalité FastAPI n'ajoute pas `HEAD` aux
+routes utilisateur (seules ses routes internes, de simples `Route` Starlette, l'obtiennent), et un
+`HEAD` recevait un 405. La réécriture de `scope["method"]` retenue à la place est la bonne idée.
+
+**Symptôme** : la méthode réécrite n'était jamais restaurée. Or uvicorn relit `scope["method"]` non
+pas au routage mais **au moment d'émettre** (`httptools_impl.py`, lignes 514 et 531) pour décider
+s'il supprime le corps d'un `HEAD`. Deux conséquences, mesurées sur un vrai serveur :
+
+1. sur les chemins sortant par anticipation du middleware (`/healthz`, `/static/`, tout statut
+   différent de 200), uvicorn **écrivait le corps sur le fil** — 36, 12 810 et 22 octets relevés en
+   socket brut. La RFC 9110 § 9.3.2 l'interdit ; sur une connexion keep-alive ces octets atterrissent
+   là où le client attend la réponse suivante. `curl` le masque : il ignore tout ce qui suit les
+   en-têtes d'un `HEAD` ;
+2. sur une page cachable, le middleware vidait le corps à la main pour compenser, et uvicorn — qui
+   attendait toujours les octets annoncés par `Content-Length` — levait
+   `RuntimeError: Response content shorter than Content-Length`, **une exception ASGI par requête**.
+
+**Correctif** : restaurer `scope["method"]` dans un `finally` autour de `call_next`, et **supprimer
+le vidage manuel du corps** — c'est uvicorn qui le supprime, correctement, dès que le scope dit la
+vérité. Le raisonnement complet est en commentaire dans le fichier : c'est là qu'il sert.
+
+**Vérification** : contre un vrai serveur, en socket brut — `0` octet de corps sur `/`, `/personnes`,
+`/api/v1/candidats`, `/healthz`, `/static/style.css` et un 404, `Content-Length` du `GET` conservé,
+ETag identique entre `GET` et `HEAD`, `304` sur revalidation par les deux méthodes, `POST` toujours
+405, et **0 exception ASGI**.
+
+**Leçon de couverture, à retenir au-delà de ce défaut** : aucun test de la suite ne pouvait
+l'attraper. `ASGITransport` (httpx) n'implémente pas la comptabilité `Content-Length` d'uvicorn. Les
+169 tests passaient avant comme après. Une suite verte ne dit rien du comportement HTTP réel d'un
+middleware qui touche aux en-têtes ou au corps : ces changements-là se vérifient contre un serveur.
+
+---
+
 ## Ordre des commits
 
 Chaque commit laisse `main` vert (lint, typage, tests).

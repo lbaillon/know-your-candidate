@@ -35,19 +35,51 @@ class HttpCacheMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        # Nos routes sont déclarées `@router.get(...)`, donc avec pour seule méthode `GET` (F9,
-        # docs/plans/phase-2.1-fix.md) — contrairement à Starlette nu, FastAPI n'ajoute pas HEAD
-        # tout seul aux routes utilisateur (il ne le fait que pour ses propres routes internes,
-        # /docs et consorts), donc une requête HEAD reçoit un 405 avant même d'atteindre ce
-        # middleware. HTTP exige pourtant qu'un HEAD porte les mêmes en-têtes qu'un GET : on
-        # réécrit la méthode dans le scope ASGI avant de router, pour que HEAD emprunte exactement
-        # le même chemin qu'un GET, puis on vide le corps de la réponse en gardant ses en-têtes
-        # (dont Content-Length, calculé sur le corps réel).
+        # --- HEAD : pourquoi ce détour par le scope ASGI, et pourquoi la restauration -----------
+        #
+        # Nos routes sont déclarées `@router.get(...)`, donc avec `GET` pour seule méthode.
+        # Contrairement à Starlette nu — dont `Route.__init__` ajoute `HEAD` dès que `GET` est
+        # présent — FastAPI ne le fait pas pour les routes utilisateur : seules ses propres routes
+        # internes (`/docs`, `/openapi.json`), qui sont de simples `Route` Starlette, l'obtiennent.
+        # Une requête HEAD reçoit donc un 405 avant d'atteindre le moindre gestionnaire, alors que
+        # HTTP exige qu'un HEAD porte les mêmes en-têtes que le GET correspondant.
+        #
+        # On réécrit donc la méthode dans le scope avant de router, et **on la restaure ensuite,
+        # sans condition**. La restauration n'est pas de la propreté : c'est elle qui rend tout le
+        # reste correct. uvicorn relit `scope["method"]` non pas au routage mais **au moment
+        # d'émettre** (`uvicorn/protocols/http/httptools_impl.py`, lignes 514 et 531), pour décider
+        # s'il supprime le corps d'un HEAD. Le laisser à « GET » a deux effets, tous deux mesurés à
+        # la revue de la phase 2.1 (F11, docs/plans/phase-2.1-fix.md) :
+        #
+        #   1. sur les chemins qui sortent par anticipation plus bas (`/healthz`, `/static/`, tout
+        #      statut différent de 200), uvicorn **écrit le corps sur le fil** — 36, 12 810 et 22
+        #      octets mesurés en socket brut. La RFC 9110 § 9.3.2 l'interdit, et sur une connexion
+        #      keep-alive ces octets atterrissent là où le client attend la réponse suivante ;
+        #   2. si on vide le corps soi-même pour compenser, uvicorn attend toujours les octets
+        #      annoncés par `Content-Length` et lève `RuntimeError: Response content shorter than
+        #      Content-Length` — une exception ASGI par requête HEAD.
+        #
+        # D'où l'absence, plus bas, de tout vidage manuel du corps : **c'est uvicorn qui le
+        # supprime**, correctement, dès que le scope dit la vérité. Le réintroduire ramènerait (2).
+        #
+        # Contrainte à connaître avant d'ajouter quoi que ce soit en aval : entre la réécriture et
+        # la restauration, gestionnaires et middlewares voient `request.method == "GET"`. Sans
+        # conséquence aujourd'hui — aucun gestionnaire ne lit la méthode — mais à revérifier avant
+        # d'introduire un middleware qui la journalise ou un flux qui s'y fie.
+        #
+        # Avertissement de couverture : **aucun test de cette suite ne peut attraper cette classe
+        # de bug.** `ASGITransport` (httpx), sur lequel ils tournent tous, n'implémente pas la
+        # comptabilité `Content-Length` d'uvicorn ; il supprime bien le corps d'un HEAD, donc les
+        # assertions restent justes, mais une suite verte ne prouve rien ici. Toute modification de
+        # ce bloc se vérifie contre un vrai serveur, en socket brut.
         original_method = request.method
         if original_method == "HEAD":
             request.scope["method"] = "GET"
 
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        finally:
+            request.scope["method"] = original_method
 
         if original_method not in ("GET", "HEAD") or response.status_code != 200:
             return response
@@ -79,9 +111,4 @@ class HttpCacheMiddleware(BaseHTTPMiddleware):
                 new_response.headers[key] = value
         new_response.headers["ETag"] = etag
         new_response.headers["Cache-Control"] = CACHE_CONTROL
-        if original_method == "HEAD":
-            # Content-Length reste celui du corps réel (calculé ci-dessus par `Response.__init__`
-            # à partir de `body`) : HTTP exige qu'un HEAD annonce la taille qu'aurait le GET
-            # correspondant, seuls les octets du corps ne sont pas envoyés.
-            new_response.body = b""
         return new_response
