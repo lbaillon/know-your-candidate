@@ -1,8 +1,8 @@
 {% macro timeline_view(timeline) %}
 {% if timeline.total_columns == 0 %}
   <p class="timeline__empty">
-    Cette personne n'a jamais siégé à l'Assemblée nationale : aucune appartenance politique n'est
-    connue par ce biais.
+    Nous n'avons aucun mandat parlementaire pour cette personne. Notre référentiel couvre les
+    législatures XI et suivantes : un mandat antérieur n'y figurerait pas.
   </p>
 {% else %}
   {# D2.7 : seuls des styles de placement de grille CSS, calculés côté serveur par

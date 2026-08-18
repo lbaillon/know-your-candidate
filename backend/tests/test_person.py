@@ -59,9 +59,12 @@ async def test_person_page_shows_identity_and_a_precise_vote_with_its_source_lin
     assert 'href="/scrutin/16/42"' in response.text
 
 
-async def test_a_person_who_never_sat_shows_the_explicit_empty_state(
+async def test_a_person_without_an_uid_gets_our_coverage_not_a_claim_about_the_world(
     client: AsyncClient, db_conn: asyncpg.Connection
 ) -> None:
+    """Une personne créée par le seed depuis un QID Wikidata, sans an_uid : son absence de notre
+    référentiel ne prouve rien sur le monde, seulement sur nos données (F2, phase 2.1).
+    """
     person_id = await factories.insert_person(
         db_conn, wikidata_qid="Q1", prenom="Ada", nom="Exemple"
     )
@@ -71,9 +74,27 @@ async def test_a_person_who_never_sat_shows_the_explicit_empty_state(
     response = await client.get("/personne/ada-exemple")
 
     assert response.status_code == 200
-    assert "n'a jamais siégé à l'Assemblée nationale" in response.text
-    # L'état vide apparaît à la fois pour la frise et pour les votes récents.
-    assert response.text.count("n'a jamais siégé à l'Assemblée nationale") == 2
+    assert "jamais siégé" not in response.text
+    assert "Nous n'avons aucun mandat parlementaire" in response.text
+    assert "Nous n'avons aucun vote personnel" in response.text
+
+
+async def test_a_person_with_an_uid_but_no_mandate_or_vote_gets_our_coverage_too(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    """Une personne du référentiel AN sans mandat ni vote en base : notre référentiel commence à
+    la XIe législature, une absence ne prouve pas une absence réelle (F2, phase 2.1).
+    """
+    person_id = await factories.insert_person(db_conn, an_uid="PA1", prenom="Jean", nom="Dupont")
+    await factories.insert_slug(db_conn, person_id=person_id, slug="jean-dupont")
+    await factories.refresh_person_apercu(db_conn)
+
+    response = await client.get("/personne/jean-dupont")
+
+    assert response.status_code == 200
+    assert "jamais siégé" not in response.text
+    assert "Nous n'avons aucun mandat parlementaire" in response.text
+    assert "Nous n'avons aucun vote personnel" in response.text
 
 
 async def test_the_orientations_zone_always_shows_the_phase_4_placeholder(
@@ -109,8 +130,8 @@ async def test_a_person_who_sat_but_has_no_vote_gets_a_different_empty_state(
 
     response = await client.get("/personne/jean-dupont")
 
-    assert "Aucun vote enregistré" in response.text
-    assert "n'a jamais siégé à l'Assemblée nationale" not in response.text
+    assert "Nous n'avons aucun vote personnel" in response.text
+    assert "jamais siégé" not in response.text
 
 
 async def test_an_old_slug_redirects_301_to_the_current_one(

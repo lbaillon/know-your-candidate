@@ -39,12 +39,7 @@
 
     <section class="person-detail__votes" aria-labelledby="votes-titre">
       <h2 id="votes-titre">Votes récents</h2>
-      {% if not has_ever_sat %}
-        <p class="empty-state">
-          Cette personne n'a jamais siégé à l'Assemblée nationale, ses votes personnels ne sont
-          donc pas disponibles.
-        </p>
-      {% elif recent_votes %}
+      {% if recent_votes %}
         <ul class="vote-list">
           {% for vote in recent_votes %}
             {{ vote_item(vote) }}
@@ -53,7 +48,8 @@
         <a href="/personne/{{ person.slug }}/votes">Voir tous les votes</a>
       {% else %}
         <p class="empty-state">
-          Aucun vote enregistré pour cette personne dans le corpus (législatures 15 à 17).
+          Nous n'avons aucun vote personnel pour cette personne. Notre corpus couvre les
+          législatures 15 à 17 (depuis 2017) ; un vote antérieur n'y figurerait pas.
         </p>
       {% endif %}
     </section>

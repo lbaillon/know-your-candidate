@@ -12,7 +12,7 @@ from kyc_api.queries import candidates as candidates_queries
 from kyc_api.queries import persons as persons_queries
 from kyc_api.queries import scrutins as scrutins_queries
 from kyc_api.templating import templates
-from kyc_api.timeline import ASSEMBLEE, build_timeline
+from kyc_api.timeline import build_timeline
 
 router = APIRouter()
 
@@ -60,11 +60,6 @@ async def person_detail(request: Request, slug: str, pool: Queryable = Depends(g
     segments = await persons_queries.get_timeline_segments(pool, resolution.person_id)
     timeline = build_timeline(segments, today=date.today())
     recent_votes = await persons_queries.get_recent_votes(pool, resolution.person_id)
-    # Le référentiel des mandats peut être en retard sur le fichier de scrutin — data-sources.md
-    # documente un cas où le rattachement au groupe se lit d'abord dans le vote, le mandat ne
-    # comblant que ce que le scrutin ne dit pas. Un vote réel est donc une preuve de présence à
-    # part entière, même sans mandat ASSEMBLEE capturé.
-    has_ever_sat = any(segment.piste == ASSEMBLEE for segment in segments) or bool(recent_votes)
 
     return templates.TemplateResponse(
         request,
@@ -72,7 +67,6 @@ async def person_detail(request: Request, slug: str, pool: Queryable = Depends(g
         {
             "person": person,
             "timeline": timeline,
-            "has_ever_sat": has_ever_sat,
             "recent_votes": recent_votes,
         },
     )

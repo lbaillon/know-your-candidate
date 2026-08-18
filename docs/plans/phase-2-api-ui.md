@@ -70,8 +70,14 @@ phase, avec le mainteneur, avant d'écrire les gabarits** — sans quoi il s'ins
 
 - **La frise des appartenances est un élément central**, pas un ornement : c'est la représentation
   directe des `daterange` et c'est ce qui rendra lisibles les positions de parti par période en phase 4.
-- **Les états vides sont du contenu.** « Cette personne n'a jamais siégé à l'Assemblée nationale, ses
-  votes personnels ne sont donc pas disponibles » est une information utile, pas une page cassée.
+- **Les états vides sont du contenu.** « Nous n'avons aucun vote personnel pour cette personne. Notre
+  corpus couvre les législatures 15 à 17 (depuis 2017) ; un vote antérieur n'y figurerait pas » est une
+  information utile, pas une page cassée — mais elle doit porter sur **nos données**, jamais sur le
+  monde. La formulation d'origine affirmait une absence de mandat *dans l'absolu* ; elle était affichée
+  pour 997 personnes qui ont bien un mandat, seulement antérieur à notre référentiel (XIe législature)
+  — une affirmation fausse sur des personnes réelles, corrigée en phase 2.1 (F2,
+  [phase-2.1-fix.md](phase-2.1-fix.md)). Une liste vide dit ce que la base ne contient pas, jamais ce
+  qui n'a jamais existé.
 - **Chaque bloc affiche sa source** et sa date de récupération.
 - **HTMX pour la recherche, les filtres et la pagination.** Si une interaction semble exiger du JS,
   chercher d'abord la solution HTMX ; le JS ponctuel reste possible mais doit être justifié.
@@ -682,7 +688,8 @@ document interrogeable en CSS ou XPath. Ce qui doit être vérifié :
 
 - la fiche d'une personne affiche un vote précis, sa position en toutes lettres, sa date, et le lien
   vers la source ;
-- une personne qui n'a jamais siégé affiche l'état vide **et** son texte exact, pas une page à trous ;
+- une personne sans mandat ni vote en base affiche l'état vide **et** son texte exact (couverture du
+  corpus, pas une affirmation sur le monde — F2, phase 2.1), pas une page à trous ;
 - la zone « orientations » affiche son état d'attente de la phase 4 ;
 - un ancien slug rend 301 vers le slug courant ; un slug inconnu rend 404 ;
 - le scrutin du Congrès est signalé comme tel et ne compte pas dans le total « votes à l'Assemblée » ;
