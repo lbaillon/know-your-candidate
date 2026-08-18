@@ -229,3 +229,50 @@ async def test_a_congres_vote_is_signalled_and_the_source_document_is_linked(
     response = await client.get("/personne/jean-dupont")
 
     assert "Congrès du Parlement" in response.text
+
+
+async def test_a_mise_au_point_is_shown_without_changing_the_recorded_vote(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    person_id = await factories.insert_person(db_conn, an_uid="PA1", prenom="Jean", nom="Dupont")
+    await factories.insert_slug(db_conn, person_id=person_id, slug="jean-dupont")
+    source_document_id = await db_conn.fetchval(
+        """
+        INSERT INTO source_document (source, uid, url, content_hash, payload)
+        VALUES ('an_scrutin', 'VTANR5L16V42', 'https://example.org', 'hash', '{}'::jsonb)
+        RETURNING id
+        """
+    )
+    scrutin_id = await db_conn.fetchval(
+        """
+        INSERT INTO scrutin (an_uid, numero, legislature, date_scrutin, type_code, titre,
+                              mode_publication, nombre_votants, suffrages_exprimes, pour, contre,
+                              abstentions, non_votants, effectif, source_document_id)
+        VALUES ('VTANR5L16V42', 42, 16, '2023-03-14', 'SPO', 'titre',
+                'DecompteNominatif', 1, 1, 0, 1, 0, 0, 577, $1)
+        RETURNING id
+        """,
+        source_document_id,
+    )
+    await db_conn.execute(
+        "INSERT INTO vote (scrutin_id, person_id, position) VALUES ($1, $2, 'contre')",
+        scrutin_id,
+        person_id,
+    )
+    await db_conn.execute(
+        """
+        INSERT INTO vote_mise_au_point (scrutin_id, person_id, position_declaree,
+                                         source_document_id)
+        VALUES ($1, $2, 'pour', $3)
+        """,
+        scrutin_id,
+        person_id,
+        source_document_id,
+    )
+    await factories.refresh_person_apercu(db_conn)
+
+    response = await client.get("/personne/jean-dupont")
+
+    assert "a voté contre" in response.text, "le vote enregistré reste celui de la source"
+    assert "a déclaré après le scrutin avoir voulu voter pour" in response.text
+    assert "le résultat du scrutin n'a pas été modifié" in response.text

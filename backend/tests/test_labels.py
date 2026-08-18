@@ -4,6 +4,7 @@ from kyc_api.labels import (
     candidate_statut_label,
     groupe_label,
     mandat_label,
+    mise_au_point_label,
     rattachement_label,
     vote_position_label,
 )
@@ -89,3 +90,18 @@ def test_vote_position_label_for_a_non_vote_without_a_known_cause_stays_uninterp
 
 def test_vote_position_label_never_crashes_on_an_unknown_cause_code() -> None:
     assert vote_position_label("non_votant", "CODE_INEDIT") == "n'a pas pris part au vote"
+
+
+def test_mise_au_point_label_for_pour_and_contre() -> None:
+    assert mise_au_point_label("pour") == "a déclaré après le scrutin avoir voulu voter pour"
+    assert mise_au_point_label("contre") == "a déclaré après le scrutin avoir voulu voter contre"
+
+
+def test_mise_au_point_label_for_abstention() -> None:
+    assert mise_au_point_label("abstention") == "a déclaré après le scrutin avoir voulu s'abstenir"
+
+
+def test_mise_au_point_label_for_non_votant_forms() -> None:
+    expected = "a déclaré après le scrutin avoir voulu ne pas prendre part au vote"
+    assert mise_au_point_label("non_votant") == expected
+    assert mise_au_point_label("non_votant_volontaire") == expected

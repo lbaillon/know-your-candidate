@@ -171,6 +171,20 @@ Distinction à conserver dans le modèle : un **groupe parlementaire** n'est pas
 rattaché à un parti sans siéger dans le groupe correspondant, et les groupes se renomment ou se
 recomposent.
 
+### Page publique d'un scrutin (lien affiché en plus du lien open data)
+
+Format confirmé le 17 août 2026 (implémentation de la phase 2, page `/scrutin/{legislature}/{numero}`)
+en ouvrant réellement une page de chaque législature :
+
+```
+https://www.assemblee-nationale.fr/dyn/{legislature}/scrutins/{numero}
+```
+
+Vérifié sur `VTANR5L16V2004` → <https://www.assemblee-nationale.fr/dyn/16/scrutins/2004> : même
+titre (« amendement n° 113 de M. Dharréville… »), même date (26/06/2023), même ventilation par
+groupe que le fichier open data. `{numero}` est le numéro simple du scrutin (`2004`), pas son
+`an_uid` complet (`VTANR5L16V2004`) : c'est le même numéro que la colonne `scrutin.numero`.
+
 ### Cas particulier : les scrutins du Congrès
 
 L'archive de la 16e législature contient un scrutin `VTCGR5L16V1` (04/03/2024, révision constitutionnelle

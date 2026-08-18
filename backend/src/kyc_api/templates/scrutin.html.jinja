@@ -1,0 +1,70 @@
+{% extends "base.html.jinja" %}
+{% from "macros/source.html.jinja" import source_note %}
+
+{% block title %}Scrutin n° {{ scrutin.numero }} ({{ scrutin.legislature }}e législature) — Know Your Candidate{% endblock %}
+
+{% block content %}
+  <h1>Scrutin n° {{ scrutin.numero }}</h1>
+  <p class="scrutin-detail__titre">{{ scrutin.titre }}</p>
+  <p class="scrutin-detail__meta">
+    {{ scrutin.date_scrutin.strftime("%d/%m/%Y") }} — {{ scrutin.legislature }}e législature
+    {%- if scrutin.chambre == "congres" %} ({{ CONGRES_LABEL }}){% endif -%}
+    {%- if scrutin.type_libelle %} — {{ scrutin.type_libelle }}{% endif -%}
+    {%- if scrutin.sort_code %} — {{ scrutin.sort_code }}{% endif -%}
+    {%- if scrutin.demandeur %} — demandé par {{ scrutin.demandeur }}{% endif -%}
+  </p>
+
+  <dl class="scrutin-detail__resultats">
+    <div><dt>Votants</dt><dd>{{ scrutin.nombre_votants }}</dd></div>
+    <div><dt>Suffrages exprimés</dt><dd>{{ scrutin.suffrages_exprimes }}</dd></div>
+    <div><dt>Pour</dt><dd>{{ scrutin.pour }}</dd></div>
+    <div><dt>Contre</dt><dd>{{ scrutin.contre }}</dd></div>
+    <div><dt>Abstentions</dt><dd>{{ scrutin.abstentions }}</dd></div>
+    <div><dt>Non-votants</dt><dd>{{ scrutin.non_votants }}</dd></div>
+    <div><dt>Effectif</dt><dd>{{ scrutin.effectif }}</dd></div>
+    {% if scrutin.participation is not none %}
+      <div><dt>Participation</dt><dd>{{ (scrutin.participation * 100) | round(1) }} %</dd></div>
+    {% endif %}
+  </dl>
+
+  <h2 id="repartition-titre">Répartition par groupe</h2>
+  <table class="scrutin-detail__groupes" aria-labelledby="repartition-titre">
+    <thead>
+      <tr>
+        <th scope="col">Groupe</th>
+        <th scope="col">Effectif</th>
+        <th scope="col">Position majoritaire</th>
+        <th scope="col">Pour</th>
+        <th scope="col">Contre</th>
+        <th scope="col">Abstentions</th>
+        <th scope="col">Non-votants</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for groupe in scrutin.groupes %}
+        <tr>
+          <td>
+            {%- if groupe.libelle -%}
+              {{ groupe.libelle }}
+            {%- else -%}
+              Groupe non identifié par la source
+            {%- endif -%}
+          </td>
+          <td>{{ groupe.nombre_membres }}</td>
+          <td>{{ vote_position_label(groupe.position_majoritaire) if groupe.position_majoritaire else "—" }}</td>
+          <td>{{ groupe.pour }}</td>
+          <td>{{ groupe.contre }}</td>
+          <td>{{ groupe.abstentions }}</td>
+          <td>{{ groupe.non_votants }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {{ source_note(scrutin.source, label="Fichier open data de ce scrutin") }}
+  <p class="source-note">
+    Voir aussi
+    <a href="https://www.assemblee-nationale.fr/dyn/{{ scrutin.legislature }}/scrutins/{{ scrutin.numero }}">la
+    page de ce scrutin sur le site de l'Assemblée nationale</a>.
+  </p>
+{% endblock %}

@@ -10,6 +10,7 @@ from kyc_api.db import Queryable, get_pool
 from kyc_api.documents import render_document
 from kyc_api.queries import candidates as candidates_queries
 from kyc_api.queries import persons as persons_queries
+from kyc_api.queries import scrutins as scrutins_queries
 from kyc_api.templating import templates
 from kyc_api.timeline import ASSEMBLEE, build_timeline
 
@@ -135,6 +136,25 @@ async def person_votes(
             "au": au,
         },
     )
+
+
+@router.get("/scrutin/{legislature}/{numero}")
+async def scrutin_detail(
+    request: Request, legislature: int, numero: int, pool: Queryable = Depends(get_pool)
+):
+    scrutin = await scrutins_queries.get_by_legislature_numero(pool, legislature, numero)
+    if scrutin is None:
+        raise HTTPException(status_code=404)
+    return templates.TemplateResponse(request, "scrutin.html.jinja", {"scrutin": scrutin})
+
+
+@router.get("/scrutin/{an_uid}")
+async def scrutin_alias(request: Request, an_uid: str, pool: Queryable = Depends(get_pool)):
+    scrutin = await scrutins_queries.get_by_an_uid(pool, an_uid)
+    if scrutin is None:
+        raise HTTPException(status_code=404)
+    # 301 : alias -> URL canonique, sur le même modèle qu'un ancien slug de personne.
+    return RedirectResponse(url=f"/scrutin/{scrutin.legislature}/{scrutin.numero}", status_code=301)
 
 
 @router.get("/methodologie")

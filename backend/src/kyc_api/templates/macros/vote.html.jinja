@@ -7,5 +7,12 @@
     {%- if vote.par_delegation %}, {{ PAR_DELEGATION_LABEL }}{% endif -%}
     {%- if vote.chambre == "congres" %} ({{ CONGRES_LABEL }}){% endif -%}
   </p>
+  {% for declaree in vote.mise_au_point_positions %}
+    {# Une mise au point ne modifie jamais le vote enregistré ci-dessus (methodology.md § 3) :
+       elle est affichée à côté, jamais fusionnée avec la position. #}
+    <p class="vote-item__mise-au-point">
+      {{ mise_au_point_label(declaree) }} ({{ MISE_AU_POINT_RESULTAT_INCHANGE }})
+    </p>
+  {% endfor %}
 </li>
 {% endmacro %}

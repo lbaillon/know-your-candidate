@@ -213,3 +213,37 @@ async def test_votes_page_satisfies_every_structural_invariant(
     _check_every_form_field_has_a_label(doc, path)
     _check_no_external_resource_except_wikimedia(doc, path)
     _check_no_inline_script_or_disallowed_style(doc, path)
+
+
+async def test_scrutin_page_satisfies_every_structural_invariant(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    source_document_id = await db_conn.fetchval(
+        """
+        INSERT INTO source_document (source, uid, url, content_hash, payload)
+        VALUES ('an_scrutin', 'VTANR5L17V42', 'https://example.org', 'hash', '{}'::jsonb)
+        RETURNING id
+        """
+    )
+    await db_conn.execute(
+        """
+        INSERT INTO scrutin (an_uid, numero, legislature, date_scrutin, type_code, titre,
+                              mode_publication, nombre_votants, suffrages_exprimes, pour, contre,
+                              abstentions, non_votants, effectif, source_document_id)
+        VALUES ('VTANR5L17V42', 42, 17, '2024-03-14', 'SPO', 'titre',
+                'DecompteNominatif', 400, 400, 200, 200, 0, 0, 577, $1)
+        """,
+        source_document_id,
+    )
+
+    path = "/scrutin/17/42"
+    doc = await _document(client, path)
+
+    _check_exactly_one_h1(doc, path)
+    _check_title_is_non_empty(doc, path)
+    _check_html_lang_is_fr(doc, path)
+    _check_has_a_skip_link(doc, path)
+    _check_every_image_has_alt(doc, path)
+    _check_every_form_field_has_a_label(doc, path)
+    _check_no_external_resource_except_wikimedia(doc, path)
+    _check_no_inline_script_or_disallowed_style(doc, path)

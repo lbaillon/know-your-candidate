@@ -440,9 +440,47 @@
     color: var(--color-text-muted);
     margin: 0;
   }
+  .vote-item__mise-au-point {
+    font-size: var(--font-size-sm);
+    font-style: italic;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
   .vote-list__load-more {
     border-bottom: none;
     padding-top: var(--space-sm);
+  }
+
+  /* Page d'un scrutin. */
+  .scrutin-detail__titre {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    margin-top: var(--space-sm);
+  }
+  .scrutin-detail__meta {
+    color: var(--color-text-muted);
+  }
+  .scrutin-detail__resultats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+  }
+  .scrutin-detail__resultats dt {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+  }
+  .scrutin-detail__resultats dd {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+  }
+  .scrutin-detail__groupes {
+    margin-top: var(--space-md);
+    font-size: var(--font-size-sm);
+  }
+  .scrutin-detail__groupes th {
+    border-bottom: 2px solid var(--color-border-strong);
   }
 }
 

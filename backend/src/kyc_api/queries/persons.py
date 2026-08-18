@@ -269,9 +269,15 @@ async def get_recent_votes(
         """
         SELECT sc.id AS scrutin_id, sc.an_uid AS scrutin_an_uid, sc.legislature, sc.numero,
                sc.titre, sc.date_scrutin, sc.chambre::text AS chambre,
-               v.position::text AS position, v.cause_non_vote, v.par_delegation
+               v.position::text AS position, v.cause_non_vote, v.par_delegation,
+               coalesce(map.positions, '{}') AS mise_au_point_positions
         FROM vote v
         JOIN scrutin sc ON sc.id = v.scrutin_id
+        LEFT JOIN LATERAL (
+            SELECT array_agg(position_declaree ORDER BY position_declaree) AS positions
+            FROM vote_mise_au_point vmp
+            WHERE vmp.scrutin_id = v.scrutin_id AND vmp.person_id = v.person_id
+        ) map ON true
         WHERE v.person_id = $1
         ORDER BY sc.date_scrutin DESC, sc.id DESC
         LIMIT $2
@@ -310,10 +316,16 @@ async def list_votes(
         """
         SELECT sc.id AS scrutin_id, sc.an_uid AS scrutin_an_uid, sc.legislature, sc.numero,
                sc.titre, sc.date_scrutin, sc.chambre::text AS chambre,
-               v.position::text AS position, v.cause_non_vote, v.par_delegation
+               v.position::text AS position, v.cause_non_vote, v.par_delegation,
+               coalesce(map.positions, '{}') AS mise_au_point_positions
         FROM vote v
         JOIN scrutin sc ON sc.id = v.scrutin_id
         LEFT JOIN organe o ON o.id = v.groupe_organe_id
+        LEFT JOIN LATERAL (
+            SELECT array_agg(position_declaree ORDER BY position_declaree) AS positions
+            FROM vote_mise_au_point vmp
+            WHERE vmp.scrutin_id = v.scrutin_id AND vmp.person_id = v.person_id
+        ) map ON true
         WHERE v.person_id = $1
           AND ($2::smallint IS NULL OR sc.legislature = $2)
           AND ($3::text IS NULL OR v.position::text = $3)

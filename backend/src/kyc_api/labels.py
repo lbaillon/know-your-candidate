@@ -94,3 +94,15 @@ def vote_position_label(position: str, cause_non_vote: str | None = None) -> str
 
 CONGRES_LABEL = "Congrès du Parlement — députés et sénateurs réunis"
 PAR_DELEGATION_LABEL = "vote émis par délégation"
+
+# Une mise au point ne modifie jamais le vote (methodology.md § 3) : la phrase le dit
+# explicitement, systématiquement accolée à la déclaration.
+MISE_AU_POINT_RESULTAT_INCHANGE = "le résultat du scrutin n'a pas été modifié"
+
+
+def mise_au_point_label(position_declaree: str) -> str:
+    if position_declaree in ("pour", "contre"):
+        return f"a déclaré après le scrutin avoir voulu voter {position_declaree}"
+    if position_declaree == "abstention":
+        return "a déclaré après le scrutin avoir voulu s'abstenir"
+    return "a déclaré après le scrutin avoir voulu ne pas prendre part au vote"
