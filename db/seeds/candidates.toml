@@ -1,8 +1,10 @@
 # Liste éditoriale des candidat·es à l'élection présidentielle de 2027.
 #
-# Chaque entrée est un choix éditorial : elle doit porter une source publique et vérifiable, et la
-# date à laquelle cette source a été publiée. Une candidature annoncée par un tiers ne suffit pas ;
-# on cite la déclaration, pas le commentaire qu'on en fait.
+# Chaque entrée est un choix éditorial : elle doit porter une source publique et vérifiable.
+# `source_date` : la date de l'acte (déclaration, désignation), pas celle de l'article qui le
+# rapporte. C'est l'acte que la fiche affiche ; l'article n'en est que la preuve. Quand les deux
+# diffèrent, le dire dans `note`. Une candidature annoncée par un tiers ne suffit pas ; on cite la
+# déclaration, pas le commentaire qu'on en fait.
 #
 # Identification : `an_uid` pour toute personne passée par l'Assemblée depuis la XIe législature —
 # c'est le cas le plus fiable, la personne existe déjà en base. `wikidata_qid` sinon : le job crée

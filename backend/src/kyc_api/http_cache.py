@@ -35,9 +35,21 @@ class HttpCacheMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
+        # Nos routes sont déclarées `@router.get(...)`, donc avec pour seule méthode `GET` (F9,
+        # docs/plans/phase-2.1-fix.md) — contrairement à Starlette nu, FastAPI n'ajoute pas HEAD
+        # tout seul aux routes utilisateur (il ne le fait que pour ses propres routes internes,
+        # /docs et consorts), donc une requête HEAD reçoit un 405 avant même d'atteindre ce
+        # middleware. HTTP exige pourtant qu'un HEAD porte les mêmes en-têtes qu'un GET : on
+        # réécrit la méthode dans le scope ASGI avant de router, pour que HEAD emprunte exactement
+        # le même chemin qu'un GET, puis on vide le corps de la réponse en gardant ses en-têtes
+        # (dont Content-Length, calculé sur le corps réel).
+        original_method = request.method
+        if original_method == "HEAD":
+            request.scope["method"] = "GET"
+
         response = await call_next(request)
 
-        if request.method != "GET" or response.status_code != 200:
+        if original_method not in ("GET", "HEAD") or response.status_code != 200:
             return response
         path = request.url.path
         if path in _EXCLUDED_PATHS or path.startswith(_EXCLUDED_PREFIXES):
@@ -67,4 +79,9 @@ class HttpCacheMiddleware(BaseHTTPMiddleware):
                 new_response.headers[key] = value
         new_response.headers["ETag"] = etag
         new_response.headers["Cache-Control"] = CACHE_CONTROL
+        if original_method == "HEAD":
+            # Content-Length reste celui du corps réel (calculé ci-dessus par `Response.__init__`
+            # à partir de `body`) : HTTP exige qu'un HEAD annonce la taille qu'aurait le GET
+            # correspondant, seuls les octets du corps ne sont pas envoyés.
+            new_response.body = b""
         return new_response

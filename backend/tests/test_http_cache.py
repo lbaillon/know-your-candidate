@@ -47,3 +47,30 @@ async def test_a_404_carries_no_etag(client: AsyncClient) -> None:
 
     assert response.status_code == 404
     assert "etag" not in response.headers
+
+
+async def test_head_carries_the_same_etag_and_cache_control_as_get_with_an_empty_body(
+    client: AsyncClient,
+) -> None:
+    """F9 : nos routes ne portent que GET (FastAPI n'ajoute pas HEAD tout seul aux routes
+    utilisateur), donc une requête HEAD recevait un 405 avant même d'atteindre ce middleware. HTTP
+    exige qu'un HEAD porte les mêmes en-têtes que le GET correspondant, corps en moins.
+    """
+    get_response = await client.get("/methodologie")
+    head_response = await client.head("/methodologie")
+
+    assert head_response.status_code == 200
+    assert head_response.headers["etag"] == get_response.headers["etag"]
+    assert head_response.headers["cache-control"] == get_response.headers["cache-control"]
+    assert head_response.content == b""
+
+
+async def test_head_yields_304_on_a_matching_if_none_match(client: AsyncClient) -> None:
+    first = await client.get("/methodologie")
+    etag = first.headers["etag"]
+
+    second = await client.head("/methodologie", headers={"if-none-match": etag})
+
+    assert second.status_code == 304
+    assert second.headers["etag"] == etag
+    assert second.content == b""

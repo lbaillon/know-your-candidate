@@ -23,9 +23,12 @@
       <h1>{{ display_name(person.prenom, person.nom) }}</h1>
       {% if person.candidature %}
         <p class="person-detail__statut">
-          {{ candidate_statut_label(person.candidature.statut) }} —
-          <a href="{{ person.candidature.source_url }}">source</a>,
-          le {{ person.candidature.source_date.strftime("%d/%m/%Y") }}
+          {# `le {date}` porte sur l'acte (candidature déclarée/pressentie/retirée), pas sur la
+             source : source_date est la date de l'acte, pas celle de l'article qui le rapporte
+             (F10, docs/plans/phase-2.1-fix.md). #}
+          {{ candidate_statut_label(person.candidature.statut) }}
+          le {{ person.candidature.source_date.strftime("%d/%m/%Y") }} —
+          <a href="{{ person.candidature.source_url }}">source</a>
           {%- if person.candidature.note %} ({{ person.candidature.note }}){% endif -%}
         </p>
       {% endif %}
