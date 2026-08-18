@@ -193,3 +193,23 @@ async def test_person_page_satisfies_every_structural_invariant(
     _check_every_form_field_has_a_label(doc, path)
     _check_no_external_resource_except_wikimedia(doc, path)
     _check_no_inline_script_or_disallowed_style(doc, path)
+
+
+async def test_votes_page_satisfies_every_structural_invariant(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    person_id = await factories.insert_person(db_conn, an_uid="PA1", prenom="Jean", nom="Dupont")
+    await factories.insert_slug(db_conn, person_id=person_id, slug="jean-dupont")
+    await factories.refresh_person_apercu(db_conn)
+
+    path = "/personne/jean-dupont/votes"
+    doc = await _document(client, path)
+
+    _check_exactly_one_h1(doc, path)
+    _check_title_is_non_empty(doc, path)
+    _check_html_lang_is_fr(doc, path)
+    _check_has_a_skip_link(doc, path)
+    _check_every_image_has_alt(doc, path)
+    _check_every_form_field_has_a_label(doc, path)
+    _check_no_external_resource_except_wikimedia(doc, path)
+    _check_no_inline_script_or_disallowed_style(doc, path)

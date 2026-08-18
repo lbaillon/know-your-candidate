@@ -221,6 +221,10 @@
     color: var(--color-text-muted);
     margin: 0;
   }
+  .vote-list__load-more {
+    border-bottom: none;
+    padding-top: var(--space-sm);
+  }
 }
 
 /* Point de rupture de la frise (--breakpoint-frise-repliee, 10-tokens.css) : hors @layer, pour

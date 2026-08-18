@@ -5,6 +5,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
+from kyc_api.cursor import InvalidCursor, parse_cursor
 from kyc_api.db import Queryable, get_pool
 from kyc_api.documents import render_document
 from kyc_api.queries import candidates as candidates_queries
@@ -72,6 +73,66 @@ async def person_detail(request: Request, slug: str, pool: Queryable = Depends(g
             "timeline": timeline,
             "has_ever_sat": has_ever_sat,
             "recent_votes": recent_votes,
+        },
+    )
+
+
+@router.get("/personne/{slug}/votes")
+async def person_votes(
+    request: Request,
+    slug: str,
+    legislature: int | None = None,
+    position: str | None = None,
+    du: date | None = None,
+    au: date | None = None,
+    groupe: str | None = None,
+    avant: str | None = None,
+    pool: Queryable = Depends(get_pool),
+):
+    resolution = await persons_queries.resolve_slug(pool, slug)
+    if resolution is None:
+        raise HTTPException(status_code=404)
+    if not resolution.is_current:
+        return RedirectResponse(url=f"/personne/{resolution.current_slug}/votes", status_code=301)
+
+    person = await persons_queries.get_person_detail(pool, resolution.person_id)
+    if person is None:
+        raise HTTPException(status_code=404)
+
+    try:
+        cursor = parse_cursor(avant)
+    except InvalidCursor:
+        # Un curseur corrompu n'a aucune raison de faire échouer une page publique : on dégrade
+        # silencieusement vers la première page plutôt que de rendre une erreur.
+        cursor = None
+
+    votes_page = await persons_queries.list_votes(
+        pool,
+        resolution.person_id,
+        legislature=legislature,
+        position=position,
+        du=du,
+        au=au,
+        groupe=groupe,
+        avant=cursor,
+    )
+    filter_qs = persons_queries.votes_filter_query_string(
+        legislature=legislature, position=position, du=du, au=au, groupe=groupe
+    )
+
+    return templates.TemplateResponse(
+        request,
+        "person_votes.html.jinja",
+        {
+            "person": person,
+            "slug": person.slug,
+            "votes": votes_page.votes,
+            "next_cursor": votes_page.next_cursor,
+            "filter_qs": filter_qs,
+            "legislature": legislature,
+            "position": position,
+            "du": du,
+            "au": au,
         },
     )
 

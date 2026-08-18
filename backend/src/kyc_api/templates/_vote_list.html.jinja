@@ -1,0 +1,13 @@
+{% from "macros/vote.html.jinja" import vote_item %}
+{% for vote in votes %}
+  {{ vote_item(vote) }}
+{% else %}
+  <li class="empty-state">Aucun vote ne correspond à ces filtres.</li>
+{% endfor %}
+{% if next_cursor %}
+  <li class="vote-list__load-more">
+    <a href="/personne/{{ slug }}/votes?{{ filter_qs }}avant={{ next_cursor | urlencode }}"
+       hx-get="/fragments/personne/{{ slug }}/votes?{{ filter_qs }}avant={{ next_cursor | urlencode }}"
+       hx-target="this" hx-swap="outerHTML">Charger plus</a>
+  </li>
+{% endif %}

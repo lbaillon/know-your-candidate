@@ -1,0 +1,45 @@
+{% extends "base.html.jinja" %}
+
+{% block title %}Votes de {{ display_name(person.prenom, person.nom) }} — Know Your Candidate{% endblock %}
+
+{% block content %}
+  <h1>Votes de {{ display_name(person.prenom, person.nom) }}</h1>
+  <p><a href="/personne/{{ person.slug }}">Retour à la fiche</a></p>
+
+  {# Le filtre par thème est prévu pour la phase 3 (voir plan d'exécution) : pas de champ mort ici
+     tant que la donnée n'existe pas. Le filtre par groupe existe côté requête (D2.8) mais n'a pas
+     encore de contrôle ici, faute d'un sélecteur de groupe exploitable sans jointure de noms. #}
+  <form class="search-form" action="/personne/{{ person.slug }}/votes" method="get">
+    <div>
+      <label for="legislature">Législature</label>
+      <select id="legislature" name="legislature">
+        <option value="" {{ "selected" if not legislature else "" }}>Toutes</option>
+        {% for leg in [15, 16, 17] %}
+          <option value="{{ leg }}" {{ "selected" if legislature == leg else "" }}>{{ leg }}e législature</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="position">Position</label>
+      <select id="position" name="position">
+        <option value="" {{ "selected" if not position else "" }}>Toutes</option>
+        {% for value, text in [("pour", "Pour"), ("contre", "Contre"), ("abstention", "Abstention"), ("non_votant", "Non-votant")] %}
+          <option value="{{ value }}" {{ "selected" if position == value else "" }}>{{ text }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="du">Depuis le</label>
+      <input type="date" id="du" name="du" value="{{ du.isoformat() if du else '' }}">
+    </div>
+    <div>
+      <label for="au">Jusqu'au</label>
+      <input type="date" id="au" name="au" value="{{ au.isoformat() if au else '' }}">
+    </div>
+    <button type="submit">Filtrer</button>
+  </form>
+
+  <ul class="vote-list" id="vote-list">
+    {% include "_vote_list.html.jinja" %}
+  </ul>
+{% endblock %}

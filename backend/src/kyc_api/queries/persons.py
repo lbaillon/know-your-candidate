@@ -4,11 +4,13 @@ aucune requête ailleurs (CLAUDE.md) ; les gabarits et l'API consomment les mêm
 """
 
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
+from urllib.parse import urlencode
 
 from asyncpg import Record
 
+from kyc_api.cursor import format_cursor
 from kyc_api.db import Queryable
 from kyc_api.labels import groupe_label, mandat_label, rattachement_label
 from kyc_api.schemas.common import Pagination, Source
@@ -23,6 +25,9 @@ DIRECTORY_PAGE_SIZE = 30
 # Nombre de votes affichés sur la fiche personne — la liste complète a sa propre page paginée
 # (voir plan d'exécution, section « Liste des votes »).
 RECENT_VOTES_LIMIT = 10
+
+# Taille d'une page de la liste complète des votes (pagination par curseur).
+VOTES_PAGE_SIZE = 50
 
 # Licence AN, rappelée à chaque bloc de source (CLAUDE.md, « chaque bloc affiche sa source »).
 AN_LICENCE = "Licence Ouverte (Etalab)"
@@ -275,3 +280,94 @@ async def get_recent_votes(
         limit,
     )
     return [VoteRecent(**dict(row)) for row in rows]
+
+
+@dataclass(frozen=True)
+class VotesPage:
+    votes: list[VoteRecent]
+    next_cursor: str | None
+
+
+async def list_votes(
+    pool: Queryable,
+    person_id: int,
+    *,
+    legislature: int | None,
+    position: str | None,
+    du: date | None,
+    au: date | None,
+    groupe: str | None,
+    avant: tuple[date, int] | None,
+) -> VotesPage:
+    """`avant` est déjà décodé (voir cursor.parse_cursor) — cette fonction ne connaît que la paire
+    `(date_scrutin, scrutin_id)`, jamais le format texte du curseur. `groupe` est l'`an_uid` de
+    l'organe (pas son id interne) : c'est ce que porterait un lien externe.
+
+    Un lot de `VOTES_PAGE_SIZE + 1` est demandé pour savoir s'il existe une page suivante sans
+    requête `count(*)` séparée sur une table de 2,3 M de lignes.
+    """
+    rows = await pool.fetch(
+        """
+        SELECT sc.id AS scrutin_id, sc.an_uid AS scrutin_an_uid, sc.legislature, sc.numero,
+               sc.titre, sc.date_scrutin, sc.chambre::text AS chambre,
+               v.position::text AS position, v.cause_non_vote, v.par_delegation
+        FROM vote v
+        JOIN scrutin sc ON sc.id = v.scrutin_id
+        LEFT JOIN organe o ON o.id = v.groupe_organe_id
+        WHERE v.person_id = $1
+          AND ($2::smallint IS NULL OR sc.legislature = $2)
+          AND ($3::text IS NULL OR v.position::text = $3)
+          AND ($4::date IS NULL OR sc.date_scrutin >= $4)
+          AND ($5::date IS NULL OR sc.date_scrutin <= $5)
+          AND ($6::text IS NULL OR o.an_uid = $6)
+          AND ($7::date IS NULL OR (sc.date_scrutin, sc.id) < ($7, $8))
+        ORDER BY sc.date_scrutin DESC, sc.id DESC
+        LIMIT $9
+        """,
+        person_id,
+        legislature,
+        position,
+        du,
+        au,
+        groupe,
+        avant[0] if avant else None,
+        avant[1] if avant else None,
+        VOTES_PAGE_SIZE + 1,
+    )
+
+    has_more = len(rows) > VOTES_PAGE_SIZE
+    page_rows = rows[:VOTES_PAGE_SIZE]
+    votes = [VoteRecent(**dict(row)) for row in page_rows]
+
+    next_cursor = None
+    if has_more and page_rows:
+        last = page_rows[-1]
+        next_cursor = format_cursor(last["date_scrutin"], last["scrutin_id"])
+
+    return VotesPage(votes=votes, next_cursor=next_cursor)
+
+
+def votes_filter_query_string(
+    *,
+    legislature: int | None,
+    position: str | None,
+    du: date | None,
+    au: date | None,
+    groupe: str | None,
+) -> str:
+    """Les filtres actifs, prêts à préfixer `avant=...` dans un lien de pagination (page ou
+    fragment) — écrit une seule fois plutôt que dans chaque gabarit qui construit ce lien.
+    """
+    params: dict[str, str] = {}
+    if legislature is not None:
+        params["legislature"] = str(legislature)
+    if position is not None:
+        params["position"] = position
+    if du is not None:
+        params["du"] = du.isoformat()
+    if au is not None:
+        params["au"] = au.isoformat()
+    if groupe is not None:
+        params["groupe"] = groupe
+    query_string = urlencode(params)
+    return f"{query_string}&" if query_string else ""
