@@ -815,6 +815,11 @@ Chaque enregistrement écrit, **dans la même transaction** : le remplacement co
 `scrutin_label` du scrutin, une ligne `label_revision` (avant/après, thèmes triés par slug) si et
 seulement si l'état a réellement changé, et une ligne `admin_action`.
 
+> **Détail d'infrastructure découvert à l'implémentation** (lot B, F3 —
+> [phase-3.0-feedback.md](phase-3.0-feedback.md)) : première écriture multi-instructions du backend,
+> qui n'avait jusqu'ici que `Queryable` (pas de `.transaction()`). Voir le lien pour `WritableQueryable`/
+> `get_connection` et un piège de test à connaître avant d'ordonner des écritures par horodatage.
+
 `GET /admin/categorisation/{legislature}/{numero}` ouvre un scrutin précis, formulaire pré-rempli avec
 la catégorisation existante s'il y en a une, et affiche son historique. C'est aussi ce que vise le lien
 « corriger » depuis la page publique.

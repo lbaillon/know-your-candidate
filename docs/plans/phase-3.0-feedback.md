@@ -1,16 +1,17 @@
-# Phase 3.0 — Retours d'implémentation du lot A
+# Phase 3.0 — Retours d'implémentation
 
-**Statut : ✅ consigné** · Dépend de : [phase 3](phase-3-categorisation.md), lot A · Ne bloque rien, sauf
-F2 qui bloque `make ingest` tant qu'elle n'est pas résolue.
+**Statut : ✅ consigné** · Dépend de : [phase 3](phase-3-categorisation.md), lots A et B · Ne bloque rien,
+sauf F2 qui bloque `make ingest` tant qu'elle n'est pas résolue.
 
 ## Objectif
 
-Ce n'est pas une phase de correction comme [0.1](phase-0.1-fix.md) ou [2.1](phase-2.1-fix.md) : le lot A
-n'a pas de défaut caché à corriger, il tient (`make lint`, `make typecheck`, `make test` verts à chaque
-commit). Ce document consigne **deux points où l'implémentation a rencontré une limite du plan lui-même**,
-comme demandé par [CLAUDE.md](../../CLAUDE.md) (« si un plan s'avère faux au contact du code, dis-le et
-propose une révision — ne contourne pas silencieusement »). Autoportant comme les autres plans : tout ce
-qui est nécessaire est ici.
+Ce n'est pas une phase de correction comme [0.1](phase-0.1-fix.md) ou [2.1](phase-2.1-fix.md) : les lots A
+et B n'ont pas de défaut caché à corriger, ils tiennent (`make lint`, `make typecheck`, `make test` verts à
+chaque commit). Ce document consigne les points où l'implémentation a rencontré une limite du plan
+lui-même ou de l'architecture existante, comme demandé par [CLAUDE.md](../../CLAUDE.md) (« si un plan
+s'avère faux au contact du code, dis-le et propose une révision — ne contourne pas silencieusement »).
+Autoportant comme les autres plans : tout ce qui est nécessaire est ici. Mis à jour au fil des lots plutôt
+que réécrit à chaque fois.
 
 ## F1 — La séparation du scrutin 17/2653 est élevée, pas médiocre
 
@@ -88,3 +89,38 @@ comportement voulu plutôt qu'un `make ingest` vert sur une donnée inventée.
    n'est pas évident (les doublons de libellé déjà repérés dans le fichier : Agir/UDI législature 15,
    Socialistes législature 16, UDR/Union des droites législature 17) ;
 4. retirer le bandeau `TODO` — c'est ce retrait, pas une date, que le job vérifie.
+
+## F3 — Le backend n'avait jamais eu besoin d'une vraie transaction avant la catégorisation
+
+**Où** : `backend/src/kyc_api/db.py` ; commit *File de travail et formulaire de catégorisation* (lot B,
+étape 5).
+
+**Ce que le plan ne disait pas, parce que ça n'avait pas de raison de figurer dedans.** Jusqu'à la phase 3,
+le backend était en lecture seule (CLAUDE.md : « le backend n'écrit que les données saisies par un admin »)
+et n'écrivait qu'une ligne à la fois (`job`, `person_photo`…) : `Queryable`, le protocole partagé par
+`asyncpg.Pool` et `asyncpg.Connection` pour permettre l'injection d'une connexion de test, n'exposait donc
+que `fetchrow`/`fetchval`/`fetch`/`execute`. L'écriture d'une catégorisation (D3.20) exige, elle,
+plusieurs instructions atomiques : lire l'état avant, remplacer les lignes, écrire l'historique
+seulement si l'état a changé, journaliser l'action — et `Pool`, contrairement à `Connection`, n'expose pas
+`.transaction()` (chaque appel `fetch*`/`execute` y acquiert sa propre connexion, sans mémoire de l'appel
+précédent).
+
+**Décision.** Ajout de `WritableQueryable` (étend `Queryable` de `.transaction()`) et de `get_connection`,
+qui retient une connexion unique acquise du pool pour toute la durée de la requête — à ne poser que sur
+les routes qui écrivent transactionnellement, `get_pool` reste la dépendance par défaut pour tout le
+reste. Les tests le surchargent exactement comme `get_pool` (même connexion unique déjà ouverte dans une
+transaction annulée en fin de test), une savepoint imbriquée s'ouvrant naturellement à chaque
+`conn.transaction()` de `replace_labels`. Aucune ligne du plan n'avait à anticiper ce détail
+d'infrastructure ; il est consigné ici pour que la phase 3.2 (import, lot C) le retrouve directement
+plutôt que de le redécouvrir.
+
+**Corollaire découvert en écrivant les tests, à connaître avant d'en écrire d'autres qui comparent des
+horodatages** : dans un test, deux écritures successives par un même `admin_client` partagent la
+transaction externe ouverte par la fixture `db_conn` (voir `conftest.py`) ; `now()` y est *figée* à
+l'ouverture de cette transaction, pas rafraîchie par instruction ni par savepoint. Deux révisions créées
+dans le même test portent donc le même `created_at` à la microseconde près. `ORDER BY created_at DESC`
+seul ne peut pas les départager de façon fiable *dans un test* (en production, chaque requête HTTP est sa
+propre transaction, le problème ne s'y pose pas). `kyc_api.queries.labels.get_revisions_for_scrutin`
+trie désormais par `created_at DESC, id DESC` pour rester correct dans les deux mondes ; tout futur tri
+sur un horodatage d'écriture devrait faire de même par précaution, et tout test qui a besoin d'ordonner
+des écritures successives doit trier par `id`, pas par `created_at`.
