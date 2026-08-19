@@ -248,3 +248,33 @@ passage (aucun `computed_at` d'estimation modifié, aucun slug créé). Seules g
 tables de journal, par construction : `job` (+10 lignes par passage) et `ingestion_anomaly`
 (+1 704 — une trace par anomalie et par exécution ; sa croissance sans borne au fil des ingestions
 est à regarder en phase 5, ce n'est pas un défaut de la phase 3).
+
+## F7 — Deux tests passaient uniquement tant que personne n'avait configuré l'authentification
+
+**Où** : `backend/tests/conftest.py` ; trouvé le 19/08/2026, à la première exécution de `make test`
+sur une machine où le back-office venait d'être réellement configuré.
+
+**Ce qui s'est passé.** `kyc_api.config.settings` est un singleton Pydantic lu **au chargement du
+module**, depuis le `.env` du dépôt. Les tests du back-office n'annulaient pas cette lecture :
+
+- `test_login_returns_503_when_oauth_is_not_configured` vérifiait le 503 « authentification non
+  configurée » en comptant sur le fait que la machine de test n'a pas de `ADMIN_GITHUB_CLIENT_ID`.
+  Dès qu'un `.env` réel en porte un, `/admin/login` redirige vers GitHub et le test tombe ;
+- `test_a_safe_method_is_never_checked` (garde CSRF) suivait alors cette redirection : le transport
+  ASGI de `httpx` route **toutes** les URL vers l'application, y compris `github.com`, et rendait un
+  404 au lieu du 503 attendu.
+
+Les deux échecs sont arrivés ensemble, sans qu'une ligne de code de production ait changé.
+
+**Pourquoi ça compte plus que deux tests rouges.** Un test dont le résultat dépend de la
+configuration locale de qui l'exécute ne teste plus le code : il teste la machine. Ici, il rendait
+`make test` rouge exactement au moment où quelqu'un commençait à se servir du back-office —
+c'est-à-dire au pire moment, et avec un message qui ne désigne pas la cause. La CI, elle, restait
+verte, ce qui aurait fait conclure à un problème de poste de travail.
+
+**Décision.** Une fixture `autouse` dans `conftest.py` vide `admin_github_client_id`,
+`admin_github_client_secret` et `admin_github_logins` pour **tous** les tests : l'état par défaut de
+la suite est « non configuré », quel que soit le `.env` de la machine. Les tests qui ont besoin du
+contraire appellent déjà `configure_admin(monkeypatch)`, qui écrase ces valeurs avec le même
+`monkeypatch`, donc avec le même défaisage en fin de test. Règle à retenir pour la suite : **tout
+réglage lu depuis l'environnement doit être neutralisé par une fixture, pas supposé absent.**

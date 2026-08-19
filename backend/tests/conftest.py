@@ -26,6 +26,7 @@ import pytest  # noqa: E402
 from fastapi import FastAPI  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 
+from kyc_api.config import settings  # noqa: E402
 from kyc_api.db import get_pool  # noqa: E402
 from kyc_api.main import create_app  # noqa: E402
 
@@ -103,6 +104,25 @@ async def db_conn(_migrated_db: None) -> AsyncIterator[asyncpg.Connection]:
     finally:
         await transaction.rollback()
         await conn.close()
+
+
+@pytest.fixture(autouse=True)
+def _admin_oauth_unconfigured(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Neutralise l'authentification admin pour **tous** les tests.
+
+    `settings` est un singleton lu au chargement du module depuis le `.env` du dépôt. Sans cette
+    neutralisation, la suite passe ou échoue selon que la personne qui la lance a configuré une
+    application OAuth GitHub en local : `test_login_returns_503_when_oauth_is_not_configured`
+    tombait dès qu'un `.env` réel était rempli, et la garde CSRF suivait le 302 vers github.com
+    (F7, docs/plans/phase-3.0-feedback.md). Un test ne doit jamais dépendre de l'état de la machine
+    qui l'exécute.
+
+    Les tests qui ont besoin de l'inverse appellent `configure_admin(monkeypatch)`
+    (tests/test_admin_auth.py), qui écrase ces valeurs — même `monkeypatch`, donc même défaisage.
+    """
+    monkeypatch.setattr(settings, "admin_github_client_id", "")
+    monkeypatch.setattr(settings, "admin_github_client_secret", "")
+    monkeypatch.setattr(settings, "admin_github_logins", "")
 
 
 @pytest.fixture
