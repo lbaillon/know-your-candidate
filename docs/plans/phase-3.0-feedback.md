@@ -124,3 +124,40 @@ propre transaction, le problème ne s'y pose pas). `kyc_api.queries.labels.get_r
 trie désormais par `created_at DESC, id DESC` pour rester correct dans les deux mondes ; tout futur tri
 sur un horodatage d'écriture devrait faire de même par précaution, et tout test qui a besoin d'ordonner
 des écritures successives doit trier par `id`, pas par `created_at`.
+
+## F4 — Un guillemet non fermé faisait disparaître une ligne CSV au lieu de la faire refuser
+
+**Où** : `backend/src/kyc_api/labels_io.py::read_csv` ; commit *Import : validation et aperçu* (lot C,
+étape 8), trouvé en écrivant `tests/fixtures/imports/guillemets_non_fermes.csv`.
+
+**Ce qui s'est passé.** `csv.DictReader` ne lève aucune exception sur un guillemet non refermé : il avale
+tout le reste du fichier dans le champ ouvert par le guillemet, et remplit les colonnes qu'une ligne
+devenue trop courte laisse sans valeur avec `None` — pas une chaîne vide. Le code de `read_csv` testait
+`if not theme: continue` pour distinguer « scrutin présent mais non catégorisé » (une ligne légitime du
+format d'export, D3.6) d'une ligne à importer. `(None or "").strip()` vaut `""` exactement comme une
+vraie colonne vide : la ligne corrompue était donc silencieusement traitée comme un scrutin non
+catégorisé, et disparaissait de l'import sans un mot — la même classe d'erreur que la « ⚠️ » du plan
+prévenait explicitement (« un bug dans la validation… détruit silencieusement des heures de relecture
+humaine »), sur son tout premier cas de test.
+
+**Décision.** `read_csv` refuse maintenant toute ligne où `None in record.values()` — signe qu'elle a
+moins de champs que l'en-tête — avant même de regarder si le thème est vide. Testé par la fixture
+elle-même dans `tests/test_import_validation.py` (le test paramétré vérifie que chaque fixture de refus
+est bien refusée, à un stade ou un autre).
+
+## F5 — `fastapi.UploadFile` n'est pas la classe que `request.form()` retourne
+
+**Où** : `backend/src/kyc_api/admin/imports.py` ; même commit, trouvé par un test qui déposait un fichier
+CSV valide et recevait un 422 « aucun fichier déposé ».
+
+**Ce qui s'est passé.** `fastapi.UploadFile` est une **sous-classe** de `starlette.datastructures.
+UploadFile`, pas un réexport du même objet. `Request.form()` (hérité de Starlette, pas réimplémenté par
+FastAPI) construit ses fichiers avec la classe Starlette. `isinstance(upload, fastapi.UploadFile)`
+rendait donc `False` pour un fichier réellement déposé — l'import était rejeté avant même d'être lu,
+quel que soit son contenu.
+
+**Décision.** Vérifier contre `starlette.datastructures.UploadFile`, la classe effectivement produite par
+`request.form()`. Piège à connaître pour toute future route qui lit `request.form()` directement plutôt
+que de déclarer un paramètre `UploadFile` typé par FastAPI (qui, lui, gère cette distinction tout seul) —
+c'est précisément parce que `admin/imports.py` doit lire les autres champs du formulaire à la main
+(nom de fichier, etc.) qu'il passe par `request.form()` plutôt que par l'injection de dépendance standard.

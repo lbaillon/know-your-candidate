@@ -944,6 +944,11 @@ Les colonnes de contexte (titre, compteurs, ventilation, URL) sont **ignorées �
 `schema_version`, `scrutin_uid` et les cinq colonnes de catégorisation sont lus. Le dire dans la
 documentation d'export, sinon quelqu'un finira par corriger un titre dans le fichier et s'étonnera.
 
+> **Bug trouvé à l'implémentation** (lot C, F4 — [phase-3.0-feedback.md](phase-3.0-feedback.md)) : un
+> guillemet non fermé faisait disparaître une ligne entière au lieu d'être refusée — exactement la
+> classe de bug que la section « ⚠️ » ci-dessous prévient. Corrigé et testé par la fixture qui l'a
+> révélé.
+
 Les nombres sont écrits et lus comme des **chaînes à trois décimales** (`"1.000"`, `"-0.400"`), ce qui
 rend l'aller-retour exact (D3.13). Les booléens n'existent pas dans ce schéma, les dates sont en
 ISO 8601.
