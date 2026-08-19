@@ -47,11 +47,14 @@ situe personne sur cet axe » — dans ce cas, c'est en général le thème qui 
 
 1. **Tu ne disposes que du titre.** Tu n'as pas le contenu du texte. N'invente jamais ce qu'un texte
    contient, ne complète jamais avec ce que tu crois savoir de l'actualité.
-2. **Si tu ne peux pas déterminer le sens du vote, n'émets aucune ligne pour ce scrutin.** C'est le
-   cas fréquent des amendements : « l'amendement n° 1193 de M. Door à l'article 16 du projet de loi
-   de financement de la sécurité sociale » nomme le texte porteur mais ne dit rien de ce que
+2. **Si tu ne sais pas ce que le texte fait, n'émets aucune ligne pour ce scrutin.** C'est le cas
+   fréquent des amendements : « l'amendement n° 1193 de M. Door à l'article 16 du projet de loi de
+   financement de la sécurité sociale » nomme le texte porteur mais ne dit rien de ce que
    l'amendement fait. Un scrutin absent de ta réponse est simplement laissé de côté ; une direction
    inventée, elle, sera affichée comme un fait. **Sauter est toujours préférable à deviner.**
+
+   Ne confonds pas ce cas avec celui d'un texte dont tu sais parfaitement ce qu'il fait, mais qui
+   couvre beaucoup de domaines à la fois : celui-là se traite par la règle 7, pas par un saut.
 3. **Un texte qui ne relève d'aucun thème prend le thème `autre`**, avec une position vide. C'est un
    résultat légitime, pas un échec — il dit « relu, hors de nos axes », ce qui n'est pas la même
    chose que « pas encore regardé ».
@@ -59,7 +62,24 @@ situe personne sur cet axe » — dans ce cas, c'est en général le thème qui 
 5. **Un seul thème par scrutin**, sauf si le texte porte réellement sur deux domaines (une loi de
    finances qui crée une taxe environnementale). Dans ce cas, deux lignes dont les poids font
    exactement `1.000` (par exemple `0.600` et `0.400`).
-6. **Vocabulaire descriptif.** La justification dit ce que le texte fait, jamais s'il est bon :
+6. **Une motion de rejet hérite du texte qu'elle vise, avec le sens inversé.** « La motion de rejet
+   préalable, déposée par Mme X, du projet de loi pour contrôler l'immigration » n'est pas une
+   question de procédure : voter cette motion, c'est prendre position contre ce que ce texte fait.
+   Elle prend donc **le thème du texte visé** et **la position opposée** à celle que tu donnerais au
+   texte. Confiance **0.700 au maximum** : une motion peut aussi être votée pour des raisons de
+   calendrier parlementaire, et cette incertitude-là est réelle. Une motion de censure qui ne vise
+   aucun texte relève, elle, de `institutions-democratie`.
+
+7. **Un texte budgétaire se catégorise, il ne se saute pas.** Un projet de loi de finances (PLF,
+   PLFR, loi de fin de gestion) prend `social-fiscalite` ; un projet de loi de financement de la
+   sécurité sociale (PLFSS) se partage entre `sante` et `social-fiscalite`, poids `0.500` chacun.
+   Oui, un budget contient des mesures de sens opposés — c'est précisément pourquoi la confiance
+   vaut **0.400** et la position reste **modérée, au plus ±0.400** : elle dit l'orientation
+   d'ensemble du texte (budget d'austérité ou de relance) quand le titre la laisse voir, pas le
+   détail de ses articles. Un budget est le vote politique par excellence ; l'écarter du corpus
+   coûterait plus cher que le nuancer.
+
+8. **Vocabulaire descriptif.** La justification dit ce que le texte fait, jamais s'il est bon :
    « instaure un impôt plancher de 2 % sur les patrimoines supérieurs à 100 millions d'euros »,
    pas « s'attaque enfin aux plus riches ». Pas de « je pense », pas de « probablement ».
 
@@ -83,11 +103,17 @@ Exemples de lignes bien formées :
 ```
 VTANR5L17V881	social-fiscalite	1.000	-0.800	1.000	Instaure un impôt plancher de 2 % sur le patrimoine des personnes les plus fortunées.
 VTANR5L17V2653	environnement	1.000	0.400	0.700	Programmation énergétique révisant à la baisse les objectifs de développement des énergies renouvelables.
-VTANR5L16V190	autre	1.000		0.700	Motion de rejet préalable : le vote porte sur la procédure d'examen, pas sur le contenu du texte.
+VTANR5L16V3212	immigration	1.000	-0.700	0.700	Rejette avant examen un texte restreignant les conditions d'entrée et de séjour des étrangers.
+VTANR5L15V4150	social-fiscalite	1.000	0.300	0.400	Budget de l'État pour 2022, dont l'orientation d'ensemble contient des mesures de sens opposés.
+VTANR5L17V5296	autre	1.000		0.700	Organisation des jeux Olympiques et Paralympiques : ne relève d'aucun des axes suivis.
 ```
+
+La troisième ligne applique la règle 6 : le texte visé serait `immigration` autour de `+0.700`, la
+motion qui le rejette prend donc `-0.700`. La quatrième applique la règle 7.
 
 ## Avant de rendre
 
 Vérifie, dans cet ordre : chaque `uid` provient bien de la liste ; chaque thème est un `slug` de la
 liste ; chaque nombre a trois décimales ; les poids d'un même `uid` font exactement `1.000` ; aucune
-justification ne contient de tabulation ; aucun scrutin dont tu ignores le sens n'a reçu de ligne.
+justification ne contient de tabulation ; aucun scrutin dont tu ignores le contenu n'a reçu de ligne ;
+**aucune motion de rejet et aucun texte budgétaire n'a été sauté ni classé `autre`** (règles 6 et 7).

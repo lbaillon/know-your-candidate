@@ -36,6 +36,18 @@ _TEXTE = re.compile(
     r"(projet de loi.*|proposition de loi.*|proposition de résolution.*|projet de loi organique.*)",
     re.IGNORECASE,
 )
+# Un amendement ou un sous-amendement n'est pas catégorisable depuis son titre : celui-ci nomme le
+# texte porteur sans jamais dire ce que l'amendement fait. Mesuré sur la première campagne
+# (19/08/2026) : 557 des 674 scrutins sautés par les agents étaient des amendements, soit 83 % des
+# sauts et plus de la moitié des jetons dépensés. `--sans-amendements` les écarte donc du lot avant
+# de payer pour eux — ils redeviendront catégorisables le jour où le contenu des textes sera ingéré
+# (phase 6), pas avant.
+# `\u2019` plutôt que le caractère lui-même : c'est l'apostrophe typographique, que la source mêle
+# à l'apostrophe droite (F8, docs/plans/phase-3.0-feedback.md). Les deux doivent être acceptées.
+_AMENDEMENT = re.compile(
+    r"^(l['\u2019]amendement|les amendements|le sous-amendement|les sous-amendements)",
+    re.IGNORECASE,
+)
 _LECTURE = re.compile(
     r"\s*\((première|deuxième|nouvelle|troisième|lecture définitive|texte de la commission)"
     r"[^)]*\)\.?\s*$",
@@ -106,6 +118,11 @@ def main() -> int:
         default=25,
         help="nombre de textes par lot (défaut : 25, soit ~100 scrutins)",
     )
+    parseur.add_argument(
+        "--sans-amendements",
+        action="store_true",
+        help="écarte les amendements et sous-amendements, non catégorisables depuis leur titre",
+    )
     args = parseur.parse_args()
 
     donnees = charge_export(args.export)
@@ -113,7 +130,16 @@ def main() -> int:
     if not themes:
         raise SystemExit(f"{args.export} : aucun thème dans l'export, un lot serait inutilisable")
 
-    groupes = groupe_par_texte(donnees["scrutins"])
+    scrutins = donnees["scrutins"]
+    ecartes = 0
+    if args.sans_amendements:
+        retenus = [s for s in scrutins if not _AMENDEMENT.match(s["titre"])]
+        ecartes = len(scrutins) - len(retenus)
+        scrutins = retenus
+        if not scrutins:
+            raise SystemExit("tous les scrutins de l'export sont des amendements : rien à faire")
+
+    groupes = groupe_par_texte(scrutins)
     args.out.mkdir(parents=True, exist_ok=True)
 
     index: dict[str, list[str]] = {}
@@ -132,7 +158,9 @@ def main() -> int:
         json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
-    print(f"{len(donnees['scrutins'])} scrutins, {len(groupes)} textes distincts")
+    if ecartes:
+        print(f"{ecartes} amendement(s) et sous-amendement(s) écartés (--sans-amendements)")
+    print(f"{len(scrutins)} scrutins retenus, {len(groupes)} textes distincts")
     print(f"{len(index)} lot(s) écrits dans {args.out}/")
     # Approximation usuelle (~4 octets par jeton) : un ordre de grandeur pour dimensionner la
     # campagne, pas une facture.

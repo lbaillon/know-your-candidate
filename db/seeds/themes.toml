@@ -12,6 +12,23 @@
 #
 # `autre` n'a pas de pôle : il sert à dire « relu, ne relève d'aucun thème », ce qui n'est pas la
 # même chose que « pas encore regardé ».
+#
+# ---
+#
+# Les quatre thèmes de rang 70 à 100 ont été ajoutés le 19/08/2026, après la première campagne de
+# catégorisation assistée : sur 988 scrutins, 251 étaient tombés dans `autre`, dont 63 relevant des
+# institutions, 14 de l'agriculture, 11 de l'Europe et 7 du travail. methodology.md § 4 les
+# annonçait nommément (« On ajoutera probablement au moins : institutions/démocratie, Europe,
+# travail/entreprise, agriculture ») — la campagne n'a fait que confirmer le besoin en le chiffrant.
+#
+# RÉSERVE IMPORTANTE, à ne pas perdre de vue : trois de ces quatre axes ne se lisent PAS
+# gauche-droite. L'Europe (intégration contre souveraineté) est la seconde dimension classique de
+# l'espace politique, orthogonale à la première ; l'agriculture et les institutions ne s'alignent
+# que faiblement. La convention de signe ci-dessus, qui rend le signe d'une saisie comparable à
+# celui de l'estimation automatique, y perd donc son sens. On les ajoute quand même — la
+# catégorisation décrit le réel, elle ne se plie pas à ce que la mesure sait vérifier — mais tout
+# taux d'accord calculé sur ces thèmes est à écarter, pas à interpréter (voir scripts/README.md,
+# étape 5).
 
 [[theme]]
 slug = "social-fiscalite"
@@ -62,7 +79,39 @@ pole_positif = "restriction de l'entrée et du séjour"
 rang = 60
 
 [[theme]]
+slug = "institutions-democratie"
+libelle = "Institutions / démocratie"
+description = "Droit électoral, Constitution, justice et magistrature, collectivités, statuts d'outre-mer."
+pole_negatif = "pouvoirs du Parlement et participation citoyenne élargis"
+pole_positif = "autorité de l'exécutif et stabilité institutionnelle"
+rang = 70
+
+[[theme]]
+slug = "travail-entreprise"
+libelle = "Travail / entreprise"
+description = "Droit du travail, chômage, dialogue social, réglementation des entreprises."
+pole_negatif = "protection des salariés et droits collectifs"
+pole_positif = "flexibilité et liberté d'entreprendre"
+rang = 80
+
+[[theme]]
+slug = "agriculture"
+libelle = "Agriculture"
+description = "Production agricole, revenu des agriculteurs, normes sanitaires et environnementales, pêche."
+pole_negatif = "régulation des marchés et contraintes environnementales"
+pole_positif = "soutien à la production et allègement des normes"
+rang = 90
+
+[[theme]]
+slug = "europe"
+libelle = "Europe"
+description = "Traités, intégration européenne, souveraineté nationale, engagements internationaux."
+pole_negatif = "approfondissement de l'intégration européenne"
+pole_positif = "primauté de la souveraineté nationale"
+rang = 100
+
+[[theme]]
 slug = "autre"
 libelle = "Autre"
 description = "Ne relève d'aucun des thèmes ci-dessus."
-rang = 99
+rang = 999

@@ -27,8 +27,15 @@ leurs deux pôles.
 ### 2. Découper en lots
 
 ```bash
-python3 scripts/export_batches.py export.json --out lots/
+python3 scripts/export_batches.py export.json --out lots/ --sans-amendements
 ```
+
+**`--sans-amendements` n'est pas une option de confort.** Un amendement n'est pas catégorisable
+depuis son titre, qui nomme le texte porteur sans jamais dire ce que l'amendement fait : lors de la
+première campagne, 557 des 674 scrutins sautés par les agents étaient des amendements — 83 % des
+sauts, et plus de la moitié des jetons dépensés pour rien. Sur le corpus actuel, le drapeau fait
+passer 988 scrutins à 401. Ils redeviendront catégorisables le jour où le contenu des textes sera
+ingéré (phase 6), pas avant.
 
 Le découpage **groupe par texte** et non par scrutin. Sur le corpus mesuré le 19/08/2026 — 988
 scrutins — il n'y a que **244 textes distincts** : le thème est une propriété du texte, pas du vote,
@@ -59,6 +66,27 @@ Deux points du prompt méritent d'être connus de qui lance la campagne :
 - **la position ne décrit pas le texte mais ce que voter *pour* veut dire.** C'est la notion que le
   prompt explique le plus longuement, parce que c'est celle qu'on peut inverser sans s'en rendre
   compte.
+
+Prompt pour lancer des sous-agents pour tout faire en une fois :
+
+```markdown
+Dans ce dépôt, campagne de catégorisation (voir scripts/README.md, étape 3).
+
+Pour chaque fichier lots/lot-NNN.txt, lance UN sous-agent chargé de :
+  1. lire scripts/prompt_categorisation.md (le prompt, à suivre à la lettre) ;
+  2. lire lots/lot-NNN.txt (les thèmes et les scrutins) ;
+  3. écrire sa réponse dans reponses/lot-NNN.tsv, au format décrit par le prompt ;
+  4. me répondre UNIQUEMENT « lot-NNN : X lignes écrites, Y scrutins sautés ».
+
+Contraintes, à répéter à chaque sous-agent :
+  - ne pas modifier le prompt, ne pas l'améliorer, ne pas discuter ses règles ;
+  - un scrutin dont le sens du vote n'est pas déterminable ne reçoit AUCUNE ligne ;
+  - ne rien inventer du contenu d'un texte : seul le titre est disponible ;
+  - écrire le fichier, ne jamais recopier son contenu dans la réponse.
+
+Six sous-agents en parallèle au maximum. À la fin, liste les lots traités et le
+total de lignes. Ne lance pas l'import : je m'en charge.
+```
 
 ### 4. Assembler et vérifier
 
@@ -99,6 +127,32 @@ désaccord signale que l'un des deux se trompe, ce qui vaut infiniment mieux qu'
 au hasard. **Ne jamais faire l'inverse** : pré-remplir la position à partir de la mesure ferait
 publier une position machine sous signature humaine, et le taux d'accord ne mesurerait plus que sa
 propre influence (D3.7, D3.8, et le premier risque de la phase 3).
+
+## Ce que la première campagne a appris (19/08/2026)
+
+988 scrutins donnés à des agents, 674 sautés, et sur les 314 traités **251 étiquetés `autre`** : 63
+catégorisations substantielles seulement. Le dépouillement a séparé trois causes, qu'il vaut la peine
+de connaître avant de relancer :
+
+1. **Les amendements — 557 des 674 sauts.** La règle d'honnêteté qui fonctionne, pas un défaut. D'où
+   `--sans-amendements` ci-dessus.
+2. **Quatre thèmes manquaient — environ 98 scrutins** : institutions/démocratie (63), agriculture
+   (14), Europe (11), travail/entreprise (7). Exactement ceux que methodology.md § 4 annonçait. Ils
+   ont été ajoutés à `db/seeds/themes.toml`.
+3. **Deux défauts du prompt, pour la part la plus coûteuse.** Son exemple classait une motion de
+   rejet en `autre` (« le vote porte sur la procédure ») : les agents l'ont recopié 51 fois, et 51
+   des votes les plus clivants du corpus sont partis à la poubelle. Et sa règle de saut confondait
+   « je ne sais pas ce que fait ce texte » avec « ce texte fait trop de choses » — d'où des lois de
+   finances sautées. Les règles 6 et 7 du prompt répondent aux deux.
+
+Le reste — environ 90 scrutins — est une traîne légitime : Mayotte, programmation militaire, fin de
+vie, contenus haineux en ligne, JO, covid. Là, `autre` est la bonne réponse, et c'est précisément à
+cela qu'il sert (D3.5).
+
+**Leçon transposable** : un exemple dans un prompt pèse plus lourd qu'une règle. Celui de la motion
+disait le contraire de ce que la méthodologie impose, et il a gagné 51 fois contre le texte des
+règles. Toute modification de `prompt_categorisation.md` doit être relue comme une page de
+méthodologie — ses exemples en premier.
 
 ## Ce que ces scripts ne font pas
 
