@@ -576,6 +576,12 @@ WHERE s.chambre = 'assemblee'
 Le scrutin du Congrès reste hors file par le filtre `chambre` : il n'a pas de ventilation par groupe
 parlementaire exploitable et n'entre dans aucun score.
 
+> **Corrigé depuis** par `db/migrations/0008_priorite_apostrophe.sql` : les comparaisons
+> `ILIKE 'l''ensemble%'` et `ILIKE 'l''article%'` écrites ci-dessus ne reconnaissent que
+> l'apostrophe droite, alors que 118 titres de l'open data portent l'apostrophe typographique
+> (F8, [phase-3.0-feedback.md](phase-3.0-feedback.md)). La vue utilise désormais
+> `~* '^l[''’]ensemble'`. Le reste de la définition est inchangé.
+
 ### Le seed des thèmes
 
 `db/seeds/themes.toml`, appliqué par le job `seed_themes`. Un fichier plutôt qu'un `INSERT` dans la

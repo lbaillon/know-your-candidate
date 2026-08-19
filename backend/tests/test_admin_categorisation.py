@@ -135,6 +135,40 @@ async def test_next_categorisation_shows_the_first_scrutin_in_the_queue(
     assert b"Zucman" in response.content
 
 
+async def test_a_typographic_apostrophe_still_ranks_as_a_vote_on_a_whole_text(
+    admin_client: AsyncClient, db_conn: asyncpg.Connection
+):
+    """F8 (docs/plans/phase-3.0-feedback.md) : 118 titres de l'open data commencent par un « l »
+    suivi de l'apostrophe typographique U+2019, que la comparaison d'origine (`ILIKE
+    'l''ensemble%'`, apostrophe droite U+0027) ne reconnaissait pas — ces scrutins tombaient au
+    rang des amendements, en toute fin de file.
+
+    L'amendement est daté plus tard que le vote sur l'ensemble : si le rang de priorité était
+    ignoré, c'est lui que la file rendrait (`date_scrutin DESC` départage à rang et à
+    part_minoritaire égaux).
+    """
+    await insert_scrutin(
+        db_conn,
+        an_uid="SC-AMENDEMENT",
+        numero=2,
+        date_scrutin=date(2024, 6, 1),
+        titre="l'amendement n° 12 de M. Dupont à l'article 3 du projet de loi de finances",
+    )
+    await insert_scrutin(
+        db_conn,
+        an_uid="SC-ENSEMBLE",
+        numero=1,
+        date_scrutin=date(2024, 1, 1),
+        titre="l\u2019ensemble du projet de loi de programmation de la recherche",
+    )
+
+    response = await admin_client.get("/admin/categorisation")
+
+    assert response.status_code == 200
+    assert b"programmation de la recherche" in response.content
+    assert b"amendement n" not in response.content
+
+
 async def test_next_categorisation_shows_empty_state_when_queue_is_empty(
     admin_client: AsyncClient,
 ):

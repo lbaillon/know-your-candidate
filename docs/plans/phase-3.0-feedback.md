@@ -278,3 +278,43 @@ la suite est « non configuré », quel que soit le `.env` de la machine. Les te
 contraire appellent déjà `configure_admin(monkeypatch)`, qui écrase ces valeurs avec le même
 `monkeypatch`, donc avec le même défaisage en fin de test. Règle à retenir pour la suite : **tout
 réglage lu depuis l'environnement doit être neutralisé par une fixture, pas supposé absent.**
+
+## F8 — L'apostrophe typographique reléguait des votes sur un texte entier en fin de file
+
+**Où** : `db/migrations/0007_categorisation.sql`, vue `scrutin_a_categoriser` ; corrigé par
+`db/migrations/0008_priorite_apostrophe.sql`. Trouvé le 19/08/2026 en relisant un lot produit par
+`scripts/export_batches.py`, dont un titre commençait par « l’ensemble » avec une apostrophe
+courbe.
+
+**Ce qui s'est passé.** Le `rang_priorite` de la file de travail compare le début du titre à
+`'l''ensemble%'`, avec l'apostrophe droite (U+0027) — celle que le plan avait écrite, sur la foi des
+titres qu'il avait sous les yeux. L'open data de l'Assemblée mélange en réalité les deux formes :
+**118 titres sur 16 956** commencent par « l’ » typographique (U+2019). Ces scrutins tombaient donc
+dans le `ELSE` du `CASE`, au rang 4, celui des amendements.
+
+**L'impact réel, cité tel quel plutôt qu'arrondi vers le haut** : sur le corpus de travail actuel,
+**deux scrutins** étaient mal classés (16/3048, vote sur l'ensemble d'une proposition de résolution,
+et 16/3047, son article unique). Les neuf autres titres concernés du corpus sont des scrutins
+solennels, déjà au rang 1 par leur `type_code`, que le défaut n'atteignait pas. Deux lignes ne
+justifieraient pas une migration ; ce qui la justifie, c'est que le défaut grandit avec le corpus —
+sur l'ensemble des scrutins de l'Assemblée, 12 votes sur un texte entier et 14 articles sont dans ce
+cas, et abaisser `corpus_parametre.participation_min`, ce qui est prévu, les ferait entrer d'un coup
+dans la file, mal classés.
+
+**Ce que ce défaut apprend, au-delà de son ampleur.** Rien n'était faux à l'écran : une file de
+travail mal ordonnée ne ressemble pas à une panne, elle ressemble à une file de travail. Ce sont les
+défauts qu'aucun test ne réclame parce que personne ne sait qu'ils existent ; celui-ci n'est sorti
+que parce qu'un humain a relu des titres à voix haute. La règle qui en découle vaut pour toute la
+suite : **tout filtre posé sur du texte de l'open data doit accepter les deux apostrophes**, et
+plus généralement se méfier de l'idée qu'une source publique est typographiquement homogène.
+
+**Décision.** Une classe de caractères (`~* '^l[''’]ensemble'`) plutôt qu'un `replace()` de
+normalisation : elle dit ce qu'on accepte là où une normalisation dirait ce qu'on remplace, et si la
+source introduit demain une troisième variante, on veut la voir plutôt que l'absorber.
+
+**Test de non-régression** : `test_a_typographic_apostrophe_still_ranks_as_a_vote_on_a_whole_text`
+(`backend/tests/test_admin_categorisation.py`). Il insère un amendement **daté plus tard** qu'un vote
+sur l'ensemble d'un texte à l'apostrophe courbe : si le rang de priorité cessait de les distinguer,
+le départage par date rendrait l'amendement et le test tomberait. Vérifié en rejouant l'ancien `CASE`
+à la main sur les deux mêmes lignes — il classe bien l'amendement en tête, le test discrimine donc
+réellement le défaut et ne se contente pas de constater le comportement corrigé.
