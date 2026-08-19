@@ -1,0 +1,50 @@
+{% extends "admin/base_admin.html.jinja" %}
+
+{% block title %}Import #{{ record.id }} — aperçu{% endblock %}
+
+{% block content %}
+  <h1>Import #{{ record.id }} — {{ record.filename }}</h1>
+  <p>Statut : <strong>{{ record.status }}</strong> · déposé le
+    {{ record.uploaded_at.strftime("%d/%m/%Y %H:%M") }}
+    {%- if record.generateur %} · généré par {{ record.generateur }}{% endif %}.</p>
+
+  <dl class="import-apercu__compteurs">
+    <div><dt>Créations</dt><dd>{{ record.apercu.compteurs.creation }}</dd></div>
+    <div><dt>Modifications</dt><dd>{{ record.apercu.compteurs.modification }}</dd></div>
+    <div><dt>Inchangés</dt><dd>{{ record.apercu.compteurs.inchange }}</dd></div>
+    <div><dt>Conflits</dt><dd>{{ record.apercu.compteurs.conflit }}</dd></div>
+  </dl>
+
+  <table class="import-apercu__scrutins">
+    <thead>
+      <tr>
+        <th scope="col">Scrutin</th>
+        <th scope="col">Classement</th>
+        <th scope="col">Avant</th>
+        <th scope="col">Après</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for scrutin in record.apercu.scrutins %}
+        <tr class="import-apercu__ligne import-apercu__ligne--{{ scrutin.classement }}">
+          <td>{{ scrutin.scrutin_uid }}</td>
+          <td>{{ scrutin.classement }}</td>
+          <td>
+            {% for entry in scrutin.avant %}
+              <p>{{ entry.theme }} — poids {{ entry.poids }}{% if entry.position_pour %}, position {{ entry.position_pour }}{% endif %}</p>
+            {% else %}
+              <p>—</p>
+            {% endfor %}
+          </td>
+          <td>
+            {% for entry in scrutin.apres %}
+              <p>{{ entry.theme }} — poids {{ entry.poids }}{% if entry.position_pour %}, position {{ entry.position_pour }}{% endif %}</p>
+            {% else %}
+              <p>—</p>
+            {% endfor %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

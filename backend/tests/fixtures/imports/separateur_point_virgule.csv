@@ -1,0 +1,2 @@
+schema_version;scrutin_uid;legislature;numero;date;titre;type;sort;pour;contre;abstentions;participation;positions_groupes;url_an;theme;poids;position_pour;confiance;justification
+1;SC1;17;1;2024-03-14;l'ensemble du texte;scrutin public ordinaire;adopté;200;150;0;0.700;RN:pour;https://example.org;social-fiscalite;1.000;0.500;0.700;justification suffisamment longue

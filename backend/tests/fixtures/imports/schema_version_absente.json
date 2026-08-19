@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-08-18T09:00:00Z",
+  "filtre": { "statut": "non_categorises" },
+  "themes": [],
+  "scrutins": [
+    {
+      "scrutin_uid": "SC1", "legislature": 17, "numero": 1, "date": "2024-03-14",
+      "titre": "l'ensemble du texte", "type": "scrutin public ordinaire", "sort": "adopté",
+      "pour": 200, "contre": 150, "abstentions": 0, "non_votants": 0, "url_an": "https://example.org",
+      "categorisation": [
+        { "theme": "social-fiscalite", "poids": "1.000", "position_pour": "0.500",
+          "confiance": "0.700", "justification": "justification suffisamment longue" }
+      ]
+    }
+  ]
+}

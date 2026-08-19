@@ -576,6 +576,32 @@
     padding: var(--space-sm);
     border-bottom: 1px solid var(--color-border);
   }
+
+  /* Import : dépôt et aperçu (D3.15, D3.16). */
+  .import-form__erreurs {
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+    padding: var(--space-sm) var(--space-md);
+  }
+  .import-apercu__compteurs {
+    display: flex;
+    gap: var(--space-lg);
+    margin: var(--space-md) 0;
+  }
+  .import-apercu__scrutins {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .import-apercu__scrutins th,
+  .import-apercu__scrutins td {
+    text-align: left;
+    vertical-align: top;
+    padding: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .import-apercu__ligne--conflit {
+    background: color-mix(in srgb, var(--color-error) 10%, transparent);
+  }
 }
 /*
  * Utilitaires ponctuels. À garder minimal — ce n'est pas un système utilitaire complet.

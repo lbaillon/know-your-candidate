@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-18T09:00:00Z",
+  "scrutins": [
+    {
+      "scrutin_uid": "SC1", "legislature": 17, "numero": 1

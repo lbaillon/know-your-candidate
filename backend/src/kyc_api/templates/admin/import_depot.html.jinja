@@ -1,0 +1,23 @@
+{% extends "admin/base_admin.html.jinja" %}
+
+{% block title %}Import — back-office{% endblock %}
+
+{% block content %}
+  <h1>Import</h1>
+  <p>
+    Dépose un fichier d'export (CSV ou JSON) retravaillé hors ligne. Le fichier entier est refusé
+    si une seule ligne est invalide — rien n'est appliqué avant l'aperçu.
+  </p>
+
+  {% if errors %}
+    <ul class="import-form__erreurs" role="alert">
+      {% for erreur in errors %}<li>{{ erreur }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  <form method="post" action="/admin/import" enctype="multipart/form-data">
+    <label for="fichier">Fichier (.csv ou .json)</label>
+    <input type="file" id="fichier" name="fichier" accept=".csv,.json" required>
+    <button type="submit">Déposer et valider</button>
+  </form>
+{% endblock %}

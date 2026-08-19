@@ -42,6 +42,12 @@ CSV_FIELDNAMES = [
 ]
 _CATEGORISATION_FIELDS = ("theme", "poids", "position_pour", "confiance", "justification")
 
+# Limites dures (plan, section « Import : validation, aperçu, application ») : au-delà, refus
+# immédiat, avant toute validation de contenu. MAX_FILE_BYTES se vérifie sur les octets bruts
+# déposés, avant même le décodage — voir kyc_api.admin.imports.
+MAX_FILE_BYTES = 5 * 1024 * 1024
+MAX_ROWS = 25_000
+
 
 class MalformedImport(Exception):
     """Un fichier qui ne peut même pas être compris comme un export version 1 — schéma inconnu,
@@ -163,12 +169,22 @@ def read_json(content: str) -> ParsedImport:
                 )
             )
 
+    if len(rows) > MAX_ROWS:
+        raise MalformedImport(
+            f"trop de lignes de catégorisation : {len(rows)} (maximum {MAX_ROWS})"
+        )
+
     return ParsedImport(
         schema_version=export.schema_version, generateur=export.generateur, rows=rows
     )
 
 
 def read_csv(content: str) -> ParsedImport:
+    # Un BOM UTF-8 en tête est une habitude d'export de tableur, pas un signal d'erreur : on le
+    # tolère plutôt que de laisser « schema_version » (repéré comme en-tête) se faire refuser en
+    # « colonne manquante » — un refus au bon moment mais au mauvais motif (plan, section
+    # « ⚠️ À concevoir ici »).
+    content = content.removeprefix("\ufeff")
     first_line = content.splitlines()[0] if content.splitlines() else ""
     if first_line.count(";") > first_line.count(","):
         # Repli explicite (plan, tableau de validation) : un export de tableur français utilise
@@ -195,6 +211,20 @@ def read_csv(content: str) -> ParsedImport:
     schema_version: int | None = None
 
     for line_number, record in enumerate(reader, start=2):
+        if line_number - 1 > MAX_ROWS:
+            raise MalformedImport(f"trop de lignes : plus de {MAX_ROWS} (limite dure)")
+
+        # `csv.DictReader` met `None` (pas une chaîne vide) sur les colonnes qui manquent parce
+        # que la ligne a moins de champs que l'en-tête — le symptôme d'un guillemet non fermé qui
+        # a avalé le reste de la ligne. Sans cette garde, une colonne de catégorisation à `None`
+        # traverserait silencieusement comme « thème vide, rien à importer » (D3.15 : le fichier
+        # entier ou rien, pas une interprétation approximative).
+        if None in record.values():
+            raise MalformedImport(
+                f"ligne {line_number} : nombre de colonnes incohérent avec l'en-tête "
+                "(guillemet non fermé ?)"
+            )
+
         raw_version = (record.get("schema_version") or "").strip()
         try:
             row_version = int(raw_version)
