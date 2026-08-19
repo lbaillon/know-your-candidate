@@ -1,7 +1,8 @@
 # Phase 3.0 — Retours d'implémentation
 
 **Statut : ✅ consigné** · Dépend de : [phase 3](phase-3-categorisation.md), lots A, B et C · F2 est
-résolue depuis le lot C ; plus rien ne bloque `make ingest`.
+résolue depuis le lot C ; F6, trouvée par la vérification 2 le 19/08/2026, est corrigée dans le
+`Makefile`. Plus rien ne bloque `make ingest`.
 
 ## Objectif
 
@@ -197,3 +198,53 @@ quel que soit son contenu.
 que de déclarer un paramètre `UploadFile` typé par FastAPI (qui, lui, gère cette distinction tout seul) —
 c'est précisément parce que `admin/imports.py` doit lire les autres champs du formulaire à la main
 (nom de fichier, etc.) qu'il passe par `request.form()` plutôt que par l'injection de dépendance standard.
+
+## F6 — Une reprise de job suffisait à faire calculer les dérivés sur un corpus incomplet
+
+**Où** : `Makefile`, cible `ingest`. Trouvé le 19/08/2026 en exécutant la vérification 2 du plan
+(« `make ingest` rejoué en entier sur une base vierge »), sur une base `kyc_phase3_check` créée pour
+l'occasion.
+
+**Ce qui s'est passé.** Au premier passage, un incident réseau a fait échouer
+`ingest_scrutins {"legislature": 16}` (`error decoding response body`). La reprise automatique a
+fonctionné — mais un job requis repart en `pending` avec une nouvelle date de planification, donc
+**derrière** tous les jobs enfilés après lui. Horodatages relevés dans la table `job` :
+
+| Job | Tentatives | Début | Fin |
+| --- | --- | --- | --- |
+| `ingest_scrutins {16}` | 2 | 12:22:21 | **12:27:24** |
+| `label_scrutins_heuristic` | 1 | 12:25:51 | 12:25:52 |
+| `refresh_views` | 1 | 12:25:52 | 12:25:59 |
+
+Les deux jobs dérivés ont donc tourné sur une base à laquelle il manquait encore les 4 105 scrutins
+de la 16e législature. Résultat : 11 956 estimations d'axe au lieu de 15 621, deux personnes sans
+slug (des votants créés par l'ingestion des scrutins, arrivés après `assign_slugs`), et une
+`person_apercu` rafraîchie trop tôt. **Et `make ingest` a rendu 0.**
+
+**Pourquoi les gardes existantes ne l'ont pas vu.** F3 ([phase-1.1-fix.md](phase-1.1-fix.md)) garantit
+que `run-once` sort en code non nul si un job ne finit pas en `done`. Ici, *tous* les jobs ont fini
+en `done` : la garantie porte sur l'issue de chaque job, jamais sur leur ordre. Or l'ordre du
+pipeline n'existait que dans l'ordre des `enqueue`, c'est-à-dire dans une propriété que la file
+n'a jamais promis de préserver.
+
+**Le même symptôme existait sur la base de développement**, indépendamment de cette reprise :
+`sum(person_apercu.votes_total)` valait 1 743 107 pour 2 346 018 votes réels à l'Assemblée — l'accueil
+et l'annuaire sous-comptaient les votes de tout le monde de 602 911. Réparé par un `refresh_views`.
+C'est le genre de faute qui ne se voit pas : une vue matérialisée périmée n'a l'air de rien, elle
+répond vite et elle ment.
+
+**Décision.** `make ingest` est découpé en **cinq étapes séparées par un `run-once`**, une par niveau
+de dépendance : référentiel · scrutins et Wikidata · seed des candidat·es · slugs et thèmes ·
+dérivés. `run-once` ne rend la main qu'une fois la file vide, reprises comprises : une étape ne peut
+plus doubler celle dont elle dépend, et un échec définitif arrête `make ingest` à l'étape fautive
+plutôt qu'après avoir calculé des dérivés faux. Pas de colonne `depends_on` dans la table `job` : la
+dépendance est déjà exprimée par l'ordre des étapes du Makefile, la mettre aussi en base ferait deux
+sources de vérité pour la même chose.
+
+**Vérifié après correctif** : deuxième et troisième passages sur base vierge, sans incident —
+15 621 estimations, empreintes identiques d'un passage à l'autre
+(`md5` des estimations `fe768380…`, des thèmes `438590e5…`), **zéro ligne réécrite** au troisième
+passage (aucun `computed_at` d'estimation modifié, aucun slug créé). Seules grandissent les deux
+tables de journal, par construction : `job` (+10 lignes par passage) et `ingestion_anomaly`
+(+1 704 — une trace par anomalie et par exécution ; sa croissance sans borne au fil des ingestions
+est à regarder en phase 5, ce n'est pas un défaut de la phase 3).

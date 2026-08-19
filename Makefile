@@ -59,22 +59,37 @@ test: db-up
 migrate:
 	sqlx migrate run --source db/migrations --database-url "$(DATABASE_URL)"
 
-# Enchaîne le référentiel puis les trois législatures dans l'ordre (D. spike : ingest_acteurs
-# avant ingest_scrutins, voir docs/plans/phase-1-ingestion.md), puis enrich_wikidata (a besoin des
-# `person` du référentiel, F2c docs/plans/phase-1.1-fix.md), puis vide la file en une seule
-# exécution (`run-once`) plutôt que de laisser un worker tourner indéfiniment derrière. Compte en
-# dizaines de minutes sur les trois législatures complètes — c'est attendu, pas un hang. `run-once`
-# sort en code non nul si l'un des jobs échoue (F3) : `make ingest` s'arrête donc avec lui.
+# Enchaîne l'ingestion complète, **en cinq étapes séparées par un `run-once`** — une par niveau
+# de dépendance. Ce découpage n'est pas cosmétique : la file est ordonnée par priorité puis par
+# date de planification, et un job repris après un échec repasse DERRIÈRE ceux enfilés après lui.
+# En une seule file, un simple incident réseau sur `ingest_scrutins` suffisait donc à faire tourner
+# `label_scrutins_heuristic` et `refresh_views` sur un corpus incomplet — sans aucune erreur, tous
+# les jobs finissant bien en `done` (F6, docs/plans/phase-3.0-feedback.md). `run-once` ne rend la
+# main qu'une fois la file vide, reprises comprises : une étape ne peut plus doubler celle dont
+# elle dépend.
+#
+# Compte en dizaines de minutes sur les trois législatures complètes — c'est attendu, pas un hang.
+# `run-once` sort en code non nul si l'un des jobs échoue (F3) : `make ingest` s'arrête avec lui,
+# et s'arrête désormais à l'étape fautive plutôt qu'après avoir calculé des dérivés faux.
 ingest: db-up
 	$(MAKE) migrate
+	@echo "==> Étape 1/5 : référentiel (person, organe, mandat)"
 	cd worker && cargo run --release -- enqueue ingest_acteurs
+	cd worker && cargo run --release -- run-once
+	@echo "==> Étape 2/5 : scrutins des législatures 15-17 et enrichissement Wikidata"
 	cd worker && cargo run --release -- enqueue ingest_scrutins '{"legislature": 15}'
 	cd worker && cargo run --release -- enqueue ingest_scrutins '{"legislature": 16}'
 	cd worker && cargo run --release -- enqueue ingest_scrutins '{"legislature": 17}'
 	cd worker && cargo run --release -- enqueue enrich_wikidata
+	cd worker && cargo run --release -- run-once
+	@echo "==> Étape 3/5 : seed éditorial des candidat·es (peut créer des personnes)"
 	cd worker && cargo run --release -- enqueue seed_candidates
+	cd worker && cargo run --release -- run-once
+	@echo "==> Étape 4/5 : slugs (toutes les personnes existent enfin) et thèmes"
 	cd worker && cargo run --release -- enqueue assign_slugs
 	cd worker && cargo run --release -- enqueue seed_themes
+	cd worker && cargo run --release -- run-once
+	@echo "==> Étape 5/5 : dérivés (estimations d'axe, vues matérialisées)"
 	cd worker && cargo run --release -- enqueue label_scrutins_heuristic
 	cd worker && cargo run --release -- enqueue refresh_views
 	cd worker && cargo run --release -- run-once

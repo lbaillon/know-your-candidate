@@ -1167,10 +1167,15 @@ hors du périmètre de cette phase. Le plan de la phase 4 porte déjà, lui, l'�
 
 1. `make lint`, `make typecheck`, `make test` verts ; CI verte. **Fait**, vérifié à chaque commit.
 2. `make ingest` rejoué **en entier sur une base vierge** : `seed_themes` et
-   `label_scrutins_heuristic` passent, et une seconde exécution ne change aucune ligne. **Pas encore
-   fait pour la phase 3** (les deux jobs ont été vérifiés séparément sur la base de développement
-   existante, pas dans un `make ingest` complet sur base vierge — recréer et repeupler la base prend
-   plusieurs dizaines de minutes, reporté à la prochaine session qui touche ce plan).
+   `label_scrutins_heuristic` passent, et une seconde exécution ne change aucune ligne. **Fait le
+   19/08/2026** sur une base `kyc_phase3_check` créée pour l'occasion, trois passages — et c'est
+   cette vérification qui a trouvé F6 ([phase-3.0-feedback.md](phase-3.0-feedback.md)) : au premier
+   passage, une reprise de job après incident réseau a fait calculer les dérivés sur un corpus
+   incomplet, sans aucune erreur et avec un code de sortie 0. `make ingest` est découpé en cinq
+   étapes depuis. Passages 2 et 3, sans incident : 15 621 estimations, empreintes identiques
+   (estimations `fe768380…`, thèmes `438590e5…`), **zéro ligne réécrite** au troisième passage —
+   ni un `computed_at` d'estimation, ni un slug. Seuls grandissent les deux journaux (`job`,
+   `ingestion_anomaly`), par construction.
 3. Le job d'ancrage **refuse** de recharger une version modifiée : vérifié à la main en changeant une
    coordonnée sans changer la version, résultat consigné. **Fait, deux fois** : une fois délibérément
    (`droite` de `0.6` à `0.65`, version inchangée → refus nommant les deux hachages, coordonnée
@@ -1188,23 +1193,27 @@ hors du périmètre de cette phase. Le plan de la phase 4 porte déjà, lui, l'�
 7. Un import de conflit fabriqué à la main : refus sans confirmation, application avec confirmation, et
    le motif visible dans l'historique.
 8. Chaque page admin ouverte **JavaScript désactivé** : la file, l'enregistrement, l'import et son
-   aperçu fonctionnent.
-9. Navigation au clavier seul sur la file de saisie, de bout en bout, sans souris.
+   aperçu fonctionnent. **Non vérifié — décision assumée du 19/08/2026** : jugé non prioritaire, à
+   reprendre sur retour utilisateur. Ce que l'on sait sans navigateur : le formulaire n'exige aucun
+   JavaScript par construction (D3.17). Ce que l'on ne sait pas : si un détail de rendu casse le
+   parcours réel. La case reste vide plutôt que cochée à tort.
+9. Navigation au clavier seul sur la file de saisie, de bout en bout, sans souris. **Non vérifié —
+   même décision, même date.** La recette chronométrée (item 4) donnera la réponse en pratique : si
+   la saisie au clavier coince, le temps le dira.
 10. Déconnecté, chaque route `/admin` rend une redirection ou un 401 — vérifié par un test paramétré
     sur **toutes** les routes du routeur admin, pas par échantillonnage.
 11. Aucune route publique ne crée de job ; aucune page publique n'affiche d'estimation automatique.
 12. Les mesures sont consignées, et sous les 100 ms. **Fait** — voir la note « Mesuré le 19/08/2026 »
     ci-dessus (mesures 1 à 4 ; 5 et 6 dépendent de la recette humaine, item 4).
 
-> **Point d'étape (lot C, commit 11, 19/08/2026)** : 1, 2 (partiel — jobs vérifiés séparément, pas via
-> un `make ingest` complet sur base vierge), 3, 11 et 12 sont faits. 5, 7 et 10 sont couverts par des
-> tests d'intégration automatisés (`test_admin_categorisation.py`, `test_import_apply.py`,
-> `test_admin_auth.py`) plutôt que reconfirmés à la main. 4 et 6 exigent une relecture humaine réelle
-> qui n'a pas eu lieu cette session. 8 et 9 (JavaScript désactivé, navigation clavier) exigent un vrai
-> navigateur — aucun outil de ce type disponible dans cette session ; le formulaire de catégorisation
-> est conçu sans JavaScript requis (D3.17, testé structurellement : groupe de boutons radio,
-> `input[type=range]` étiqueté) mais cela reste à vérifier les yeux ouverts. La phase n'est donc pas
-> déclarable terminée avant une session avec accès à un navigateur et à un relecteur humain.
+> **Point d'étape (19/08/2026, après la vérification 2)** : 1, 2, 3, 11 et 12 sont faits. 5, 7 et 10
+> sont couverts par des tests d'intégration automatisés (`test_admin_categorisation.py`,
+> `test_import_apply.py`, `test_admin_auth.py`) plutôt que reconfirmés à la main. 8 et 9 sont
+> abandonnés par décision explicite (voir ci-dessus) — non prioritaires, à reprendre sur retour
+> utilisateur. **Il ne reste que 4 et 6**, qui exigent une relecture humaine réelle : la recette
+> chronométrée de 30 scrutins et l'aller-retour export → import sur ces 30 scrutins. Les mesures 5 et
+> 6 de la section « Mesures à produire » en dépendent, et elles seules. La phase se déclare terminée
+> le jour où cette recette est faite et consignée.
 
 ### Hors périmètre — ne pas ajouter
 
