@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.responses import Response as FastAPIResponse
 
-from kyc_api.admin import auth, categorisation, jobs
+from kyc_api.admin import auth, categorisation, exports, jobs
 from kyc_api.admin.csrf import verify_csrf
 from kyc_api.admin.headers import AdminHeadersMiddleware
 from kyc_api.schemas.admin import AdminUser
@@ -35,6 +35,7 @@ async def dashboard(request: Request, admin_user: AdminUser = Depends(auth.requi
 
 protected_router.include_router(categorisation.router)
 protected_router.include_router(jobs.router)
+protected_router.include_router(exports.router)
 
 
 async def _handle_auth_required(request: Request, exc: Exception) -> FastAPIResponse:
