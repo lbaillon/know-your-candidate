@@ -46,7 +46,10 @@ css:
 
 lint: css
 	git diff --exit-code -- $(CSS_OUTPUT)
-	cd backend && uv run ruff check . && uv run ruff format --check .
+	# `../scripts` en plus de `backend/` : les outils du cycle export/import sont du Python du
+	# dépôt, ils vieillissent comme le reste. La configuration ruff vit dans backend/pyproject.toml,
+	# d'où l'invocation depuis backend/.
+	cd backend && uv run ruff check . ../scripts && uv run ruff format --check . ../scripts
 	cd worker && cargo fmt --check && cargo clippy --all-targets -- -D warnings
 
 typecheck:
