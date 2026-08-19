@@ -575,9 +575,104 @@
   .categorisation-form__position label {
     flex-basis: 100%;
   }
+
+  /*
+   * Curseur de position — apparence (D3.21). Deux règles, toutes deux voulues :
+   *
+   * 1. AUCUN REMPLISSAGE DE LA PISTE. Un `input[type=range]` par défaut peint la portion située à
+   *    gauche du pointeau (`::-moz-range-progress`, `accent-color`) : la barre se remplit à mesure
+   *    qu'on va vers la droite, ce qui suggère « plus », donc « mieux ». L'axe d'un thème n'a pas
+   *    de sens de progression — ses deux extrémités sont deux positions, pas un minimum et un
+   *    maximum, et methodology.md § 1 impose que les pôles soient nommés symétriquement. Une barre
+   *    qui se remplit contredirait cette symétrie en silence. D'où `appearance: none` partout, et
+   *    l'effacement explicite de `::-moz-range-progress`.
+   * 2. UN DÉGRADÉ QUI PORTE L'ORIENTATION, rouge à gauche, bleu à droite, gris neutre au centre
+   *    (l'interpolation directe rouge → bleu passerait par un violet illisible). Ce sont les seules
+   *    couleurs politiques du dépôt, et elles ne sortent pas du back-office : D2.11 (« pas de
+   *    couleur de parti ») reste entière côté public, et 10-tokens.css garde sa palette neutre par
+   *    construction. C'est pour cela qu'elles sont déclarées ici, sur le composant, et non parmi
+   *    les jetons globaux.
+   *
+   * Le pointeau prend la couleur du dégradé à sa position via `--position-color`, posée par
+   * static/admin.js. Sans JavaScript il reste neutre et bordé : lisible, utilisable, seulement
+   * moins parlant (D3.17 — le formulaire ne dépend pas de JavaScript, il en profite).
+   */
+  .categorisation-form__position {
+    --color-axe-gauche: #cc0000;
+    --color-axe-centre: #e8e8e4;
+    --color-axe-droite: #0d3b8a;
+  }
+  .categorisation-form__position input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1 1 12rem;
+    min-width: 8rem;
+    height: 1.5rem;
+    background: transparent;
+    cursor: pointer;
+  }
+  .categorisation-form__position input[type="range"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .categorisation-form__position input[type="range"]:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  .categorisation-form__position input[type="range"]::-webkit-slider-runnable-track {
+    height: 0.5rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.25rem;
+    background: linear-gradient(
+      to right,
+      var(--color-axe-gauche),
+      var(--color-axe-centre) 50%,
+      var(--color-axe-droite)
+    );
+  }
+  .categorisation-form__position input[type="range"]::-moz-range-track {
+    height: 0.5rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.25rem;
+    background: linear-gradient(
+      to right,
+      var(--color-axe-gauche),
+      var(--color-axe-centre) 50%,
+      var(--color-axe-droite)
+    );
+  }
+  /* Règle 1 ci-dessus : Firefox peint la portion parcourue, on l'efface. */
+  .categorisation-form__position input[type="range"]::-moz-range-progress {
+    background: transparent;
+  }
+  .categorisation-form__position input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    width: 1.25rem;
+    height: 1.25rem;
+    /* Recentre le pointeau sur une piste de 0,5 rem bordée de 1 px. */
+    margin-top: -0.4rem;
+    border: 2px solid var(--color-text);
+    border-radius: 50%;
+    background: var(--position-color, var(--color-background));
+  }
+  .categorisation-form__position input[type="range"]::-moz-range-thumb {
+    box-sizing: border-box;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--color-text);
+    border-radius: 50%;
+    background: var(--position-color, var(--color-background));
+  }
   .categorisation-form__pole {
+    /* Les deux pôles encadrent le curseur : largeur bornée pour qu'un libellé long ne repousse
+       pas la piste hors de l'écran. */
+    flex: 0 1 12rem;
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);
+  }
+  .categorisation-form__pole--positif {
+    text-align: right;
   }
   .categorisation-form__poids,
   .categorisation-form__justification {

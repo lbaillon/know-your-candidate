@@ -194,6 +194,7 @@ d'implémentation** : si l'une s'avère fausse au contact du code, le dire et pr
 | D3.17 | Ergonomie de la file de saisie | **Sans JavaScript.** Groupe de boutons radio pour le thème et `input type=range` pour la position sont pilotables aux flèches nativement ; l'envoi rend le scrutin suivant avec `autofocus`. HTMX pour éviter le rechargement, jamais pour rendre l'interaction possible. Si la recette chronométrée montre que le compte n'y est pas, un `static/admin.js` documenté sera ajouté — après la mesure, pas avant |
 | D3.18 | Format des seeds | **TOML** (`db/seeds/themes.toml`, `db/seeds/group_axis.toml`), comme `candidates.toml` en phase 2 : bibliothèque Rust de première classe, là où l'écosystème YAML de Rust est en cours d'abandon |
 | D3.19 | Protection CSRF | **Vérification d'origine** (`Origin`, repli `Referer`) sur toute méthode non sûre sous `/admin`, plus un cookie de session en `SameSite=Lax`. Pas de jeton à propager dans chaque formulaire : deux mécanismes qui font le même travail, c'est un de trop à maintenir juste |
+| D3.21 | Apparence du curseur de position | **Pas de remplissage de la piste, un dégradé rouge → bleu à la place.** Un `input[type=range]` peint par défaut la portion à gauche du pointeau : la barre se remplit quand on va vers la droite, ce qui dit « plus », donc « mieux ». L'axe d'un thème n'a pas de sens de progression — ses deux extrémités sont deux positions nommées symétriquement (methodology.md § 1), et un remplissage contredirait cette symétrie en silence. La piste porte donc un dégradé qui dit l'orientation gauche-droite, et le pointeau prend la couleur du dégradé à sa position. **Ces couleurs politiques ne sortent pas du back-office** : D2.11 reste entière côté public, et la palette de `10-tokens.css` reste neutre par construction. La coloration du pointeau vient d'un `static/admin.js` de cinquante lignes — première entorse à D3.17, assumée : purement cosmétique, le formulaire reste entièrement utilisable sans lui, et aucun calcul ni aucune requête n'y passe |
 | D3.20 | Granularité de l'historique | **Un acte éditorial sur un scrutin = une ligne** de `label_revision`, portant l'état complet avant et après en JSONB (thèmes triés par slug, donc comparables structurellement). Contrainte `CHECK (avant <> apres)` : la base elle-même refuse d'enregistrer un changement qui n'en est pas un, ce qui fait de l'aller-retour sans effet une propriété garantie plutôt qu'un espoir |
 
 ## Plan d'exécution
@@ -814,7 +815,8 @@ Le formulaire, sans JavaScript (D3.17) :
   poids ; tant qu'il n'y en a qu'un, le poids est masqué et vaut 1 ;
 - **position** : `<input type="range" min="-1" max="1" step="0.05">`, pilotable aux flèches, encadré
   des deux libellés de pôle **en toutes lettres** — jamais un nombre nu. Désactivé si le thème
-  sélectionné n'a pas d'axe ;
+  sélectionné n'a pas d'axe. Apparence : piste sans remplissage, dégradé d'orientation, pointeau
+  coloré à sa position (D3.21) ;
 - **confiance** : trois boutons radio (0,4 / 0,7 / 1,0) plutôt qu'un curseur. Une confiance qu'on
   hésite à chiffrer finement n'a pas besoin de l'être ;
 - **justification** : `<input type="text">` et non `<textarea>`, pour que `Entrée` valide ;
