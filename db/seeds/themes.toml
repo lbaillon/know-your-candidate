@@ -1,0 +1,68 @@
+# Thèmes et axes. Chaque thème a un axe à deux pôles nommés symétriquement (methodology.md § 4).
+#
+# Convention de signe, à ne pas inverser : le pôle négatif est celui situé du côté gauche de
+# l'ancrage des nuances (db/seeds/group_axis.toml). Ce n'est pas un jugement de valeur, c'est ce
+# qui rend comparables le signe d'une catégorisation humaine et celui d'une estimation automatique.
+#
+# ATTENTION à qui recopierait methodology.md § 4 sans relire : ce tableau liste « Pôle A » puis
+# « Pôle B » sans imposer un ordre gauche→droite constant. Pour cinq thèmes sur six, A est bien le
+# pôle de gauche. Sur `securite`, A (« extension des pouvoirs de police et fermeté pénale ») est le
+# pôle de droite et B (« libertés publiques, prévention, garanties procédurales ») celui de gauche —
+# l'ordre y est donc inversé ci-dessous, volontairement.
+#
+# `autre` n'a pas de pôle : il sert à dire « relu, ne relève d'aucun thème », ce qui n'est pas la
+# même chose que « pas encore regardé ».
+
+[[theme]]
+slug = "social-fiscalite"
+libelle = "Social / fiscalité"
+description = "Prélèvements, prestations, retraites, salaires, protection sociale."
+pole_negatif = "redistribution et protection sociale étendue"
+pole_positif = "maîtrise de la dépense et de la fiscalité"
+rang = 10
+
+[[theme]]
+slug = "environnement"
+libelle = "Environnement"
+description = "Climat, énergie, biodiversité, pollution, transition écologique."
+pole_negatif = "contrainte réglementaire et transition rapide"
+pole_positif = "priorité à l'activité économique et à la transition graduée"
+rang = 20
+
+[[theme]]
+slug = "sante"
+libelle = "Santé"
+description = "Hôpital, sécurité sociale, accès aux soins, politiques de santé publique."
+pole_negatif = "financement collectif et service public renforcé"
+pole_positif = "maîtrise des dépenses et place accrue du privé"
+rang = 30
+
+[[theme]]
+slug = "education"
+libelle = "Éducation"
+description = "École, enseignement supérieur, recherche, formation."
+pole_negatif = "moyens publics et unification du système"
+pole_positif = "autonomie des établissements, sélection, place du privé"
+rang = 40
+
+[[theme]]
+slug = "securite"
+libelle = "Sécurité"
+description = "Police, justice pénale, prévention de la délinquance, ordre public."
+pole_negatif = "libertés publiques, prévention, garanties procédurales"
+pole_positif = "extension des pouvoirs de police et fermeté pénale"
+rang = 50
+
+[[theme]]
+slug = "immigration"
+libelle = "Immigration"
+description = "Droit d'asile, séjour, travail des étranger·es, politique migratoire."
+pole_negatif = "droits des étrangers et facilitation du séjour"
+pole_positif = "restriction de l'entrée et du séjour"
+rang = 60
+
+[[theme]]
+slug = "autre"
+libelle = "Autre"
+description = "Ne relève d'aucun des thèmes ci-dessus."
+rang = 99

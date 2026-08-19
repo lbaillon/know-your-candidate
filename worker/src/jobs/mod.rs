@@ -6,6 +6,7 @@ pub mod noop;
 pub mod queue;
 pub mod refresh_views;
 pub mod seed_candidates;
+pub mod seed_themes;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, PoisonError};
@@ -305,6 +306,7 @@ async fn execute(ctx: &JobContext, job: &queue::ClaimedJob) -> anyhow::Result<()
         "enrich_wikidata" => enrich_wikidata::run(ctx, &job.payload).await,
         "assign_slugs" => assign_slugs::run(ctx, &job.payload).await,
         "seed_candidates" => seed_candidates::run(ctx, &job.payload).await,
+        "seed_themes" => seed_themes::run(ctx, &job.payload).await,
         "refresh_views" => refresh_views::run(ctx, &job.payload).await,
         other => anyhow::bail!("type de job inconnu : {other}"),
     }

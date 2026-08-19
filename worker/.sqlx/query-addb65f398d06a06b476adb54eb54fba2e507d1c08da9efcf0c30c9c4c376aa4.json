@@ -1,0 +1,86 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT libelle, description, libelle_pole_negatif, libelle_pole_positif, rang, actif\n           FROM theme WHERE slug = 'social-fiscalite'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "libelle",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "libelle"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "libelle_pole_negatif",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "libelle_pole_negatif"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "libelle_pole_positif",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "libelle_pole_positif"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "rang",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "rang"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "actif",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "actif"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "addb65f398d06a06b476adb54eb54fba2e507d1c08da9efcf0c30c9c4c376aa4"
+}

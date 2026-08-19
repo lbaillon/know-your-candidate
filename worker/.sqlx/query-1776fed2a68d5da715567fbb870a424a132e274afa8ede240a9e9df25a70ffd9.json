@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT libelle_pole_negatif, libelle_pole_positif FROM theme WHERE slug = 'autre'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "libelle_pole_negatif",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "libelle_pole_negatif"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "libelle_pole_positif",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "libelle_pole_positif"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "1776fed2a68d5da715567fbb870a424a132e274afa8ede240a9e9df25a70ffd9"
+}

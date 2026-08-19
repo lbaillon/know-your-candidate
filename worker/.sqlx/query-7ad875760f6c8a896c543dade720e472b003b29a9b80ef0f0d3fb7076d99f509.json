@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT actif FROM theme WHERE slug = 'b'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "actif",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "actif"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7ad875760f6c8a896c543dade720e472b003b29a9b80ef0f0d3fb7076d99f509"
+}
