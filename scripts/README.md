@@ -63,7 +63,8 @@ Deux points du prompt méritent d'être connus de qui lance la campagne :
 ### 4. Assembler et vérifier
 
 ```bash
-python3 scripts/build_import.py --export export.json --reponses reponses/ --out import.csv
+python3 scripts/build_import.py --export export.json --reponses reponses/ \
+    --modele claude-sonnet-5 --out import.json
 ```
 
 Le script refuse d'écrire quoi que ce soit tant qu'une erreur subsiste, et les liste toutes d'un
@@ -72,7 +73,14 @@ poids différente de 1, justification trop courte, position posée sur un thème
 sur un thème qui en a un. Il affiche enfin combien de scrutins de l'export restent non catégorisés —
 c'est la mesure du taux de saut du modèle.
 
-Déposer ensuite `import.csv` sur `/admin/import`, **regarder l'aperçu** (créations, modifications,
+**Le format de sortie est du JSON, et `--modele` est obligatoire.** Le schéma d'échange ne transporte
+le modèle utilisé qu'en JSON : un import CSV arrive en base avec `label_import.generateur` vide, et
+« ces neuf cents lignes viennent de tel modèle » ne se reconstitue pas après coup. Or methodology.md
+§ 5.c impose qu'une catégorisation produite par un modèle soit signalée comme telle dans l'interface.
+`--format csv` reste possible pour un aller-retour par tableur ; le script prévient alors, sur la
+sortie d'erreur, que la trace sera perdue.
+
+Déposer ensuite `import.json` sur `/admin/import`, **regarder l'aperçu** (créations, modifications,
 inchangés, conflits) et appliquer.
 
 ### 5. Contrôler

@@ -30,6 +30,16 @@ worker/.cache/
 exports/
 !exports/.gitkeep
 
+# Artefacts d'une campagne de catégorisation assistée (voir scripts/README.md) : l'export
+# téléchargé, les lots donnés au modèle, ses réponses. Ce sont des données de travail, pas des
+# sources — et le fichier d'export pèse plusieurs mégaoctets. Ce qui doit être versionné d'une
+# campagne, c'est ce qui entre en base par l'import, avec son historique et sa provenance.
+lots/
+reponses/
+categorisation-*.json
+import-*.json
+import-*.csv
+
 # Outils
 .DS_Store
 Thumbs.db

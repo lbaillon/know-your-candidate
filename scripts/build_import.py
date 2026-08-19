@@ -6,6 +6,13 @@ revérifie tout, c'est elle la garde (D3.15, « le fichier entier ou rien »). I
 l'erreur se voie ici, sur le poste, avec le numéro de ligne du lot fautif — plutôt qu'après un
 aller-retour de dépôt sur un fichier de plusieurs milliers de lignes.
 
+Il écrit du **JSON par défaut**, et non du CSV, pour une seule raison : le schéma d'échange ne
+porte le modèle utilisé (`generateur.modele`) qu'en JSON. Un import CSV arrive en base avec
+`label_import.generateur` vide, et l'information « ces 900 lignes ont été produites par tel modèle »
+n'est pas reconstituable après coup — or methodology.md § 5.c impose qu'une catégorisation produite
+par un modèle soit signalée comme telle. `--format csv` reste disponible pour un aller-retour par
+tableur, au prix de cette trace.
+
 Format attendu des réponses : **TSV**, six colonnes, sans en-tête —
 
     uid<TAB>theme<TAB>poids<TAB>position_pour<TAB>confiance<TAB>justification
@@ -17,7 +24,8 @@ est faite ici par `csv.writer`, qui guillemète correctement par construction.
 Bibliothèque standard uniquement : ce script doit tourner sans environnement virtuel.
 
 Usage :
-    python3 scripts/build_import.py --export export.json --reponses reponses/ --out import.csv
+    python3 scripts/build_import.py --export export.json --reponses reponses/ \
+        --modele claude-sonnet-5 --out import.json
 """
 
 from __future__ import annotations
@@ -91,6 +99,40 @@ def lit_reponses(chemins: list[Path]) -> list[tuple[str, int, list[str]]]:
     return lignes
 
 
+def document_json(
+    export: dict, scrutins: dict[str, dict], retenues: list[dict[str, str]], args
+) -> dict:
+    """Reconstruit un document au schéma d'échange complet, restreint aux scrutins catégorisés.
+
+    Les champs de contexte (titre, compteurs, URL) sont recopiés depuis l'export : l'application les
+    ignore à l'import, mais un fichier d'échange qui ne se relit pas tout seul n'a aucune valeur le
+    jour où quelqu'un conteste une catégorisation.
+    """
+    par_uid: dict[str, list[dict[str, str]]] = {}
+    for ligne in retenues:
+        entree = {
+            "theme": ligne["theme"],
+            "poids": ligne["poids"],
+            "confiance": ligne["confiance"],
+            "justification": ligne["justification"],
+        }
+        if ligne["position_pour"]:
+            entree["position_pour"] = ligne["position_pour"]
+        par_uid.setdefault(ligne["scrutin_uid"], []).append(entree)
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "generated_at": export.get("generated_at"),
+        "filtre": export.get("filtre", {"statut": "non_categorises"}),
+        "generateur": {"outil": args.outil, "modele": args.modele},
+        "themes": export.get("themes", []),
+        "scrutins": [
+            {**scrutins[uid], "categorisation": categorisations}
+            for uid, categorisations in par_uid.items()
+        ],
+    }
+
+
 def main() -> int:
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parseur.add_argument("--export", type=Path, required=True, help="l'export JSON d'origine")
@@ -101,11 +143,33 @@ def main() -> int:
         required=True,
         help="fichiers TSV rendus par le modèle, ou répertoires les contenant",
     )
-    parseur.add_argument("--out", type=Path, required=True, help="fichier CSV à écrire")
+    parseur.add_argument("--out", type=Path, required=True, help="fichier à écrire")
+    parseur.add_argument(
+        "--format",
+        choices=("json", "csv"),
+        default="json",
+        dest="format_",
+        help="json (défaut) conserve le modèle utilisé ; csv le perd",
+    )
+    parseur.add_argument(
+        "--modele",
+        help="identifiant du modèle qui a produit les réponses (ex. claude-sonnet-5). "
+        "Obligatoire en JSON : c'est la trace que l'UI affichera",
+    )
+    parseur.add_argument(
+        "--outil", default="scripts/build_import.py", help="outil déclaré dans le fichier produit"
+    )
     args = parseur.parse_args()
 
+    if args.format_ == "json" and not args.modele:
+        raise SystemExit(
+            "--modele est obligatoire en JSON : sans lui, la provenance des lignes importées est "
+            "perdue pour de bon. Utiliser --format csv pour l'assumer explicitement."
+        )
+
     export = json.loads(args.export.read_text(encoding="utf-8"))
-    titres = {s["scrutin_uid"]: s["titre"] for s in export.get("scrutins", [])}
+    scrutins = {s["scrutin_uid"]: s for s in export.get("scrutins", [])}
+    titres = {uid: s["titre"] for uid, s in scrutins.items()}
     themes = {t["slug"]: t for t in export.get("themes", [])}
     if not titres or not themes:
         raise SystemExit(f"{args.export} : export vide ou sans thèmes")
@@ -202,14 +266,24 @@ def main() -> int:
             print(f"  … et {reste} autre(s)", file=sys.stderr)
         return 1
 
-    with args.out.open("w", encoding="utf-8", newline="") as sortie:
-        redacteur = csv.DictWriter(sortie, fieldnames=COLONNES)
-        redacteur.writeheader()
-        redacteur.writerows(retenues)
+    if args.format_ == "csv":
+        with args.out.open("w", encoding="utf-8", newline="") as sortie:
+            redacteur = csv.DictWriter(sortie, fieldnames=COLONNES)
+            redacteur.writeheader()
+            redacteur.writerows(retenues)
+    else:
+        args.out.write_text(
+            json.dumps(
+                document_json(export, scrutins, retenues, args), ensure_ascii=False, indent=2
+            ),
+            encoding="utf-8",
+        )
 
     couverts = len(poids_par_uid)
     print(f"{len(retenues)} ligne(s) de catégorisation sur {couverts} scrutin(s) → {args.out}")
     print(f"{len(titres) - couverts} scrutin(s) de l'export restent non catégorisés (non touchés)")
+    if args.format_ == "csv":
+        print("format CSV : le modèle utilisé ne sera PAS enregistré à l'import", file=sys.stderr)
     return 0
 
 
