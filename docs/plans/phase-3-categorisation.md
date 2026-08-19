@@ -77,10 +77,17 @@ des groupes parlementaires, lu depuis un **fichier de configuration versionné**
 (`db/seeds/group_axis.toml`).
 
 Cet ordonnancement n'est pas inventé : il est **dérivé de la grille des nuances politiques du ministère
-de l'Intérieur** (26 nuances, 6 blocs — voir
-[data-sources.md](../data-sources.md#4-ministère-de-lintérieur--grille-des-nuances-politiques)).
+de l'Intérieur** — voir
+[data-sources.md](../data-sources.md#4-ministère-de-lintérieur--grille-des-nuances-politiques).
 Chaque ligne du seed porte donc la nuance officielle, la version de la grille, sa date et l'URL de la
 source, plus le rattachement nuance → parti → groupe parlementaire que nous établissons.
+
+> **Corrigé à l'implémentation** (lot A, F2, résolu au lot C — [phase-3.0-feedback.md](phase-3.0-feedback.md)) : la
+> grille effectivement utilisée est celle des élections **législatives de 2024** (24 nuances), pas la
+> « 2026, 26 nuances » supposée ici avant vérification. Elle ne définit d'ailleurs pas de blocs : c'est
+> une liste plate de 24 nuances, ordonnée implicitement de l'extrême gauche à l'extrême droite. Le
+> regroupement en six blocs est notre propre lecture de cet ordre, pas une donnée publiée telle quelle
+> — voir le lien pour le détail et la source primaire.
 
 On garde un fichier plutôt qu'une ingestion directe pour trois raisons : la grille change à chaque
 élection et n'est pas versionnée de façon exploitable ; elle nuance des candidat·es, pas des groupes,
@@ -619,6 +626,14 @@ législatures 15 à 17.
 > livré porte les `an_uid`/`libelle` (vérifiés) et des champs de source vides sous bandeau `TODO`, exactement
 > la voie de repli prévue trois paragraphes plus bas. Le job refuse de charger le fichier tant que c'est
 > le cas — voir le lien pour le détail et le travail restant.
+>
+> **Résolu au lot C** : la grille effectivement utilisée est celle des élections législatives de 2024
+> (24 nuances, pas 26), fournie par l'utilisateur après un échec de récupération automatisée
+> (Légifrance bloque les requêtes non-navigateur). Les 40 lignes portent désormais une nuance, un
+> bloc et, pour les rattachements non évidents (groupes renommés, alliances électorales, groupes
+> composites sans nuance propre), une note qui documente le choix. Le bandeau `TODO` est retiré, le
+> job charge le fichier et calcule les 15 621 estimations sur les 16 956 scrutins du corpus — voir
+> le lien pour le détail.
 
 ```toml
 version = "2026-08-nuances-2026"

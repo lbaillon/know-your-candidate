@@ -1,51 +1,54 @@
-# TODO (bloquant) — grille de nuances non vérifiée, `label_scrutins_heuristic` refuse de charger
-# ce fichier tant que ce bandeau n'a pas été retiré.
+# Ancrage gauche-droite — voir docs/plans/phase-3-categorisation.md, section « Le seed d'ancrage »,
+# et docs/data-sources.md § 4.
 #
-# Cette session d'implémentation n'a pas pu confirmer, avec une source primaire citable et datée,
-# le rattachement nuance → groupe parlementaire ni les six coordonnées de bloc pour la grille des
-# nuances politiques telle que documentée par docs/data-sources.md § 4 (« version 2026, 26 nuances,
-# 6 blocs »). Une recherche a permis de retrouver une grille officielle voisine — celle des
-# élections législatives de 2024 (24 nuances), Instruction du ministère de l'Intérieur relative à
-# l'attribution des nuances aux candidats aux élections législatives de 2024, Légifrance
-# https://www.legifrance.gouv.fr/circulaire/id/45565 — mais ni sa version ni ses 24 codes
-# (EXG, COM, FI, SOC, RDG, VEC, DVG, UG, ECO, REG, DIV, REN, MDM, HOR, ENS, DVC, UDI, LR, DVD, DSV,
-# RN, REC, UXD, EXD) ne correspondent nécessairement à la grille 2026 à 26 nuances citée par
-# data-sources.md, et le rattachement groupe parlementaire → nuance (qui n'est publié par le
-# ministère qu'au niveau des candidats, jamais des groupes) reste un travail à faire, pas à
-# deviner. CLAUDE.md et docs/plans/phase-3-categorisation.md sont explicites sur ce point : un
-# fichier de source à moitié inventé est pire qu'un fichier incomplet.
+# Source vérifiée (lot A, F2 résolu — voir phase-3.0-feedback.md) : « Instruction relative à
+# l'attribution des nuances aux candidats aux élections législatives de 2024 », ministère de
+# l'Intérieur et des Outre-mer, NOR IOMA2415630C, signée par Gérald Darmanin le 11 juin 2024,
+# https://www.legifrance.gouv.fr/circulaire/id/45565 — Annexe 1, grille de 24 nuances individuelles.
+# Ce n'est pas la grille « 2026, 26 nuances » évoquée par une version antérieure de
+# data-sources.md § 4 (corrigé dans le même commit que ce fichier) : c'est la grille législative en
+# vigueur au moment de l'élection de la 17e législature, la plus proche de ce que nous ancrons — des
+# groupes parlementaires, pas des candidats à une élection locale.
 #
-# Ce qui EST vérifié, parce que ça se lit directement en base (`organe` table, requête ci-dessous) :
-# les 40 groupes parlementaires (hors non-inscrits) des législatures 15 à 17, leur `an_uid` et leur
-# libellé exact. Le plan comptait 39 (42 organes GP moins 3 non-inscrits, mesuré le 18/08/2026) ;
-# une nouvelle mesure du 18/08/2026 en trouve 40 (43 moins 3) — écart d'une unité à noter au
-# prochain point du plan, pas une erreur de cette liste.
+# Les 24 codes, dans l'ordre où l'annexe les publie (elle-même ordonnée gauche → droite) :
+#   EXG, COM, FI, SOC, RDG, VEC, DVG, UG, ECO, REG, DIV,
+#   REN, MDM, HOR, ENS, DVC, UDI, LR, DVD, DSV,
+#   RN, REC, UXD, EXD
 #
+# Répartition en six blocs : reprend cet ordre officiel tel quel, REG/DIV (régionalistes et
+# inclassables) écartés de l'axe gauche-droite plutôt que rattachés arbitrairement à un camp :
+#   extreme_gauche = EXG
+#   gauche         = COM, FI, SOC, RDG, VEC, DVG, UG, ECO
+#   divers         = REG, DIV
+#   centre         = REN, MDM, HOR, ENS, DVC, UDI
+#   droite         = LR, DVD, DSV
+#   extreme_droite = RN, REC, UXD, EXD
+#
+# La grille nuance des **candidats**, jamais des groupes parlementaires (docs/data-sources.md § 4,
+# réserve 3) : le rattachement nuance → parti → groupe ci-dessous est notre travail éditorial, pas une
+# donnée publiée telle quelle. Chaque entrée sans nuance propre dans la grille, ou dont le
+# rattachement n'est pas immédiat (renommage de groupe, alliance électorale, groupe composite), porte
+# un `note` qui l'explique — c'est ce que docs/data-sources.md appelle « citer sans s'y soumettre ».
+#
+# Vérifié en base (`organe` table) :
 #   SELECT an_uid, libelle, legislature FROM organe
 #   WHERE code_type = 'GP' AND legislature IN (15, 16, 17) AND is_non_inscrit = false
 #   ORDER BY legislature, libelle, an_uid;
-#
-# Reste à faire avant que ce seed soit chargeable :
-#   1. retrouver/confirmer la grille des nuances politiques 2026 (26 nuances, 6 blocs) citée par
-#      data-sources.md § 4 — version exacte, date de publication, URL de la publication officielle ;
-#   2. renseigner `grille_version`, `grille_date`, `source_url` ci-dessous ;
-#   3. pour chacun des 40 groupes, renseigner `nuance` (le code officiel) et `bloc` (un des six blocs
-#      définis dans `[bloc]` ci-dessous) ; un `note` est obligatoire quand le rattachement n'est pas
-#      évident (ex. les groupes dupliqués ci-dessous, ou un groupe centriste à cheval sur deux
-#      nuances) ;
-#   4. retirer ce bandeau `TODO` une fois les trois points ci-dessus faits — c'est ce retrait, pas
-#      une date, que `label_scrutins_heuristic` vérifie.
+# 40 lignes (voir la note historique de F2 : le plan en comptait 39, une nouvelle mesure en a trouvé
+# 40 — écart pris en compte ici, pas une erreur de cette liste).
 
-version = ""
-description = "Ancrage dérivé de la grille des nuances politiques du ministère de l'Intérieur."
-grille_version = ""
-# grille_date = 2026-01-01
-source_url = ""
+version = "grille-legislatives-2024-v1"
+description = "Ancrage dérivé de la grille des nuances individuelles - élections législatives 2024 (Instruction NOR IOMA2415630C, ministère de l'Intérieur et des Outre-mer, 11 juin 2024)."
+grille_version = "legislatives-2024"
+grille_date = 2024-06-11
+source_url = "https://www.legifrance.gouv.fr/circulaire/id/45565"
 
-# Coordonnées des blocs. Ce sont les SEULS nombres que nous inventons : la grille ordonne six
-# blocs, elle ne les chiffre pas. Ils sont ici pour être contestés — une PR d'une ligne suffit.
-# Valeurs de départ reprises de docs/plans/phase-3-categorisation.md ; à revoir en même temps que
-# le reste de ce fichier, pas avant.
+# Coordonnées des blocs. L'annexe 1 de la grille (voir en tête de fichier) est une liste plate de
+# 24 nuances, sans colonne de regroupement : elle n'organise pas elle-même six blocs, contrairement
+# à ce qu'une version antérieure de ce commentaire supposait avant vérification de la source
+# primaire (phase-3.0-feedback.md). Le regroupement en six blocs ET leurs coordonnées sont donc
+# TOUS DEUX de notre fait — la liste plate n'en donne que l'ordre gauche-droite implicite, que ce
+# regroupement respecte. Ils sont ici pour être contestés — une PR d'une ligne suffit.
 [bloc]
 extreme_gauche = -1.0
 gauche         = -0.6
@@ -59,102 +62,108 @@ extreme_droite =  1.0
 [[groupe]]
 an_uid = "PO771923"
 libelle = "Agir ensemble"
-nuance = ""
-bloc = ""
+nuance = "DVC"
+bloc = "centre"
+note = "« Agir - la droite constructive » n'a pas de nuance propre dans la grille 2024 ; groupe allié de la majorité présidentielle en position centriste, rattaché à DVC (divers centre)."
 
 [[groupe]]
 an_uid = "PO771789"
 libelle = "Écologie Démocratie Solidarité"
-nuance = ""
-bloc = ""
+nuance = "ECO"
+bloc = "gauche"
+note = "Groupe composite (dissident·es LREM/MoDem et ex-écologistes, ex. Delphine Batho) sans nuance propre ; rattaché à ECO au vu de sa ligne écologiste affichée — rattachement le moins mauvais, pas évident."
 
 [[groupe]]
 an_uid = "PO730940"
 libelle = "Gauche démocrate et républicaine"
-nuance = ""
-bloc = ""
+nuance = "COM"
+bloc = "gauche"
 
 [[groupe]]
 an_uid = "PO730958"
 libelle = "La France insoumise"
-nuance = ""
-bloc = ""
+nuance = "FI"
+bloc = "gauche"
 
 [[groupe]]
 an_uid = "PO730964"
 libelle = "La République en Marche"
-nuance = ""
-bloc = ""
+nuance = "REN"
+bloc = "centre"
+note = "La République en Marche est le nom du parti avant son renommage en Renaissance (2022) ; REN est la nuance de la formation qui lui a directement succédé."
 
 [[groupe]]
 an_uid = "PO730952"
 libelle = "Les Constructifs : républicains, UDI, indépendants"
-nuance = ""
-bloc = ""
+nuance = "UDI"
+bloc = "centre"
+note = "Groupe composite (ex-UDI et ex-LR « constructifs », alliés du gouvernement 2017-2018), sans nuance propre ; rattaché à UDI, citée dans son nom."
 
 [[groupe]]
 an_uid = "PO730934"
 libelle = "Les Républicains"
-nuance = ""
-bloc = ""
+nuance = "LR"
+bloc = "droite"
 
 [[groupe]]
 an_uid = "PO759900"
 libelle = "Libertés et Territoires"
-nuance = ""
-bloc = ""
+nuance = "REG"
+bloc = "divers"
+note = "Groupe hétérogène (élu·es régionalistes, notamment corses, et indépendant·es divers) sans nuance propre ; rattaché à REG (régionalistes) au vu de son nom et de sa composition dominante."
 
 [[groupe]]
 an_uid = "PO730970"
 libelle = "Mouvement Démocrate et apparentés"
-nuance = ""
-bloc = ""
+nuance = "MDM"
+bloc = "centre"
 
 [[groupe]]
 an_uid = "PO774834"
 libelle = "Mouvement Démocrate (MoDem) et Démocrates apparentés"
-nuance = ""
-bloc = ""
-note = "Succède à PO730970 (même famille MoDem) au sein de la législature 15 — à confirmer que les deux partagent la même nuance."
+nuance = "MDM"
+bloc = "centre"
+note = "Succède à PO730970 (même famille MoDem) au sein de la législature 15 ; même nuance."
 
 [[groupe]]
 an_uid = "PO730946"
 libelle = "Nouvelle Gauche"
-nuance = ""
-bloc = ""
+nuance = "SOC"
+bloc = "gauche"
+note = "Nom initial du groupe du Parti socialiste en début de législature 15, avant son renommage en « Socialistes et apparentés » (septembre 2017)."
 
 [[groupe]]
 an_uid = "PO758835"
 libelle = "Socialistes et apparentés"
-nuance = ""
-bloc = ""
+nuance = "SOC"
+bloc = "gauche"
 
 [[groupe]]
 an_uid = "PO744425"
 libelle = "UDI, Agir et Indépendants"
-nuance = ""
-bloc = ""
-note = "Deux organes AN portent ce même libellé sur la législature 15 (PO744425 et PO767217) — vérifier s'il s'agit d'une reconstitution du groupe ou d'une erreur de référentiel avant de leur donner la même nuance."
+nuance = "UDI"
+bloc = "centre"
+note = "Deux organes AN portent ce même libellé sur la législature 15 (PO744425 et PO767217) ; même nuance dans les deux cas, la question de savoir s'il s'agit d'une reconstitution du groupe ou d'une erreur de référentiel reste ouverte mais n'affecte pas ce rattachement."
 
 [[groupe]]
 an_uid = "PO767217"
 libelle = "UDI, Agir et Indépendants"
-nuance = ""
-bloc = ""
+nuance = "UDI"
+bloc = "centre"
 note = "Voir la note sur PO744425."
 
 [[groupe]]
 an_uid = "PO765636"
 libelle = "UDI et Indépendants"
-nuance = ""
-bloc = ""
-note = "Deux organes AN portent ce même libellé sur la législature 15 (PO765636 et PO771889) — même remarque que UDI, Agir et Indépendants."
+nuance = "UDI"
+bloc = "centre"
+note = "Deux organes AN portent ce même libellé sur la législature 15 (PO765636 et PO771889) ; même remarque que UDI, Agir et Indépendants."
 
 [[groupe]]
 an_uid = "PO771889"
 libelle = "UDI et Indépendants"
-nuance = ""
-bloc = ""
+nuance = "UDI"
+bloc = "centre"
 note = "Voir la note sur PO765636."
 
 # --- Législature 16 (2022-2024) --------------------------------------------------------------
@@ -162,69 +171,70 @@ note = "Voir la note sur PO765636."
 [[groupe]]
 an_uid = "PO800484"
 libelle = "Démocrate (MoDem et Indépendants)"
-nuance = ""
-bloc = ""
+nuance = "MDM"
+bloc = "centre"
 
 [[groupe]]
 an_uid = "PO800526"
 libelle = "Écologiste - NUPES"
-nuance = ""
-bloc = ""
+nuance = "VEC"
+bloc = "gauche"
 
 [[groupe]]
 an_uid = "PO800502"
 libelle = "Gauche démocrate et républicaine - NUPES"
-nuance = ""
-bloc = ""
+nuance = "COM"
+bloc = "gauche"
 
 [[groupe]]
 an_uid = "PO800514"
 libelle = "Horizons et apparentés"
-nuance = ""
-bloc = ""
+nuance = "HOR"
+bloc = "centre"
 
 [[groupe]]
 an_uid = "PO800490"
 libelle = "La France insoumise - Nouvelle Union Populaire écologique et sociale"
-nuance = ""
-bloc = ""
+nuance = "FI"
+bloc = "gauche"
 
 [[groupe]]
 an_uid = "PO800508"
 libelle = "Les Républicains"
-nuance = ""
-bloc = ""
+nuance = "LR"
+bloc = "droite"
 
 [[groupe]]
 an_uid = "PO800532"
 libelle = "Libertés, Indépendants, Outre-mer et Territoires"
-nuance = ""
-bloc = ""
+nuance = "REG"
+bloc = "divers"
+note = "Groupe hétérogène (élu·es d'outre-mer, régionalistes et indépendant·es) sans nuance propre ; rattaché à REG, cohérent avec son nom (« Outre-mer et Territoires »)."
 
 [[groupe]]
 an_uid = "PO800520"
 libelle = "Rassemblement National"
-nuance = ""
-bloc = ""
+nuance = "RN"
+bloc = "extreme_droite"
 
 [[groupe]]
 an_uid = "PO800538"
 libelle = "Renaissance"
-nuance = ""
-bloc = ""
+nuance = "REN"
+bloc = "centre"
 
 [[groupe]]
 an_uid = "PO830170"
 libelle = "Socialistes et apparentés"
-nuance = ""
-bloc = ""
-note = "Deux organes AN portent ce libellé sur la législature 16 (PO830170 et PO800496, ce dernier « membre de l'intergroupe NUPES ») — vérifier s'ils doivent partager la même nuance."
+nuance = "SOC"
+bloc = "gauche"
+note = "Deux organes AN portent ce libellé sur la législature 16 (PO830170 et PO800496, ce dernier « membre de l'intergroupe NUPES ») ; même nuance dans les deux cas."
 
 [[groupe]]
 an_uid = "PO800496"
 libelle = "Socialistes et apparentés (membre de l’intergroupe NUPES)"
-nuance = ""
-bloc = ""
+nuance = "SOC"
+bloc = "gauche"
 note = "Voir la note sur PO830170."
 
 # --- Législature 17 (2024-…) -------------------------------------------------------------------
@@ -232,79 +242,84 @@ note = "Voir la note sur PO830170."
 [[groupe]]
 an_uid = "PO845520"
 libelle = "À Droite"
-nuance = ""
-bloc = ""
+nuance = "DVD"
+bloc = "droite"
+note = "Petit groupe formé en cours de législature 17, sans nuance propre dans la grille ; rattaché à DVD (divers droite)."
 
 [[groupe]]
 an_uid = "PO845425"
 libelle = "Droite Républicaine"
-nuance = ""
-bloc = ""
+nuance = "LR"
+bloc = "droite"
+note = "Nom du groupe LR à l'Assemblée pour la législature 17 ; le parti reste « Les Républicains » (nuance LR)."
 
 [[groupe]]
 an_uid = "PO845439"
 libelle = "Écologiste et Social"
-nuance = ""
-bloc = ""
+nuance = "VEC"
+bloc = "gauche"
 
 [[groupe]]
 an_uid = "PO845407"
 libelle = "Ensemble pour la République"
-nuance = ""
-bloc = ""
+nuance = "REN"
+bloc = "centre"
+note = "Nom du groupe de la majorité présidentielle (lignée LREM → Renaissance) à l'Assemblée pour la législature 17."
 
 [[groupe]]
 an_uid = "PO845514"
 libelle = "Gauche Démocrate et Républicaine"
-nuance = ""
-bloc = ""
+nuance = "COM"
+bloc = "gauche"
 
 [[groupe]]
 an_uid = "PO845470"
 libelle = "Horizons & Indépendants"
-nuance = ""
-bloc = ""
+nuance = "HOR"
+bloc = "centre"
 
 [[groupe]]
 an_uid = "PO845413"
 libelle = "La France insoumise - Nouveau Front Populaire"
-nuance = ""
-bloc = ""
+nuance = "FI"
+bloc = "gauche"
 
 [[groupe]]
 an_uid = "PO845454"
 libelle = "Les Démocrates"
-nuance = ""
-bloc = ""
+nuance = "MDM"
+bloc = "centre"
+note = "Nom du groupe MoDem à l'Assemblée pour la législature 17."
 
 [[groupe]]
 an_uid = "PO845485"
 libelle = "Libertés, Indépendants, Outre-mer et Territoires"
-nuance = ""
-bloc = ""
+nuance = "REG"
+bloc = "divers"
+note = "Même groupe LIOT qu'en législature 16 ; même rattachement, voir la note sur PO800532."
 
 [[groupe]]
 an_uid = "PO845401"
 libelle = "Rassemblement National"
-nuance = ""
-bloc = ""
+nuance = "RN"
+bloc = "extreme_droite"
 
 [[groupe]]
 an_uid = "PO845419"
 libelle = "Socialistes et apparentés"
-nuance = ""
-bloc = ""
+nuance = "SOC"
+bloc = "gauche"
 
 [[groupe]]
 an_uid = "PO847173"
 libelle = "UDR"
-nuance = ""
-bloc = ""
-note = "Deux organes AN sur la législature 17 : PO847173 (libellé « UDR ») et PO872880 (libellé « Union des droites pour la République ») — même sigle final, vérifier avant le chargement s'il s'agit du même groupe renommé ou de deux groupes distincts."
+nuance = "UXD"
+bloc = "extreme_droite"
+note = "UDR (parti d'Éric Ciotti) a fait liste commune avec le RN aux élections législatives de 2024 ; sans nuance propre dans la grille, rattaché à UXD (« union de deux partis d'extrême-droite ») — lecture la plus défendable au vu de l'alliance électorale publique, non confirmée auprès d'une décision de nuance ministérielle datée pour ce cas précis. Deux organes AN portent une identité UDR sur la législature 17 (PO847173 et PO872880) ; même nuance dans les deux cas."
 
 [[groupe]]
 an_uid = "PO872880"
 libelle = "Union des droites pour la République"
-nuance = ""
-bloc = ""
+nuance = "UXD"
+bloc = "extreme_droite"
 note = "Voir la note sur PO847173."

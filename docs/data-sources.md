@@ -288,10 +288,18 @@ domaine public). Conséquences :
 ## 4. Ministère de l'Intérieur — grille des nuances politiques
 
 Le ministère de l'Intérieur publie, à chaque élection, une **grille des nuances politiques** servant à
-agréger les résultats. Version 2026 : 26 nuances, regroupées en 6 blocs (extrême gauche, gauche, divers,
-centre, droite, extrême droite). La nuance est attribuée par les préfectures, **indépendamment de
-l'étiquette revendiquée par le candidat**. Les résultats nuancés sont publiés sur data.gouv.fr et
-interieur.gouv.fr, et le Répertoire national des élus (RNE) porte la nuance des élu·es.
+agréger les résultats. Version utilisée pour l'ancrage de la [phase 3](plans/phase-3-categorisation.md) :
+la grille des élections **législatives de 2024** (24 nuances), publiée par l'instruction NOR
+IOMA2415630C du 11 juin 2024, signée du ministre de l'Intérieur et des Outre-mer, Légifrance
+[circulaire n°45565](https://www.legifrance.gouv.fr/circulaire/id/45565) — la plus proche d'un ancrage de
+**groupes parlementaires**, puisqu'elle nuance les candidat·es aux mêmes élections qui les composent.
+Cette grille elle-même **ne définit pas de blocs** : c'est une liste plate de 24 nuances, ordonnée
+implicitement de l'extrême gauche à l'extrême droite. Le regroupement en six blocs (extrême gauche,
+gauche, divers, centre, droite, extrême droite) qu'utilise `db/seeds/group_axis.toml`, et leurs six
+coordonnées, sont donc notre propre lecture de cet ordre — pas une donnée publiée telle quelle (voir
+[phase-3.0-feedback.md](plans/phase-3.0-feedback.md), F2). La nuance est attribuée par les préfectures,
+**indépendamment de l'étiquette revendiquée par le candidat**. Les résultats nuancés sont publiés sur
+data.gouv.fr et interieur.gouv.fr, et le Répertoire national des élus (RNE) porte la nuance des élu·es.
 
 C'est la seule source **officielle, publiée et datée** qui positionne les formations politiques sur un axe
 gauche-droite. Elle est donc un excellent point d'ancrage pour l'heuristique de la

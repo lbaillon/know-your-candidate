@@ -1,7 +1,7 @@
 # Phase 3.0 — Retours d'implémentation
 
-**Statut : ✅ consigné** · Dépend de : [phase 3](phase-3-categorisation.md), lots A et B · Ne bloque rien,
-sauf F2 qui bloque `make ingest` tant qu'elle n'est pas résolue.
+**Statut : ✅ consigné** · Dépend de : [phase 3](phase-3-categorisation.md), lots A, B et C · F2 est
+résolue depuis le lot C ; plus rien ne bloque `make ingest`.
 
 ## Objectif
 
@@ -47,7 +47,7 @@ des deux orientations) et corriger le récit plutôt que de plier le calcul pour
 présupposé. Le test documente cette correction en toutes lettres ; aucune ligne du schéma ou de la
 migration n'a changé.
 
-## F2 — La grille des nuances politiques n'a pas pu être vérifiée cette session
+## F2 — La grille des nuances politiques n'a pas pu être vérifiée cette session (résolue au lot C)
 
 **Où** : [phase-3-categorisation.md](phase-3-categorisation.md), section « Le seed d'ancrage » ;
 `db/seeds/group_axis.toml`.
@@ -89,6 +89,42 @@ comportement voulu plutôt qu'un `make ingest` vert sur une donnée inventée.
    n'est pas évident (les doublons de libellé déjà repérés dans le fichier : Agir/UDI législature 15,
    Socialistes législature 16, UDR/Union des droites législature 17) ;
 4. retirer le bandeau `TODO` — c'est ce retrait, pas une date, que le job vérifie.
+
+**Résolution (lot C).** La même impasse s'est reproduite en commençant le lot C : Légifrance renvoie
+`403 Forbidden` à toute requête non-navigateur (confirmé par deux outils de lecture web différents et un
+`curl` direct), et le seul fichier disponible sur data.gouv.fr pour le « Nuancier politique du ministère
+de l'Intérieur » est un CSV de 2014 (nomenclature « Front National », « UMP » — inutilisable pour les
+législatures 15 à 17 sans se tromper de parti). Plutôt que d'assembler une grille plausible à partir de
+fragments de sources secondaires (Wikipédia, presse) — la même impasse que le bandeau `TODO` avait
+identifiée comme le seul endroit de la phase où « remplir de mémoire » serait tentant et grave — la
+question a été posée à l'utilisateur, qui a récupéré et fourni le PDF de l'instruction du 11 juin 2024
+(NOR IOMA2415630C, Légifrance `id/45565`).
+
+Deux corrections à l'hypothèse de départ, une fois la source primaire lue :
+
+1. **La grille utilisée est celle des élections législatives de 2024 (24 nuances), pas une grille « 2026
+   à 26 nuances ».** Cette dernière référence, présente dans une version antérieure de
+   [data-sources.md § 4](../data-sources.md#4-ministère-de-lintérieur--grille-des-nuances-politiques) et
+   reprise par le plan, n'a jamais été vérifiée par une source primaire — corrigée dans le même commit
+   que ce fichier, avec un renvoi ici plutôt qu'une réécriture silencieuse (même traitement que F1).
+2. **La grille elle-même ne définit pas de blocs.** L'annexe 1 du document est une liste plate de 24
+   nuances (libellé, signification, commentaires), sans colonne de regroupement — seulement un ordre
+   implicite de l'extrême gauche à l'extrême droite. Le commentaire du fichier de seed affirmait que
+   « la grille ordonne six blocs, elle ne les chiffre pas » : c'était une supposition du plan, jamais
+   vérifiée, et elle est fausse pour la source réellement utilisée. Le regroupement en six blocs (pas
+   seulement leurs six coordonnées) est donc entièrement de notre fait, dérivé de cet ordre implicite —
+   `db/seeds/group_axis.toml` le dit maintenant explicitement.
+
+Le rattachement nuance → groupe parlementaire (40 lignes) a ensuite été construit à la main : les 12
+nuances à parti unique (`COM`, `FI`, `SOC`, `RDG`, `VEC`, `REN`, `MDM`, `HOR`, `UDI`, `LR`, `RN`, `REC`)
+couvrent la plupart des groupes ; les groupes sans nuance propre (petits groupes centristes ou
+régionalistes, alliances électorales comme UDR/RN aux législatives 2024) portent une `note` qui
+documente le choix — la même convention que les doublons de libellé déjà présents dans le fichier.
+Vérifié en conditions réelles : `cargo run -- enqueue label_scrutins_heuristic` puis `run-once` charge le
+fichier (`is_current = true` sur `grille-legislatives-2024-v1`) et calcule 15 621 estimations sur 16 956
+scrutins examinés (couverture médiane 99,3 %), y compris pour 17/2653 (position `+0,670`, séparation
+`1,000`) — cohérent avec la correction narrative de F1 : RN et UDR, tous deux `extreme_droite`, sont
+isolés par le seuil optimal, comme prévu.
 
 ## F3 — Le backend n'avait jamais eu besoin d'une vraie transaction avant la catégorisation
 

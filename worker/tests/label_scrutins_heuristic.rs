@@ -4,8 +4,9 @@
 //! ne se teste qu'avec une vraie base : résolution des `an_uid` contre `organe`, immuabilité d'une
 //! version d'ancrage, écriture par lots, filtrage par périmètre, journalisation des refus.
 //!
-//! Le seed réel (`db/seeds/group_axis.toml`) est volontairement incomplet (voir son bandeau TODO) :
-//! chaque test ici écrit son propre fichier TOML éphémère, complet, inventé pour l'occasion.
+//! Chaque test ici écrit son propre fichier TOML éphémère, complet, inventé pour l'occasion —
+//! indépendant du seed réel (`db/seeds/group_axis.toml`), qui porte la vraie grille des nuances
+//! (voir phase-3.0-feedback.md, F2).
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
