@@ -18,9 +18,11 @@ CACHE_CONTROL = "public, max-age=60, stale-while-revalidate=300"
 
 _CACHEABLE_CONTENT_TYPES = ("text/html", "application/json")
 # /healthz reflète un état en temps réel (voir routers/health.py) : le mettre en cache irait
-# contre sa raison d'être. /static/ a déjà son propre cache conditionnel via StaticFiles.
+# contre sa raison d'être. /static/ a déjà son propre cache conditionnel via StaticFiles. /admin
+# porte son propre Cache-Control (private, no-store — voir kyc_api.admin.headers, D3.1 point 7) :
+# le cache public ne doit jamais s'en mêler.
 _EXCLUDED_PATHS = frozenset({"/healthz"})
-_EXCLUDED_PREFIXES = ("/static/",)
+_EXCLUDED_PREFIXES = ("/static/", "/admin")
 
 
 def compute_etag(body: bytes) -> str:

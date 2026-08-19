@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Back-office — Know Your Candidate{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <!-- htmx 2.0.9, vendoré dans static/ — pas de CDN -->
+  <script src="/static/htmx.min.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+  <header class="admin-header">
+    <a class="admin-header__brand" href="/admin">Know Your Candidate — back-office</a>
+    {% if admin_user %}
+      <nav class="admin-header__nav" aria-label="Navigation back-office">
+        <span class="admin-header__user">{{ admin_user.display_name }}</span>
+        <form method="post" action="/admin/logout">
+          <button type="submit">Se déconnecter</button>
+        </form>
+      </nav>
+    {% endif %}
+  </header>
+  <main id="contenu">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

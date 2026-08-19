@@ -12,6 +12,15 @@ dependencies = [
     "pydantic>=2.13.4,<3",
     "pydantic-settings>=2.15.0,<3",
     "markdown>=3.10.3",
+    # Échange de jeton OAuth GitHub (D3.1, docs/plans/phase-3-categorisation.md) : le seul appel
+    # HTTP sortant du backend, à la connexion admin. N'était jusqu'ici qu'un outil de test (voir
+    # dependency-groups.dev ci-dessous) ; il devient du code de production.
+    "httpx>=0.28.1,<0.29",
+    # Exigé par SessionMiddleware de Starlette pour signer le cookie de session admin.
+    "itsdangerous>=2.2.0,<3",
+    # Exigé par FastAPI pour lire un formulaire POST et un fichier déposé (back-office et import,
+    # phase 3). Sans lui, tout le back-office rend un 500 au premier envoi.
+    "python-multipart>=0.0.20,<0.1",
 ]
 
 [dependency-groups]
@@ -20,7 +29,6 @@ dev = [
     "ty>=0.0.70",
     "pytest>=9.1.1,<10",
     "pytest-asyncio>=1.4.0,<2",
-    "httpx>=0.28.1,<0.29",
     "lxml>=6.1.1",
 ]
 

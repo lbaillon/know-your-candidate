@@ -1,0 +1,8 @@
+{% extends "admin/base_admin.html.jinja" %}
+
+{% block title %}Tableau de bord — back-office{% endblock %}
+
+{% block content %}
+  <h1>Tableau de bord</h1>
+  <p>Connecté·e en tant que {{ admin_user.display_name }} (@{{ admin_user.github_login }}).</p>
+{% endblock %}

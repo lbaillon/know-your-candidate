@@ -23,6 +23,7 @@ from pathlib import Path  # noqa: E402
 
 import asyncpg  # noqa: E402
 import pytest  # noqa: E402
+from fastapi import FastAPI  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 
 from kyc_api.db import get_pool  # noqa: E402
@@ -105,8 +106,15 @@ async def db_conn(_migrated_db: None) -> AsyncIterator[asyncpg.Connection]:
 
 
 @pytest.fixture
-async def client(db_conn: asyncpg.Connection) -> AsyncIterator[AsyncClient]:
-    app = create_app()
+def app() -> FastAPI:
+    """Séparée de `client` pour que les tests qui ont besoin d'autres surcharges de dépendances
+    (le transport GitHub de `test_admin_auth.py`, par exemple) puissent les poser avant que le
+    client ne soit construit, sans dupliquer `create_app()`."""
+    return create_app()
+
+
+@pytest.fixture
+async def client(app: FastAPI, db_conn: asyncpg.Connection) -> AsyncIterator[AsyncClient]:
     app.dependency_overrides[get_pool] = lambda: db_conn
     transport = ASGITransport(app=app)
     # follow_redirects=True : httpx ne suit pas les redirections par défaut, contrairement à un

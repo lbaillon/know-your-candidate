@@ -497,6 +497,25 @@
   }
 }
 /*
+ * Back-office (phase 3). Cascade : après 40-components (composants publics), avant
+ * 50-utilities — voir docs/plans/phase-3-categorisation.md, section « Langue ».
+ */
+
+@layer components {
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--color-border-strong);
+  }
+  .admin-header__nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+  }
+}
+/*
  * Utilitaires ponctuels. À garder minimal — ce n'est pas un système utilitaire complet.
  */
 
