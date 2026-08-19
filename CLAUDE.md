@@ -120,6 +120,13 @@ En cas de doute sur ce qu'on a le droit d'afficher ou de déduire : demande, ne 
 Prérequis : `uv`, Rust (édition 2024) + `sqlx-cli`, Podman + `podman-compose`, `make`. Copier
 `.env.example` en `.env` avant de lancer quoi que ce soit.
 
+Le back-office (`/admin`, phase 3) exige en plus une application OAuth GitHub réelle
+(`ADMIN_GITHUB_CLIENT_ID`/`ADMIN_GITHUB_CLIENT_SECRET`, rappel `http://localhost:8000` en local) et au
+moins un login GitHub dans `ADMIN_GITHUB_LOGINS` — voir `.env.example` pour le détail de chaque
+variable. Sans ces variables, `/admin/login` rend un 503 plutôt qu'un contournement de développement
+(CLAUDE.md, « aucun échafaudage de développement ne survit dans le produit final ») ; le reste de
+l'application fonctionne normalement.
+
 **Tout l'outillage (`cargo`, `uv`, `podman`, `make`, `sqlx`) est installé dans WSL, pas dans Windows**, et
 le dépôt lui-même vit dans le système de fichiers WSL (`/home/laury/know-your-candidate`), pas sous
 `/mnt/c`. La manière de lancer une commande dépend donc de l'endroit d'où tourne la session :

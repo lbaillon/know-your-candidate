@@ -1066,6 +1066,62 @@ est consigné.
    scrutins relus. À consigner même — surtout — s'il est mauvais, en disant combien de scrutins le
    sous-tendent : sur trente relectures, c'est une indication, pas une conclusion.
 
+> **Mesuré le 19/08/2026** (lot C, commit 11), sur la base réelle peuplée par les phases 1 et 2 puis par
+> `label_scrutins_heuristic` avec la grille d'ancrage résolue (F2 — [phase-3.0-feedback.md](phase-3.0-feedback.md)).
+> Mesures 5 et 6 non produites : elles exigent une relecture humaine réelle, reportée à une session
+> ultérieure — voir la note de suivi en tête du commit 11 ci-dessous.
+>
+> **1. Job `label_scrutins_heuristic`** : 2 099 ms sur 16 956 scrutins examinés (16 957 attendus par
+> l'arbitrage initial, écart d'une unité déjà noté par F2) — 15 621 estimations écrites, refus
+> couverture 32, refus effectif 12, refus unanimité 1 291, couverture médiane 99,3 %.
+>
+> **2. Distribution de `separation`** (déciles, sur les 15 621 estimations) :
+>
+> | D1 | D2 | D3 | D4 | D5 (médiane) | D6 | D7 | D8 | D9 |
+> | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+> | 0,624 | 0,737 | 0,820 | 0,887 | 0,933 | 0,961 | 0,980 | 1,000 | 1,000 |
+>
+> Distribution tassée contre 1 : plus de 20 % des scrutins mesurés ont une séparation parfaite. Attendu
+> au vu de F1 — une recherche de seuil libre récompense structurellement l'isolement d'un petit camp
+> homogène à une extrémité, et le corpus retenu (participation ≥ 50 %) contient beaucoup de scrutins où
+> un petit groupe vote à l'inverse de tous les autres. Une séparation élevée dit que l'axe *explique*
+> le partage pour/contre sur ce scrutin, pas que le camp majoritaire est idéologiquement homogène —
+> distinction déjà posée par F1, que cette distribution confirme à l'échelle du corpus plutôt que sur un
+> seul cas.
+>
+> **3. `EXPLAIN (ANALYZE, BUFFERS)`** :
+>
+> - file de travail (`scrutin_a_categoriser`, requête de `get_next_to_categorize`, file vide de tout
+>   `scrutin_id` exclu) : **40 à 42 ms**, `Seq Scan` sur `scrutin` (16 956 lignes) suivi d'un
+>   `Nested Loop` avec `corpus_parametre`, pas d'index utilisé sur les colonnes calculées de la vue.
+>   Sous les 100 ms sans index supplémentaire ; aucun ajouté, conformément à la règle phase 2 (« ne pas
+>   ajouter d'index sans que la mesure le justifie »).
+> - liste publique des scrutins catégorisés (`list_categorized_scrutins`, sans filtre, page 1) :
+>   **16,8 ms** — pire cas mesuré, aucune catégorisation humaine n'existe encore donc `LIMIT 30` ne
+>   peut jamais être satisfait tôt et le scan va jusqu'au bout. `Index Scan` sur `scrutin_date_idx`
+>   (index déjà posé en phase 2) suivi d'un `Nested Loop Semi Join` avec `Index Only Scan` sur
+>   `scrutin_label_pkey`. Sous les 100 ms ; à remesurer une fois des catégorisations réelles présentes,
+>   où le comportement pourrait changer dans un sens comme dans l'autre selon leur répartition dans le
+>   temps.
+>
+> **4. p50/p95 de rendu** (20 appels par route après une requête de chauffe, mesuré en mémoire via
+> `httpx.ASGITransport` contre l'application réelle connectée à la base réelle — équivalent au serveur
+> `uvicorn` en local, sans la latence réseau) :
+>
+> | Route | p50 | p95 |
+> | --- | --- | --- |
+> | `/admin/categorisation` | 33,3 ms | 45,9 ms |
+> | `/scrutins` | 15,9 ms | 18,6 ms |
+> | `/theme/environnement` | 3,8 ms | 4,7 ms |
+> | `/scrutin/17/2653` | 4,5 ms | 5,6 ms |
+>
+> Toutes les routes tiennent largement sous les 100 ms. `/admin/categorisation` est la plus lente,
+> cohérent avec le paragraphe 3 : elle exécute la requête de la file de travail à chaque affichage.
+> `/scrutins` est plus lente que `/theme/{slug}` pour la même raison — elle interroge tous les thèmes
+> pour son filtre en plus de la liste. Aucune de ces quatre pages ne porte de catégorisation humaine
+> réelle au moment de la mesure (aucune relecture effectuée) : à remesurer une fois le back-office
+> réellement utilisé, ces pages afficheront plus de contenu que leur état vide actuel.
+
 ### Ordre des commits
 
 Un commit par ligne, `main` vert (lint, typage, tests) à chaque fois.
@@ -1109,13 +1165,22 @@ hors du périmètre de cette phase. Le plan de la phase 4 porte déjà, lui, l'�
 
 ### Vérifications avant de déclarer la phase terminée
 
-1. `make lint`, `make typecheck`, `make test` verts ; CI verte.
+1. `make lint`, `make typecheck`, `make test` verts ; CI verte. **Fait**, vérifié à chaque commit.
 2. `make ingest` rejoué **en entier sur une base vierge** : `seed_themes` et
-   `label_scrutins_heuristic` passent, et une seconde exécution ne change aucune ligne.
+   `label_scrutins_heuristic` passent, et une seconde exécution ne change aucune ligne. **Pas encore
+   fait pour la phase 3** (les deux jobs ont été vérifiés séparément sur la base de développement
+   existante, pas dans un `make ingest` complet sur base vierge — recréer et repeupler la base prend
+   plusieurs dizaines de minutes, reporté à la prochaine session qui touche ce plan).
 3. Le job d'ancrage **refuse** de recharger une version modifiée : vérifié à la main en changeant une
-   coordonnée sans changer la version, résultat consigné.
+   coordonnée sans changer la version, résultat consigné. **Fait, deux fois** : une fois délibérément
+   (`droite` de `0.6` à `0.65`, version inchangée → refus nommant les deux hachages, coordonnée
+   restaurée ensuite), une fois accidentellement (une correction de commentaire dans ce même fichier,
+   faite entre le chargement initial et ce test, a elle-même changé le hachage — le job a refusé le
+   rechargement pour cette raison avant même le test délibéré, confirmant que la garde porte sur le
+   fichier entier, commentaires compris, pas seulement sur les coordonnées).
 4. **Recette de 30 scrutins réels**, dont la taxe Zucman, catégorisés à la main et chronométrés. Le
    modèle tient-il ? Un scrutin a-t-il exigé un thème absent de la liste ? Consigner les deux réponses.
+   **Pas fait** : exige une relecture humaine réelle, voir la note de suivi du commit 11.
 5. Une catégorisation saisie, corrigée, puis supprimée : l'historique public raconte exactement les
    trois actes, avec les bons auteurs et les bonnes dates.
 6. Un aller-retour export → import réel sur les 30 scrutins de la recette : zéro modification, zéro
@@ -1128,7 +1193,18 @@ hors du périmètre de cette phase. Le plan de la phase 4 porte déjà, lui, l'�
 10. Déconnecté, chaque route `/admin` rend une redirection ou un 401 — vérifié par un test paramétré
     sur **toutes** les routes du routeur admin, pas par échantillonnage.
 11. Aucune route publique ne crée de job ; aucune page publique n'affiche d'estimation automatique.
-12. Les mesures sont consignées, et sous les 100 ms.
+12. Les mesures sont consignées, et sous les 100 ms. **Fait** — voir la note « Mesuré le 19/08/2026 »
+    ci-dessus (mesures 1 à 4 ; 5 et 6 dépendent de la recette humaine, item 4).
+
+> **Point d'étape (lot C, commit 11, 19/08/2026)** : 1, 2 (partiel — jobs vérifiés séparément, pas via
+> un `make ingest` complet sur base vierge), 3, 11 et 12 sont faits. 5, 7 et 10 sont couverts par des
+> tests d'intégration automatisés (`test_admin_categorisation.py`, `test_import_apply.py`,
+> `test_admin_auth.py`) plutôt que reconfirmés à la main. 4 et 6 exigent une relecture humaine réelle
+> qui n'a pas eu lieu cette session. 8 et 9 (JavaScript désactivé, navigation clavier) exigent un vrai
+> navigateur — aucun outil de ce type disponible dans cette session ; le formulaire de catégorisation
+> est conçu sans JavaScript requis (D3.17, testé structurellement : groupe de boutons radio,
+> `input[type=range]` étiqueté) mais cela reste à vérifier les yeux ouverts. La phase n'est donc pas
+> déclarable terminée avant une session avec accès à un navigateur et à un relecteur humain.
 
 ### Hors périmètre — ne pas ajouter
 
