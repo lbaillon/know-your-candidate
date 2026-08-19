@@ -7,4 +7,5 @@
     <li class="empty-state">Aucune personne ne correspond à cette recherche.</li>
   {% endfor %}
 </ul>
-{{ pagination_nav(pagination, "/personnes", q, legislature) }}
+{% set extra_qs = (("&q=" ~ (q | urlencode)) if q else "") ~ (("&legislature=" ~ legislature) if legislature else "") %}
+{{ pagination_nav(pagination, "/personnes", extra_qs) }}

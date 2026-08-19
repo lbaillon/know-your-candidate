@@ -1,0 +1,72 @@
+{% extends "base.html.jinja" %}
+
+{% block title %}Catégorisation — scrutin n° {{ scrutin.numero }} — Know Your Candidate{% endblock %}
+
+{% block content %}
+  <h1>Catégorisation du scrutin n° {{ scrutin.numero }}</h1>
+  <p class="scrutin-detail__titre">{{ scrutin.titre }}</p>
+  <p>
+    <a href="/scrutin/{{ scrutin.legislature }}/{{ scrutin.numero }}">Retour à la fiche de ce scrutin</a>.
+  </p>
+
+  {% if labels %}
+    <h2 id="etat-actuel-titre">État actuel</h2>
+    <ul class="categorisation-liste" aria-labelledby="etat-actuel-titre">
+      {% for label in labels %}
+        <li>
+          <p class="categorisation-liste__theme"><a href="/theme/{{ label.theme_slug }}">{{ label.theme_libelle }}</a></p>
+          {% set position_label = categorisation_position_label(
+               position_pour=label.position_pour, theme_libelle=label.theme_libelle,
+               libelle_pole_negatif=label.libelle_pole_negatif,
+               libelle_pole_positif=label.libelle_pole_positif) %}
+          {% if position_label %}
+            <p>{{ position_label }}</p>
+          {% endif %}
+          <p>{{ label.justification }}</p>
+          <p class="categorisation-liste__methode">
+            {{ categorisation_method_label(
+                 method=label.method, author_display_name=label.author_display_name,
+                 created_at=label.created_at, import_filename=label.import_filename,
+                 reviewed_by_display_name=label.reviewed_by_display_name,
+                 reviewed_at=label.reviewed_at) }}
+          </p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>Ce scrutin n'est plus catégorisé. L'historique ci-dessous montre les changements passés.</p>
+  {% endif %}
+
+  <h2 id="historique-titre">Historique</h2>
+  <ul class="categorisation-historique" aria-labelledby="historique-titre">
+    {% for revision in revisions %}
+      <li>
+        <p>
+          {{ revision.created_at.strftime("%d/%m/%Y %H:%M") }} —
+          {% if revision.apres | length == 0 %}
+            suppression
+          {% elif revision.avant | length == 0 %}
+            création
+          {% else %}
+            modification
+          {% endif %}
+          par {{ revision.author_display_name }}
+          {%- if revision.motif %} — {{ revision.motif }}{% endif -%}
+        </p>
+        {% if revision.apres %}
+          <ul class="categorisation-historique__themes">
+            {% for entry in revision.apres %}
+              <li>
+                {{ entry.slug }} — poids {{ entry.poids }}
+                {%- if entry.position_pour %}, position {{ entry.position_pour }}{% endif %},
+                confiance {{ entry.confiance }} : {{ entry.justification }}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </li>
+    {% else %}
+      <li class="empty-state">Aucun historique pour ce scrutin.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

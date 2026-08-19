@@ -1,0 +1,46 @@
+{% extends "base.html.jinja" %}
+{% from "macros/pagination.html.jinja" import pagination as pagination_nav %}
+{% from "macros/scrutin_summary.html.jinja" import scrutin_summary_item %}
+
+{% block title %}Scrutins catégorisés — Know Your Candidate{% endblock %}
+
+{% block content %}
+  <h1>Scrutins catégorisés</h1>
+  <p>
+    Les scrutins pour lesquels une catégorisation existe. Voir
+    <a href="/themes">les thèmes</a> et <a href="/methodologie">la méthodologie</a>.
+  </p>
+
+  <form class="search-form" action="/scrutins" method="get">
+    <div>
+      <label for="theme">Thème</label>
+      <select id="theme" name="theme">
+        <option value="" {{ "selected" if not theme else "" }}>Tous</option>
+        {% for t in themes %}
+          <option value="{{ t.slug }}" {{ "selected" if theme == t.slug else "" }}>{{ t.libelle }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="legislature">Législature</label>
+      <select id="legislature" name="legislature">
+        <option value="" {{ "selected" if not legislature else "" }}>Toutes</option>
+        {% for leg in [15, 16, 17] %}
+          <option value="{{ leg }}" {{ "selected" if legislature == leg else "" }}>{{ leg }}e législature</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit">Filtrer</button>
+  </form>
+
+  <ul class="scrutin-list">
+    {% for s in scrutins %}
+      {{ scrutin_summary_item(s, show_themes=True) }}
+    {% else %}
+      <li class="empty-state">Aucun scrutin ne correspond à ces filtres.</li>
+    {% endfor %}
+  </ul>
+
+  {% set extra_qs = (("&theme=" ~ (theme | urlencode)) if theme else "") ~ (("&legislature=" ~ legislature) if legislature else "") %}
+  {{ pagination_nav(pagination, "/scrutins", extra_qs) }}
+{% endblock %}

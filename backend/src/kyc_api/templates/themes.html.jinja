@@ -1,0 +1,28 @@
+{% extends "base.html.jinja" %}
+
+{% block title %}Thèmes — Know Your Candidate{% endblock %}
+
+{% block content %}
+  <h1>Thèmes</h1>
+  <p class="avertissement">
+    Ces thèmes et leurs axes sont une construction du projet, pas une nomenclature officielle : ils
+    servent à regrouper des scrutins pour les rendre lisibles, et sont discutables comme tels. Voir
+    <a href="/methodologie">la méthodologie</a> pour la manière dont ils sont établis et catégorisés.
+  </p>
+
+  <ul class="theme-grid">
+    {% for theme in themes %}
+      <li class="theme-card">
+        <h2><a href="/theme/{{ theme.slug }}">{{ theme.libelle }}</a></h2>
+        <p>{{ theme.description }}</p>
+        {% if theme.has_axis %}
+          <p class="theme-card__axe">
+            Axe : {{ theme.libelle_pole_negatif }} — {{ theme.libelle_pole_positif }}
+          </p>
+        {% endif %}
+      </li>
+    {% else %}
+      <li class="empty-state">Aucun thème actif pour le moment.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% macro scrutin_summary_item(s, show_themes=True) %}
+<li class="scrutin-summary">
+  <a href="/scrutin/{{ s.legislature }}/{{ s.numero }}">{{ s.titre }}</a>
+  <p class="scrutin-summary__meta">
+    {{ s.date_scrutin.strftime("%d/%m/%Y") }} — {{ s.legislature }}e législature — n° {{ s.numero }}
+    {%- if show_themes and s.themes %} — {{ s.themes | join(", ") }}{% endif -%}
+  </p>
+</li>
+{% endmacro %}

@@ -1,0 +1,41 @@
+{% extends "base.html.jinja" %}
+{% from "macros/pagination.html.jinja" import pagination as pagination_nav %}
+{% from "macros/scrutin_summary.html.jinja" import scrutin_summary_item %}
+
+{% block title %}{{ theme.libelle }} — Know Your Candidate{% endblock %}
+
+{% block content %}
+  <h1>{{ theme.libelle }}</h1>
+  <p>{{ theme.description }}</p>
+  {% if theme.has_axis %}
+    <p class="theme-card__axe">Axe : {{ theme.libelle_pole_negatif }} — {{ theme.libelle_pole_positif }}</p>
+  {% endif %}
+  <p class="avertissement">
+    Ce regroupement est une construction du projet, discutable comme tel. Voir
+    <a href="/methodologie">la méthodologie</a>.
+  </p>
+
+  <form class="search-form" action="/theme/{{ theme.slug }}" method="get">
+    <div>
+      <label for="legislature">Législature</label>
+      <select id="legislature" name="legislature">
+        <option value="" {{ "selected" if not legislature else "" }}>Toutes</option>
+        {% for leg in [15, 16, 17] %}
+          <option value="{{ leg }}" {{ "selected" if legislature == leg else "" }}>{{ leg }}e législature</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit">Filtrer</button>
+  </form>
+
+  <ul class="scrutin-list">
+    {% for s in scrutins %}
+      {{ scrutin_summary_item(s, show_themes=False) }}
+    {% else %}
+      <li class="empty-state">Aucun scrutin catégorisé sur ce thème pour l'instant.</li>
+    {% endfor %}
+  </ul>
+
+  {% set extra_qs = ("&legislature=" ~ legislature) if legislature else "" %}
+  {{ pagination_nav(pagination, "/theme/" ~ theme.slug, extra_qs) }}
+{% endblock %}

@@ -18,7 +18,7 @@ from httpx import AsyncClient
 
 import factories
 
-PAGE_ROUTES = ["/", "/personnes", "/methodologie", "/sources"]
+PAGE_ROUTES = ["/", "/personnes", "/methodologie", "/sources", "/themes", "/scrutins"]
 
 # tag -> attribut qui déclenche une requête au chargement de la page.
 _EXTERNAL_RESOURCE_ATTRS = {
@@ -256,6 +256,90 @@ async def test_scrutin_page_satisfies_every_structural_invariant(
     )
 
     path = "/scrutin/17/42"
+    doc = await _document(client, path)
+
+    _check_exactly_one_h1(doc, path)
+    _check_title_is_non_empty(doc, path)
+    _check_html_lang_is_fr(doc, path)
+    _check_has_a_skip_link(doc, path)
+    _check_every_image_has_alt(doc, path)
+    _check_every_form_field_has_a_label(doc, path)
+    _check_no_external_resource_except_wikimedia(doc, path)
+    _check_no_inline_script_or_disallowed_style(doc, path)
+    _check_every_link_has_an_accessible_name(doc, path)
+
+
+async def _insert_categorized_scrutin(db_conn: asyncpg.Connection) -> None:
+    source_document_id = await db_conn.fetchval(
+        """
+        INSERT INTO source_document (source, uid, url, content_hash, payload)
+        VALUES ('an_scrutin', 'VTANR5L17V43', 'https://example.org', 'hash', '{}'::jsonb)
+        RETURNING id
+        """
+    )
+    await db_conn.execute(
+        """
+        INSERT INTO scrutin (an_uid, numero, legislature, date_scrutin, type_code, titre,
+                              mode_publication, nombre_votants, suffrages_exprimes, pour, contre,
+                              abstentions, non_votants, effectif, source_document_id)
+        VALUES ('VTANR5L17V43', 43, 17, '2024-03-14', 'SPO', 'titre',
+                'DecompteNominatif', 400, 400, 200, 200, 0, 0, 577, $1)
+        """,
+        source_document_id,
+    )
+    theme_id = await db_conn.fetchval(
+        """
+        INSERT INTO theme
+            (slug, libelle, description, libelle_pole_negatif, libelle_pole_positif, rang)
+        VALUES ('environnement', 'Environnement', 'd', 'négatif', 'positif', 1)
+        RETURNING id
+        """
+    )
+    admin_id = await db_conn.fetchval(
+        """
+        INSERT INTO admin_user (github_id, github_login, display_name) VALUES (1, 'alice', 'Alice')
+        RETURNING id
+        """
+    )
+    scrutin_id = await db_conn.fetchval("SELECT id FROM scrutin WHERE an_uid = 'VTANR5L17V43'")
+    await db_conn.execute(
+        """
+        INSERT INTO scrutin_label
+            (scrutin_id, theme_id, poids, position_pour, confiance, justification, method,
+             author_id)
+        VALUES ($1, $2, 1.000, 0.500, 0.700, 'justification suffisamment longue', 'manual', $3)
+        """,
+        scrutin_id,
+        theme_id,
+        admin_id,
+    )
+
+
+async def test_theme_page_satisfies_every_structural_invariant(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    await _insert_categorized_scrutin(db_conn)
+
+    path = "/theme/environnement"
+    doc = await _document(client, path)
+
+    _check_exactly_one_h1(doc, path)
+    _check_title_is_non_empty(doc, path)
+    _check_html_lang_is_fr(doc, path)
+    _check_has_a_skip_link(doc, path)
+    _check_every_image_has_alt(doc, path)
+    _check_every_form_field_has_a_label(doc, path)
+    _check_no_external_resource_except_wikimedia(doc, path)
+    _check_no_inline_script_or_disallowed_style(doc, path)
+    _check_every_link_has_an_accessible_name(doc, path)
+
+
+async def test_categorisation_detail_page_satisfies_every_structural_invariant(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    await _insert_categorized_scrutin(db_conn)
+
+    path = "/scrutin/17/43/categorisation"
     doc = await _document(client, path)
 
     _check_exactly_one_h1(doc, path)

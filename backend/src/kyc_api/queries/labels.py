@@ -3,11 +3,20 @@ docs/plans/phase-3-categorisation.md. Un seul module, aucune requête ailleurs (
 """
 
 import json
+from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
 
 from kyc_api.db import Queryable, WritableQueryable
-from kyc_api.schemas.label import AxisEstimate, LabelEntry, LabelRevisionEntry
+from kyc_api.schemas.common import Pagination
+from kyc_api.schemas.label import (
+    AxisEstimate,
+    CategorizedScrutinSummary,
+    LabelEntry,
+    LabelRevisionEntry,
+)
+
+PUBLIC_LISTING_PAGE_SIZE = 30
 
 
 async def get_next_to_categorize(
@@ -37,12 +46,14 @@ async def get_labels_for_scrutin(pool: Queryable, scrutin_id: int) -> list[Label
                t.libelle_pole_negatif, t.libelle_pole_positif,
                sl.poids::float8 AS poids, sl.position_pour::float8 AS position_pour,
                sl.confiance::float8 AS confiance, sl.justification, sl.method::text AS method,
-               au.display_name AS author_display_name, sl.created_at, sl.updated_at,
+               au.display_name AS author_display_name, li.filename AS import_filename,
+               sl.created_at, sl.updated_at,
                ru.display_name AS reviewed_by_display_name, sl.reviewed_at
         FROM scrutin_label sl
         JOIN theme t ON t.id = sl.theme_id
         JOIN admin_user au ON au.id = sl.author_id
         LEFT JOIN admin_user ru ON ru.id = sl.reviewed_by
+        LEFT JOIN label_import li ON li.id = sl.import_id
         WHERE sl.scrutin_id = $1
         ORDER BY t.slug
         """,
@@ -209,3 +220,71 @@ async def replace_labels(
         )
 
     return action
+
+
+async def list_categorized_scrutins(
+    pool: Queryable, *, theme_slug: str | None, legislature: int | None, page: int
+) -> tuple[list[CategorizedScrutinSummary], Pagination]:
+    """Les scrutins catégorisés, publics (`/scrutins`, `/theme/{slug}`) — jamais leur mesure
+    automatique (D3.8), qui n'apparaît nulle part ici."""
+    page = max(page, 1)
+    offset = (page - 1) * PUBLIC_LISTING_PAGE_SIZE
+
+    where = """
+        EXISTS (SELECT 1 FROM scrutin_label sl WHERE sl.scrutin_id = s.id)
+        AND (
+            $1::text IS NULL
+            OR EXISTS (
+                SELECT 1 FROM scrutin_label sl
+                JOIN theme t ON t.id = sl.theme_id
+                WHERE sl.scrutin_id = s.id AND t.slug = $1
+            )
+        )
+        AND ($2::smallint IS NULL OR s.legislature = $2)
+    """
+
+    rows = await pool.fetch(
+        f"""
+        SELECT s.id AS scrutin_id, s.legislature, s.numero, s.titre, s.date_scrutin
+        FROM scrutin s
+        WHERE {where}
+        ORDER BY s.date_scrutin DESC, s.id
+        LIMIT $3 OFFSET $4
+        """,
+        theme_slug,
+        legislature,
+        PUBLIC_LISTING_PAGE_SIZE,
+        offset,
+    )
+    total = await pool.fetchval(
+        f"SELECT count(*) FROM scrutin s WHERE {where}", theme_slug, legislature
+    )
+    assert isinstance(total, int)
+
+    scrutin_ids = [row["scrutin_id"] for row in rows]
+    themes_by_scrutin: dict[int, list[str]] = defaultdict(list)
+    if scrutin_ids:
+        theme_rows = await pool.fetch(
+            """
+            SELECT sl.scrutin_id, t.libelle
+            FROM scrutin_label sl
+            JOIN theme t ON t.id = sl.theme_id
+            WHERE sl.scrutin_id = ANY($1::bigint[])
+            ORDER BY sl.scrutin_id, t.libelle
+            """,
+            scrutin_ids,
+        )
+        for row in theme_rows:
+            themes_by_scrutin[row["scrutin_id"]].append(row["libelle"])
+
+    summaries = [
+        CategorizedScrutinSummary(
+            legislature=row["legislature"],
+            numero=row["numero"],
+            titre=row["titre"],
+            date_scrutin=row["date_scrutin"],
+            themes=themes_by_scrutin.get(row["scrutin_id"], []),
+        )
+        for row in rows
+    ]
+    return summaries, Pagination(page=page, page_size=PUBLIC_LISTING_PAGE_SIZE, total=total)

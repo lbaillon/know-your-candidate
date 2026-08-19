@@ -1,13 +1,12 @@
-{% macro pagination(pagination, base_path, q=None, legislature=None) %}
+{% macro pagination(pagination, base_path, extra_qs="") %}
 {% if pagination.total_pages > 1 %}
-{% set suffix = (("&q=" ~ (q | urlencode)) if q else "") ~ (("&legislature=" ~ legislature) if legislature else "") %}
 <nav class="pagination" aria-label="Pagination">
   {% if pagination.has_previous %}
-    <a href="{{ base_path }}?page={{ pagination.page - 1 }}{{ suffix }}">Page précédente</a>
+    <a href="{{ base_path }}?page={{ pagination.page - 1 }}{{ extra_qs }}">Page précédente</a>
   {% endif %}
   <span class="pagination__status">Page {{ pagination.page }} sur {{ pagination.total_pages }}</span>
   {% if pagination.has_next %}
-    <a href="{{ base_path }}?page={{ pagination.page + 1 }}{{ suffix }}">Page suivante</a>
+    <a href="{{ base_path }}?page={{ pagination.page + 1 }}{{ extra_qs }}">Page suivante</a>
   {% endif %}
 </nav>
 {% endif %}

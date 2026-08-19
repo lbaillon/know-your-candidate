@@ -106,3 +106,42 @@ def mise_au_point_label(position_declaree: str) -> str:
     if position_declaree == "abstention":
         return "a déclaré après le scrutin avoir voulu s'abstenir"
     return "a déclaré après le scrutin avoir voulu ne pas prendre part au vote"
+
+
+def categorisation_position_label(
+    *,
+    position_pour: float | None,
+    theme_libelle: str,
+    libelle_pole_negatif: str | None,
+    libelle_pole_positif: str | None,
+) -> str | None:
+    """Une position ne s'affiche jamais en nombre nu (plan phase 3, « Pages publiques ») : le
+    libellé du pôle vient toujours en premier, le chiffre entre parenthèses. `None` pour un thème
+    sans axe (« autre », D3.5) — rien à afficher, pas une case vide.
+    """
+    if position_pour is None or libelle_pole_negatif is None or libelle_pole_positif is None:
+        return None
+    pole = libelle_pole_positif if position_pour >= 0 else libelle_pole_negatif
+    return f"plutôt : {pole} (position {position_pour:+.1f} sur l'axe {theme_libelle})"
+
+
+def categorisation_method_label(
+    *,
+    method: str,
+    author_display_name: str,
+    created_at: date,
+    import_filename: str | None,
+    reviewed_by_display_name: str | None,
+    reviewed_at: date | None,
+) -> str:
+    """La méthode est toujours visible sans cliquer (plan phase 3, « Pages publiques ») : une
+    catégorisation importée et non relue le dit explicitement, elle ne se contente pas de citer
+    le fichier.
+    """
+    if method == "manual":
+        return f"catégorisé par {author_display_name}, le {_format_date_fr(created_at)}"
+
+    base = f"importé du fichier {import_filename}, le {_format_date_fr(created_at)}"
+    if reviewed_by_display_name is None or reviewed_at is None:
+        return f"{base} — non relu depuis"
+    return f"{base}, relu par {reviewed_by_display_name} le {_format_date_fr(reviewed_at)}"

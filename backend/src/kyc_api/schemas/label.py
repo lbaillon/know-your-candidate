@@ -1,6 +1,6 @@
 """Modèles Pydantic de la catégorisation — voir docs/plans/phase-3-categorisation.md."""
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -18,6 +18,7 @@ class LabelEntry(BaseModel):
     justification: str
     method: str
     author_display_name: str
+    import_filename: str | None
     created_at: datetime
     updated_at: datetime
     reviewed_by_display_name: str | None
@@ -41,3 +42,14 @@ class LabelRevisionEntry(BaseModel):
     author_display_name: str
     motif: str | None
     created_at: datetime
+
+
+class CategorizedScrutinSummary(BaseModel):
+    """Une ligne des pages publiques `/theme/{slug}` et `/scrutins` — identité du scrutin et
+    libellés de ses thèmes, jamais sa mesure automatique (D3.8)."""
+
+    legislature: int
+    numero: int
+    titre: str
+    date_scrutin: date
+    themes: list[str]

@@ -61,6 +61,36 @@
     </tbody>
   </table>
 
+  {% if labels %}
+    <h2 id="categorisation-titre">Catégorisation</h2>
+    <ul class="categorisation-liste" aria-labelledby="categorisation-titre">
+      {% for label in labels %}
+        <li>
+          <p class="categorisation-liste__theme"><a href="/theme/{{ label.theme_slug }}">{{ label.theme_libelle }}</a></p>
+          {% set position_label = categorisation_position_label(
+               position_pour=label.position_pour, theme_libelle=label.theme_libelle,
+               libelle_pole_negatif=label.libelle_pole_negatif,
+               libelle_pole_positif=label.libelle_pole_positif) %}
+          {% if position_label %}
+            <p>{{ position_label }}</p>
+          {% endif %}
+          <p>{{ label.justification }}</p>
+          <p class="categorisation-liste__methode">
+            {{ categorisation_method_label(
+                 method=label.method, author_display_name=label.author_display_name,
+                 created_at=label.created_at, import_filename=label.import_filename,
+                 reviewed_by_display_name=label.reviewed_by_display_name,
+                 reviewed_at=label.reviewed_at) }}
+          </p>
+        </li>
+      {% endfor %}
+    </ul>
+    <p>
+      <a href="/scrutin/{{ scrutin.legislature }}/{{ scrutin.numero }}/categorisation">Voir le détail
+      et l'historique de cette catégorisation</a>.
+    </p>
+  {% endif %}
+
   {{ source_note(scrutin.source, label="Fichier open data de ce scrutin") }}
   <p class="source-note">
     Voir aussi

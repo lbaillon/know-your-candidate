@@ -9,8 +9,10 @@ from kyc_api.cursor import InvalidCursor, parse_cursor
 from kyc_api.db import Queryable, get_pool
 from kyc_api.documents import render_document
 from kyc_api.queries import candidates as candidates_queries
+from kyc_api.queries import labels as labels_queries
 from kyc_api.queries import persons as persons_queries
 from kyc_api.queries import scrutins as scrutins_queries
+from kyc_api.queries import themes as themes_queries
 from kyc_api.templating import templates
 from kyc_api.timeline import build_timeline
 
@@ -139,7 +141,31 @@ async def scrutin_detail(
     scrutin = await scrutins_queries.get_by_legislature_numero(pool, legislature, numero)
     if scrutin is None:
         raise HTTPException(status_code=404)
-    return templates.TemplateResponse(request, "scrutin.html.jinja", {"scrutin": scrutin})
+    labels = await labels_queries.get_labels_for_scrutin(pool, scrutin.scrutin_id)
+    return templates.TemplateResponse(
+        request, "scrutin.html.jinja", {"scrutin": scrutin, "labels": labels}
+    )
+
+
+@router.get("/scrutin/{legislature}/{numero}/categorisation")
+async def scrutin_categorisation(
+    request: Request, legislature: int, numero: int, pool: Queryable = Depends(get_pool)
+):
+    scrutin = await scrutins_queries.get_by_legislature_numero(pool, legislature, numero)
+    if scrutin is None:
+        raise HTTPException(status_code=404)
+    labels = await labels_queries.get_labels_for_scrutin(pool, scrutin.scrutin_id)
+    revisions = await labels_queries.get_revisions_for_scrutin(pool, scrutin.scrutin_id)
+    if not labels and not revisions:
+        # Rien à détailler : cette page n'est atteignable que depuis un lien affiché sur une
+        # catégorisation existante (plan, « Pages publiques »), jamais devinable pour un scrutin
+        # qui n'en a jamais eu.
+        raise HTTPException(status_code=404)
+    return templates.TemplateResponse(
+        request,
+        "categorisation.html.jinja",
+        {"scrutin": scrutin, "labels": labels, "revisions": revisions},
+    )
 
 
 @router.get("/scrutin/{an_uid}")
@@ -149,6 +175,63 @@ async def scrutin_alias(request: Request, an_uid: str, pool: Queryable = Depends
         raise HTTPException(status_code=404)
     # 301 : alias -> URL canonique, sur le même modèle qu'un ancien slug de personne.
     return RedirectResponse(url=f"/scrutin/{scrutin.legislature}/{scrutin.numero}", status_code=301)
+
+
+@router.get("/themes")
+async def themes(request: Request, pool: Queryable = Depends(get_pool)):
+    theme_list = await themes_queries.list_active(pool)
+    return templates.TemplateResponse(request, "themes.html.jinja", {"themes": theme_list})
+
+
+@router.get("/theme/{slug}")
+async def theme_detail(
+    request: Request,
+    slug: str,
+    legislature: int | None = None,
+    page: int = 1,
+    pool: Queryable = Depends(get_pool),
+):
+    theme = await themes_queries.get_by_slug(pool, slug)
+    if theme is None:
+        raise HTTPException(status_code=404)
+    scrutins, pagination = await labels_queries.list_categorized_scrutins(
+        pool, theme_slug=slug, legislature=legislature, page=page
+    )
+    return templates.TemplateResponse(
+        request,
+        "theme.html.jinja",
+        {
+            "theme": theme,
+            "scrutins": scrutins,
+            "pagination": pagination,
+            "legislature": legislature,
+        },
+    )
+
+
+@router.get("/scrutins")
+async def scrutins_list(
+    request: Request,
+    theme: str | None = None,
+    legislature: int | None = None,
+    page: int = 1,
+    pool: Queryable = Depends(get_pool),
+):
+    theme_list = await themes_queries.list_active(pool)
+    scrutins, pagination = await labels_queries.list_categorized_scrutins(
+        pool, theme_slug=theme, legislature=legislature, page=page
+    )
+    return templates.TemplateResponse(
+        request,
+        "scrutins.html.jinja",
+        {
+            "scrutins": scrutins,
+            "pagination": pagination,
+            "themes": theme_list,
+            "theme": theme,
+            "legislature": legislature,
+        },
+    )
 
 
 @router.get("/methodologie")

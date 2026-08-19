@@ -465,6 +465,58 @@
   .scrutin-detail__groupes th {
     border-bottom: 2px solid var(--color-border-strong);
   }
+
+  /* Rappel épistémique répété sur toute page qui affiche une catégorisation (thèmes, scrutin) :
+   * ce sont des constructions du projet, pas une nomenclature officielle (D3.8, CLAUDE.md). */
+  .avertissement {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  /* Pages publiques de la catégorisation : /themes, /theme/{slug}, /scrutins (phase 3). */
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: var(--space-lg);
+    margin-top: var(--space-lg);
+    list-style: none;
+    padding: 0;
+  }
+  .theme-card__axe {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+  }
+  .scrutin-list {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-lg);
+  }
+  .scrutin-list .scrutin-summary {
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .scrutin-summary__meta {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+  .categorisation-liste {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-lg);
+  }
+  .categorisation-liste > li {
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .categorisation-liste__theme {
+    font-weight: 700;
+    margin-bottom: 0;
+  }
+  .categorisation-liste__methode {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+  }
 }
 
 /* Point de rupture de la frise (--breakpoint-frise-repliee, 10-tokens.css) : hors @layer, pour

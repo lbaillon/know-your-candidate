@@ -10,6 +10,8 @@ from kyc_api.labels import (
     PAR_DELEGATION_LABEL,
     PISTE_TITLES,
     candidate_statut_label,
+    categorisation_method_label,
+    categorisation_position_label,
     mise_au_point_label,
     vote_position_label,
 )
@@ -40,3 +42,5 @@ _env_globals["PAR_DELEGATION_LABEL"] = PAR_DELEGATION_LABEL
 _env_globals["CONGRES_LABEL"] = CONGRES_LABEL
 _env_globals["mise_au_point_label"] = mise_au_point_label
 _env_globals["MISE_AU_POINT_RESULTAT_INCHANGE"] = MISE_AU_POINT_RESULTAT_INCHANGE
+_env_globals["categorisation_position_label"] = categorisation_position_label
+_env_globals["categorisation_method_label"] = categorisation_method_label
