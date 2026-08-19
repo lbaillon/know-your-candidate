@@ -118,4 +118,13 @@
   .import-apercu__ligne--conflit {
     background: color-mix(in srgb, var(--color-error) 10%, transparent);
   }
+  .import-apercu__perime {
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+    padding: var(--space-sm) var(--space-md);
+  }
+  .import-apercu__appliquer,
+  .import-apercu__rejeter {
+    margin-top: var(--space-md);
+  }
 }

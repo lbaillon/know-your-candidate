@@ -12,7 +12,7 @@ from starlette.datastructures import UploadFile
 
 from kyc_api import labels_io
 from kyc_api.admin.auth import require_admin
-from kyc_api.db import Queryable, get_pool
+from kyc_api.db import Queryable, WritableQueryable, get_connection, get_pool
 from kyc_api.import_validation import build_plan, plan_to_dict
 from kyc_api.queries import admin as admin_queries
 from kyc_api.queries import imports as imports_queries
@@ -107,6 +107,81 @@ async def show_import(
     return templates.TemplateResponse(
         request, "admin/import_apercu.html.jinja", {"admin_user": admin_user, "record": record}
     )
+
+
+@router.post("/import/{import_id}/appliquer")
+async def apply_import(
+    request: Request,
+    import_id: int,
+    admin_user: AdminUser = Depends(require_admin),
+    pool: Queryable = Depends(get_pool),
+    conn: WritableQueryable = Depends(get_connection),
+):
+    record = await imports_queries.get_label_import(pool, import_id)
+    if record is None:
+        raise HTTPException(status_code=404)
+    if record["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"import déjà {record['status']}")
+
+    form = await request.form()
+    apply_conflicts = str(form.get("ecraser_conflits") or "").strip() == "1"
+
+    # Étape 2 de l'application (plan) : relire le fichier déposé, jamais l'aperçu, et recalculer.
+    # C'est ce qui protège contre deux admins qui travaillent sur le même import en même temps.
+    parsed = (
+        labels_io.read_json(record["contenu"])
+        if record["format"] == "json"
+        else labels_io.read_csv(record["contenu"])
+    )
+    fresh_plan = await build_plan(pool, parsed)
+    fresh_apercu = plan_to_dict(fresh_plan)
+
+    if fresh_apercu != record["apercu"]:
+        await imports_queries.update_apercu(pool, import_id, fresh_apercu)
+        record = await imports_queries.get_label_import(pool, import_id)
+        assert record is not None
+        return templates.TemplateResponse(
+            request,
+            "admin/import_apercu.html.jinja",
+            {
+                "admin_user": admin_user,
+                "record": record,
+                "perime": True,
+            },
+            status_code=409,
+        )
+
+    rapport = await imports_queries.apply_plan(
+        conn,
+        plan=fresh_plan,
+        import_id=import_id,
+        author_id=admin_user.id,
+        apply_conflicts=apply_conflicts,
+    )
+    await imports_queries.mark_applied(pool, import_id, rapport=rapport, decided_by=admin_user.id)
+    await admin_queries.log_admin_action(
+        pool, admin_user_id=admin_user.id, action="import_application", target=str(import_id)
+    )
+    return RedirectResponse(url=f"/admin/import/{import_id}", status_code=303)
+
+
+@router.post("/import/{import_id}/rejeter")
+async def reject_import(
+    import_id: int,
+    admin_user: AdminUser = Depends(require_admin),
+    pool: Queryable = Depends(get_pool),
+) -> RedirectResponse:
+    record = await imports_queries.get_label_import(pool, import_id)
+    if record is None:
+        raise HTTPException(status_code=404)
+    if record["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"import déjà {record['status']}")
+
+    await imports_queries.mark_rejected(pool, import_id, decided_by=admin_user.id)
+    await admin_queries.log_admin_action(
+        pool, admin_user_id=admin_user.id, action="import_rejet", target=str(import_id)
+    )
+    return RedirectResponse(url=f"/admin/import/{import_id}", status_code=303)
 
 
 def _render_depot(

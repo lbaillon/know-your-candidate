@@ -8,6 +8,13 @@
     {{ record.uploaded_at.strftime("%d/%m/%Y %H:%M") }}
     {%- if record.generateur %} · généré par {{ record.generateur }}{% endif %}.</p>
 
+  {% if perime %}
+    <p class="import-apercu__perime" role="alert">
+      La base a changé depuis le dépôt de ce fichier : l'aperçu ci-dessous vient d'être
+      recalculé. Vérifiez-le avant d'appliquer à nouveau.
+    </p>
+  {% endif %}
+
   <dl class="import-apercu__compteurs">
     <div><dt>Créations</dt><dd>{{ record.apercu.compteurs.creation }}</dd></div>
     <div><dt>Modifications</dt><dd>{{ record.apercu.compteurs.modification }}</dd></div>
@@ -47,4 +54,27 @@
       {% endfor %}
     </tbody>
   </table>
+
+  {% if record.status == "pending" %}
+    <form method="post" action="/admin/import/{{ record.id }}/appliquer" class="import-apercu__appliquer">
+      {% if record.apercu.compteurs.conflit > 0 %}
+        <label>
+          <input type="checkbox" name="ecraser_conflits" value="1">
+          Écraser les {{ record.apercu.compteurs.conflit }} catégorisation(s) relue(s) en conflit
+        </label>
+      {% endif %}
+      <button type="submit">Appliquer</button>
+    </form>
+    <form method="post" action="/admin/import/{{ record.id }}/rejeter" class="import-apercu__rejeter">
+      <button type="submit">Rejeter</button>
+    </form>
+  {% elif record.rapport %}
+    <h2>Rapport</h2>
+    <p>
+      {{ record.rapport.crees }} créé(s), {{ record.rapport.modifies }} modifié(s),
+      {{ record.rapport.ecrases }} conflit(s) écrasé(s)
+      {%- if record.rapport.conflits_ignores %}, {{ record.rapport.conflits_ignores | length }}
+      conflit(s) ignoré(s){% endif %}.
+    </p>
+  {% endif %}
 {% endblock %}
