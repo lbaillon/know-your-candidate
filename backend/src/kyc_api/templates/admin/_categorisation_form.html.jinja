@@ -1,0 +1,112 @@
+{% macro theme_slot(i, slot, themes, show_poids) %}
+  {% set selected_theme = themes | selectattr("slug", "equalto", slot.theme) | first | default(none, true) %}
+  <fieldset class="categorisation-form__slot">
+    <legend>Thème {{ i }}</legend>
+
+    <div class="categorisation-form__themes" role="radiogroup">
+      {% for theme in themes %}
+        <label>
+          <input
+            type="radio"
+            name="theme_{{ i }}"
+            value="{{ theme.slug }}"
+            {%- if theme.slug == slot.theme %} checked{% endif %}
+            {%- if i == 1 and loop.first %} autofocus{% endif %}
+            required>
+          {{ theme.libelle }}
+        </label>
+      {% endfor %}
+    </div>
+
+    <div class="categorisation-form__position">
+      <label for="position_{{ i }}">
+        Position
+        {%- if selected_theme %} sur l'axe « {{ selected_theme.libelle }} »{% endif -%}
+        {%- if not selected_theme %} (choisir un thème doté d'un axe pour l'activer){% endif -%}
+      </label>
+      {% if selected_theme %}
+        <span class="categorisation-form__pole categorisation-form__pole--negatif">{{ selected_theme.libelle_pole_negatif or "—" }}</span>
+      {% endif %}
+      <input
+        type="range"
+        id="position_{{ i }}"
+        name="position_{{ i }}"
+        min="-1" max="1" step="0.05"
+        value="{{ slot.position if slot.position else 0 }}"
+        {%- if selected_theme and not selected_theme.has_axis %} disabled{% endif -%}>
+      {% if selected_theme %}
+        <span class="categorisation-form__pole categorisation-form__pole--positif">{{ selected_theme.libelle_pole_positif or "—" }}</span>
+      {% endif %}
+    </div>
+
+    <div class="categorisation-form__confiance" role="radiogroup">
+      <span>Confiance</span>
+      {% for valeur, libelle in [("0.4", "faible"), ("0.7", "moyenne"), ("1.0", "forte")] %}
+        <label>
+          <input type="radio" name="confiance_{{ i }}" value="{{ valeur }}"
+                 {%- if slot.confiance and (slot.confiance | float(-1)) == (valeur | float) %} checked{% endif %}
+                 required>
+          {{ libelle }}
+        </label>
+      {% endfor %}
+    </div>
+
+    {% if show_poids %}
+      <div class="categorisation-form__poids">
+        <label for="poids_{{ i }}">Poids</label>
+        <input type="number" id="poids_{{ i }}" name="poids_{{ i }}" min="0.001" max="1" step="0.001"
+               value="{{ slot.poids }}">
+      </div>
+    {% endif %}
+
+    <div class="categorisation-form__justification">
+      <label for="justification_{{ i }}">Justification</label>
+      <input type="text" id="justification_{{ i }}" name="justification_{{ i }}"
+             minlength="10" required value="{{ slot.justification }}">
+    </div>
+  </fieldset>
+{% endmacro %}
+
+<form
+  id="formulaire-categorisation"
+  method="post"
+  action="/admin/categorisation/{{ scrutin.legislature }}/{{ scrutin.numero }}"
+>
+  {% if errors %}
+    <ul class="categorisation-form__erreurs" role="alert">
+      {% for erreur in errors %}<li>{{ erreur }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if estimate %}
+    <p class="categorisation-form__repere">
+      Repère automatique : position {{ "%+.2f" | format(estimate.position_pour) }}, l'axe classe
+      correctement {{ (estimate.separation * 100) | round(0, "common") }} % des votants, ancrage
+      {{ estimate.axis_version }}. Non publié (D3.8) — sert uniquement à pré-remplir ce formulaire.
+    </p>
+  {% endif %}
+
+  {% for slot in slots %}
+    {{ theme_slot(loop.index, slot, themes, show_second_theme) }}
+  {% endfor %}
+
+  {% if not show_second_theme %}
+    <a
+      href="/admin/categorisation/{{ scrutin.legislature }}/{{ scrutin.numero }}?deuxieme_theme=1"
+      hx-get="/admin/categorisation/{{ scrutin.legislature }}/{{ scrutin.numero }}?deuxieme_theme=1"
+      hx-select="#formulaire-categorisation"
+      hx-target="#formulaire-categorisation"
+      hx-swap="outerHTML"
+      hx-push-url="true"
+    >+ Ajouter un second thème</a>
+  {% endif %}
+
+  <div class="categorisation-form__actions">
+    <button type="submit">Enregistrer</button>
+  </div>
+</form>
+
+<form method="post" action="/admin/categorisation/passer" class="categorisation-form__passer">
+  <input type="hidden" name="scrutin_id" value="{{ scrutin.scrutin_id }}">
+  <button type="submit">Passer ce scrutin</button>
+</form>

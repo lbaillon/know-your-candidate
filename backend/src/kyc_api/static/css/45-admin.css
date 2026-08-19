@@ -16,4 +16,51 @@
     align-items: center;
     gap: var(--space-md);
   }
+
+  /* File de travail et formulaire de catégorisation (D3.17 : sans JavaScript). */
+  .categorisation-form__slot {
+    margin: var(--space-md) 0;
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+  }
+  .categorisation-form__themes,
+  .categorisation-form__confiance {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-md);
+    margin: var(--space-sm) 0;
+  }
+  .categorisation-form__position {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: var(--space-sm) 0;
+  }
+  .categorisation-form__position label {
+    flex-basis: 100%;
+  }
+  .categorisation-form__pole {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+  }
+  .categorisation-form__poids,
+  .categorisation-form__justification {
+    margin: var(--space-sm) 0;
+  }
+  .categorisation-form__erreurs {
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+    padding: var(--space-sm) var(--space-md);
+  }
+  .categorisation-form__repere {
+    border: 1px solid var(--color-border);
+    padding: var(--space-sm) var(--space-md);
+    color: var(--color-text-muted);
+  }
+  .categorisation-form__actions {
+    margin-top: var(--space-md);
+  }
+  .categorisation-form__passer {
+    margin-top: var(--space-sm);
+  }
 }

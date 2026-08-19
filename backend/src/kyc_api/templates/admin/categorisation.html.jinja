@@ -1,0 +1,90 @@
+{% extends "admin/base_admin.html.jinja" %}
+
+{% block title %}Scrutin n° {{ scrutin.numero }} — catégorisation{% endblock %}
+
+{% block content %}
+  <h1>Scrutin n° {{ scrutin.numero }} ({{ scrutin.legislature }}e législature)</h1>
+  <p class="scrutin-detail__titre">{{ scrutin.titre }}</p>
+  <p class="scrutin-detail__meta">
+    {{ scrutin.date_scrutin.strftime("%d/%m/%Y") }}
+    {%- if scrutin.type_libelle %} — {{ scrutin.type_libelle }}{% endif -%}
+    {%- if scrutin.sort_code %} — {{ scrutin.sort_code }}{% endif -%}
+  </p>
+
+  <dl class="scrutin-detail__resultats">
+    <div><dt>Votants</dt><dd>{{ scrutin.nombre_votants }}</dd></div>
+    <div><dt>Pour</dt><dd>{{ scrutin.pour }}</dd></div>
+    <div><dt>Contre</dt><dd>{{ scrutin.contre }}</dd></div>
+    <div><dt>Abstentions</dt><dd>{{ scrutin.abstentions }}</dd></div>
+    {% if scrutin.participation is not none %}
+      <div><dt>Participation</dt><dd>{{ (scrutin.participation * 100) | round(1) }} %</dd></div>
+    {% endif %}
+  </dl>
+
+  <h2 id="repartition-titre">Répartition par groupe</h2>
+  <table class="scrutin-detail__groupes" aria-labelledby="repartition-titre">
+    <thead>
+      <tr>
+        <th scope="col">Groupe</th>
+        <th scope="col">Effectif</th>
+        <th scope="col">Position majoritaire</th>
+        <th scope="col">Pour</th>
+        <th scope="col">Contre</th>
+        <th scope="col">Abstentions</th>
+        <th scope="col">Non-votants</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for groupe in scrutin.groupes %}
+        <tr>
+          <td>{{ groupe.libelle or "Groupe non identifié par la source" }}</td>
+          <td>{{ groupe.nombre_membres }}</td>
+          <td>{{ vote_position_label(groupe.position_majoritaire) if groupe.position_majoritaire else "—" }}</td>
+          <td>{{ groupe.pour }}</td>
+          <td>{{ groupe.contre }}</td>
+          <td>{{ groupe.abstentions }}</td>
+          <td>{{ groupe.non_votants }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="source-note">
+    <a href="https://www.assemblee-nationale.fr/dyn/{{ scrutin.legislature }}/scrutins/{{ scrutin.numero }}">Voir
+    ce scrutin sur le site de l'Assemblée nationale</a>.
+  </p>
+
+  <h2>Catégorisation</h2>
+  {% include "admin/_categorisation_form.html.jinja" %}
+
+  {% if labels %}
+    <form method="post" action="/admin/categorisation/{{ scrutin.legislature }}/{{ scrutin.numero }}/supprimer"
+          class="categorisation-form__supprimer">
+      <label for="motif">Motif de la suppression</label>
+      <input type="text" id="motif" name="motif" required minlength="10">
+      <button type="submit">Retirer la catégorisation</button>
+    </form>
+  {% endif %}
+
+  {% if revisions %}
+    <h2>Historique</h2>
+    <ul class="categorisation-historique">
+      {% for revision in revisions %}
+        <li>
+          <p>
+            {{ revision.created_at.strftime("%d/%m/%Y %H:%M") }} —
+            {% if revision.apres | length == 0 %}
+              suppression
+            {% elif revision.avant | length == 0 %}
+              création
+            {% else %}
+              modification
+            {% endif %}
+            par {{ revision.author_display_name }}
+            {%- if revision.motif %} — {{ revision.motif }}{% endif %}
+          </p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}
