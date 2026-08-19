@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT scrutin_id FROM scrutin_axis_estimate",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "scrutin_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "scrutin_axis_estimate",
+            "name": "scrutin_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e9418623247ba965b42f90b0ed9e30cf0d52255f91edf95b10941f0a6f2ccb48"
+}

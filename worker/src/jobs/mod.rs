@@ -2,6 +2,7 @@ pub mod assign_slugs;
 pub mod enrich_wikidata;
 pub mod ingest_acteurs;
 pub mod ingest_scrutins;
+pub mod label_scrutins_heuristic;
 pub mod noop;
 pub mod queue;
 pub mod refresh_views;
@@ -307,6 +308,7 @@ async fn execute(ctx: &JobContext, job: &queue::ClaimedJob) -> anyhow::Result<()
         "assign_slugs" => assign_slugs::run(ctx, &job.payload).await,
         "seed_candidates" => seed_candidates::run(ctx, &job.payload).await,
         "seed_themes" => seed_themes::run(ctx, &job.payload).await,
+        "label_scrutins_heuristic" => label_scrutins_heuristic::run(ctx, &job.payload).await,
         "refresh_views" => refresh_views::run(ctx, &job.payload).await,
         other => anyhow::bail!("type de job inconnu : {other}"),
     }

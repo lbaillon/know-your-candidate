@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO group_axis_entry\n                    (axis_version, organe_id, nuance_code, bloc, coordonnee, note)\n                SELECT $1, organe_id, nuance_code, bloc, coordonnee::numeric, note\n                FROM UNNEST($2::bigint[], $3::text[], $4::text[], $5::float8[], $6::text[])\n                    AS t(organe_id, nuance_code, bloc, coordonnee, note)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8Array",
+        "TextArray",
+        "TextArray",
+        "Float8Array",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6a4856d3fac709926ae3fd8150589db0c1c2008ae1911644eccd0f0d3de27479"
+}

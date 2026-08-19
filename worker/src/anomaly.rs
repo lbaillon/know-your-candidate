@@ -19,6 +19,9 @@ pub const PHOTO_SANS_LICENCE: &str = "photo_sans_licence";
 #[allow(dead_code)] // utilisé par enrich_wikidata
 pub const WIKIDATA_QID_AMBIGU: &str = "wikidata_qid_ambigu";
 pub const SLUG_DERIVE_D_IDENTIFIANT: &str = "slug_derive_d_identifiant";
+pub const ANCRAGE_INSUFFISANT: &str = "ancrage_insuffisant";
+pub const TROP_PEU_DE_VOTANTS: &str = "trop_peu_de_votants";
+pub const SCRUTIN_UNANIME: &str = "scrutin_unanime";
 
 pub struct AnomalyRecord {
     pub kind: &'static str,

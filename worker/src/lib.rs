@@ -3,6 +3,7 @@
 
 pub mod an;
 pub mod anomaly;
+pub mod axis;
 pub mod config;
 pub mod db;
 pub mod heartbeat;

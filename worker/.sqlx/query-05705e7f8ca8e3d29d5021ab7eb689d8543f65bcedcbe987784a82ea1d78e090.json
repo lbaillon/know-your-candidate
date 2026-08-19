@@ -1,0 +1,61 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT position_pour::float8 AS \"position_pour!\", separation::float8 AS \"separation!\",\n                  couverture::float8 AS \"couverture!\", votants_couverts, axis_version\n           FROM scrutin_axis_estimate WHERE scrutin_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "position_pour!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "separation!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "couverture!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "votants_couverts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "scrutin_axis_estimate",
+            "name": "votants_couverts"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "axis_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "scrutin_axis_estimate",
+            "name": "axis_version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "05705e7f8ca8e3d29d5021ab7eb689d8543f65bcedcbe987784a82ea1d78e090"
+}

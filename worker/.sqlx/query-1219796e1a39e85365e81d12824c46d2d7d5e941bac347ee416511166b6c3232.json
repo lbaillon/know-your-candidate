@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT computed_at FROM scrutin_axis_estimate WHERE scrutin_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "computed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "scrutin_axis_estimate",
+            "name": "computed_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1219796e1a39e85365e81d12824c46d2d7d5e941bac347ee416511166b6c3232"
+}

@@ -1,0 +1,65 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT sg.scrutin_id, sg.organe_id, sg.pour, sg.contre\n        FROM scrutin_groupe sg\n        JOIN scrutin s ON s.id = sg.scrutin_id\n        WHERE s.chambre = 'assemblee'\n          AND ($1::smallint IS NULL OR s.legislature = $1)\n          AND ($2::date IS NULL OR s.date_scrutin >= $2)\n        ORDER BY sg.scrutin_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "scrutin_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "scrutin_groupe",
+            "name": "scrutin_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "organe_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "scrutin_groupe",
+            "name": "organe_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "pour",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "scrutin_groupe",
+            "name": "pour"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "contre",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "scrutin_groupe",
+            "name": "contre"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "a24de67d6295fc22541bfd8db1fb44dfcf59c7a5f601bb93f593cbf293f599b4"
+}

@@ -74,5 +74,7 @@ ingest: db-up
 	cd worker && cargo run --release -- enqueue enrich_wikidata
 	cd worker && cargo run --release -- enqueue seed_candidates
 	cd worker && cargo run --release -- enqueue assign_slugs
+	cd worker && cargo run --release -- enqueue seed_themes
+	cd worker && cargo run --release -- enqueue label_scrutins_heuristic
 	cd worker && cargo run --release -- enqueue refresh_views
 	cd worker && cargo run --release -- run-once

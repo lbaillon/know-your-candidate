@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, code_type, legislature, is_non_inscrit FROM organe WHERE an_uid = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "organe",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "code_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "organe",
+            "name": "code_type"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "legislature",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "organe",
+            "name": "legislature"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "is_non_inscrit",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "organe",
+            "name": "is_non_inscrit"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "8b50737c926004295005bd9efb9d841a20f0ca94d624387e474b0ad0c0b69ce8"
+}

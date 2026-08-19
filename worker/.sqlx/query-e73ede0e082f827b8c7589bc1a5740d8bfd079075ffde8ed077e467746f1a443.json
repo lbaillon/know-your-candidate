@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE group_axis SET is_current = (version = $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e73ede0e082f827b8c7589bc1a5740d8bfd079075ffde8ed077e467746f1a443"
+}
