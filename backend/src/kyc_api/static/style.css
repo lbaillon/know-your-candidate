@@ -222,20 +222,6 @@
  */
 
 @layer components {
-  /* Suivi de progression d'un job (phase 0). Non montée publiquement depuis la phase 1.1 (F11) :
-   * la route qui la servait a été supprimée, cette phase reprend les gabarits derrière le
-   * back-office de la phase 3 (voir docs/plans/phase-2-api-ui.md, « Ce que la phase 2 ne fait
-   * pas »). Les règles restent ici, non mortes, pour ce moment-là.
-   */
-  .job-status {
-    margin-top: var(--space-md);
-    padding: var(--space-md);
-    border: 1px solid var(--color-border-strong);
-  }
-  .job-status__error {
-    color: var(--color-error);
-  }
-
   /* Rendu du Markdown de docs/methodology.md et docs/data-sources.md (/methodologie, /sources). */
   .doc-content h1:first-child {
     margin-top: 0;
@@ -560,6 +546,35 @@
   }
   .categorisation-form__passer {
     margin-top: var(--space-sm);
+  }
+
+  /* Suivi de progression d'un job — écrit en phase 0, retiré des routes publiques en phase 1.1
+   * (F11, docs/plans/phase-1.1-fix.md), repris ici derrière le back-office (livrable 8). Règles
+   * inchangées depuis leur création, seulement déplacées de 40-components.css. */
+  .job-status {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+    border: 1px solid var(--color-border-strong);
+  }
+  .job-status__error {
+    color: var(--color-error);
+  }
+
+  .jobs-form__declencher {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: var(--space-md) 0;
+  }
+  .jobs-liste {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .jobs-liste th,
+  .jobs-liste td {
+    text-align: left;
+    padding: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
   }
 }
 /*

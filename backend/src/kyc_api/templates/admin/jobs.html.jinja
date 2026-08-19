@@ -1,0 +1,41 @@
+{% extends "admin/base_admin.html.jinja" %}
+
+{% block title %}Jobs — back-office{% endblock %}
+
+{% block content %}
+  <h1>Jobs</h1>
+  <p>Worker : <strong>{{ worker_status }}</strong></p>
+
+  <form method="post" action="/admin/jobs" class="jobs-form__declencher">
+    <label for="type">Déclencher un job</label>
+    <select id="type" name="type" required>
+      {% for job_type in allowed_job_types %}
+        <option value="{{ job_type }}">{{ job_type }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Lancer</button>
+  </form>
+
+  <table class="jobs-liste">
+    <thead>
+      <tr>
+        <th scope="col">Id</th>
+        <th scope="col">Type</th>
+        <th scope="col">Statut</th>
+        <th scope="col">Créé</th>
+        <th scope="col">Terminé</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+        <tr>
+          <td><a href="/admin/jobs/{{ job.id }}">{{ job.id }}</a></td>
+          <td>{{ job.type }}</td>
+          <td>{{ job.status }}</td>
+          <td>{{ job.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
+          <td>{{ job.finished_at.strftime("%d/%m/%Y %H:%M") if job.finished_at else "—" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

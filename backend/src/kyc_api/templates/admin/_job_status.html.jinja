@@ -2,7 +2,7 @@
 <div id="job-status" class="job-status job-status--{{ job.status }}">
 {% else %}
 <div id="job-status" class="job-status job-status--{{ job.status }}"
-     hx-get="/fragments/dev/jobs/{{ job.id }}"
+     hx-get="/admin/fragments/jobs/{{ job.id }}"
      hx-trigger="every 2s"
      hx-swap="outerHTML">
 {% endif %}

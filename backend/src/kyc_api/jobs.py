@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel
@@ -17,6 +18,17 @@ class Job(BaseModel):
     @property
     def is_finished(self) -> bool:
         return self.status in ("done", "failed", "cancelled")
+
+
+class JobSummary(BaseModel):
+    """Une ligne de la liste `/admin/jobs` (D3, livrable 8) : moins de champs que `Job`, pas de
+    suivi de progression en direct sur cette vue-là."""
+
+    id: int
+    type: str
+    status: str
+    created_at: datetime
+    finished_at: datetime | None
 
 
 async def create_job(pool: Queryable, *, type: str, payload: dict[str, Any] | None = None) -> int:
@@ -45,3 +57,16 @@ async def get_job(pool: Queryable, job_id: int) -> Job | None:
     if row is None:
         return None
     return Job(**dict(row))
+
+
+async def list_recent(pool: Queryable, *, limit: int = 50) -> list[JobSummary]:
+    rows = await pool.fetch(
+        """
+        SELECT id, type, status, created_at, finished_at
+        FROM job
+        ORDER BY created_at DESC, id DESC
+        LIMIT $1
+        """,
+        limit,
+    )
+    return [JobSummary(**dict(row)) for row in rows]

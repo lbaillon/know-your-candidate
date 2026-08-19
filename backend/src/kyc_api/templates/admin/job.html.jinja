@@ -1,0 +1,9 @@
+{% extends "admin/base_admin.html.jinja" %}
+
+{% block title %}Job #{{ job.id }} — back-office{% endblock %}
+
+{% block content %}
+  <h1>Job #{{ job.id }} ({{ job.type }})</h1>
+  {% include "admin/_job_status.html.jinja" %}
+  <p><a href="/admin/jobs">Retour à la liste des jobs</a></p>
+{% endblock %}

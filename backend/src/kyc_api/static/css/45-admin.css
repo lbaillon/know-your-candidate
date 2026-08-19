@@ -63,4 +63,33 @@
   .categorisation-form__passer {
     margin-top: var(--space-sm);
   }
+
+  /* Suivi de progression d'un job — écrit en phase 0, retiré des routes publiques en phase 1.1
+   * (F11, docs/plans/phase-1.1-fix.md), repris ici derrière le back-office (livrable 8). Règles
+   * inchangées depuis leur création, seulement déplacées de 40-components.css. */
+  .job-status {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+    border: 1px solid var(--color-border-strong);
+  }
+  .job-status__error {
+    color: var(--color-error);
+  }
+
+  .jobs-form__declencher {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: var(--space-md) 0;
+  }
+  .jobs-liste {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .jobs-liste th,
+  .jobs-liste td {
+    text-align: left;
+    padding: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+  }
 }

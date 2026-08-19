@@ -3,7 +3,9 @@ section « Authentification admin (D3.1) ». Un seul module, aucune requête ail
 """
 
 import json
+from datetime import UTC, datetime
 
+from kyc_api.config import settings
 from kyc_api.db import Queryable
 from kyc_api.schemas.admin import AdminUser
 
@@ -41,6 +43,17 @@ async def upsert_admin_user(
     )
     assert row is not None
     return AdminUser(**dict(row))
+
+
+async def get_worker_status(pool: Queryable) -> str:
+    """Même règle que `/healthz` (routers/health.py) : un worker éteint ne doit jamais faire
+    tomber le back-office, seulement le signaler sur le tableau de bord."""
+    last_seen_at = await pool.fetchval("SELECT max(last_seen_at) FROM worker_heartbeat")
+    if last_seen_at is None:
+        return "unknown"
+    assert isinstance(last_seen_at, datetime)
+    age = (datetime.now(UTC) - last_seen_at).total_seconds()
+    return "ok" if age <= settings.worker_stale_after_seconds else "stale"
 
 
 async def log_admin_action(
