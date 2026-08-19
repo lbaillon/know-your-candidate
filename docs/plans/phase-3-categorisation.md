@@ -61,6 +61,11 @@ passant par LR. La moyenne d'axe du camp « contre » est centriste par simple a
 direction sortie est juste, la séparation est mauvaise, et un chiffre qui ne dirait pas laquelle des deux
 il est serait un piège. D'où la colonne `separation` (D3.9).
 
+> **Corrigé à l'implémentation** (lot A, F1 — [phase-3.0-feedback.md](phase-3.0-feedback.md)) : calculé
+> tel qu'arbitré, ce scrutin a en réalité une séparation **élevée**, pas mauvaise — un seuil isole
+> exactement RN+UDR et classe la quasi-totalité des votants. Le récit ci-dessus reste comme trace de
+> l'intuition de départ ; voir le lien pour ce que la mesure dit réellement et pourquoi c'est correct.
+
 ## L'heuristique automatique
 
 Objectif : dégrossir. **Elle mesure une position, elle ne décide pas d'un thème** (D3.7) — parce qu'elle
@@ -607,6 +612,13 @@ pas de l'historique.
 
 `db/seeds/group_axis.toml` — 39 lignes, une par groupe parlementaire non-inscrit exclu, sur les
 législatures 15 à 17.
+
+> **Incomplet à l'implémentation** (lot A, F2 — [phase-3.0-feedback.md](phase-3.0-feedback.md)) : 40
+> lignes réellement trouvées en base (un écart d'une unité par rapport aux 39 comptés ici), mais la
+> grille des nuances 2026 elle-même n'a pas pu être vérifiée par une source primaire citable. Le fichier
+> livré porte les `an_uid`/`libelle` (vérifiés) et des champs de source vides sous bandeau `TODO`, exactement
+> la voie de repli prévue trois paragraphes plus bas. Le job refuse de charger le fichier tant que c'est
+> le cas — voir le lien pour le détail et le travail restant.
 
 ```toml
 version = "2026-08-nuances-2026"
