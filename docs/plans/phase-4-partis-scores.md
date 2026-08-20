@@ -462,6 +462,75 @@ charges ; il mérite son test nommé.
 4. `EXPLAIN (ANALYZE, BUFFERS)` sur la fiche personne enrichie et sur la page d'explication ;
 5. p50/p95 de rendu des deux routes — le seuil de 100 ms de la phase 2 s'applique.
 
+**Résultats, mesurés le 20/08/2026 sur la base réelle, à l'issue de la phase :**
+
+| Mesure | Résultat |
+| --- | --- |
+| Durée de `recompute_scores` sur le corpus complet | ~5-6 s (105 385 votes balayés, 69 856 lignes agrégées pour les mandats) |
+| Volume écrit | 55 866 `score_contribution`, 4 424 `person_theme_score` (7 thèmes éligibles), 225 `groupe_theme_score`, 12 914 `mandat_theme_score` |
+| Idempotence | deux exécutions consécutives produisent des compteurs et une empreinte de table identiques, sur les trois tables de score, run après run |
+| Personnes avec au moins une orientation | **1 030** (projection : 1 101 — écart attendu, la projection datait de la phase 3 sur un seuil légèrement différent) |
+| Distribution par nombre de thèmes | 1 thème : 102 · 2 : 125 · 3 : 172 · 4 : 178 · 5 : 93 · 6 : 141 · 7 (maximum, tous les thèmes éligibles) : 219 |
+| `EXPLAIN (ANALYZE, BUFFERS)`, fiche personne | après correctif (voir plus bas) : quelques index scans, 0,3 ms de temps d'exécution réel |
+| `EXPLAIN (ANALYZE, BUFFERS)`, page d'explication | quelques index scans, 0,3 ms |
+| p50 / p95, fiche personne | **9 ms / 11 ms** |
+| p50 / p95, page d'explication | **5 ms / 8 ms** |
+| p50 / p95, page groupe (bonus, non listée dans les seuils ci-dessus) | 3 ms / 4 ms |
+
+**Un correctif de performance a été nécessaire en cours de mesure**, pas seulement consigné après
+coup : la première mesure sur `GET /personne/{slug}` donnait p50 218 ms / p95 232 ms — **plus de
+deux fois le seuil**. `EXPLAIN (ANALYZE, BUFFERS)` a montré que la quasi-totalité du temps était de
+la compilation JIT, déclenchée parce que `get_person_orientations` joignait `theme` directement sur
+`jsonb_array_elements_text(...)`, que Postgres ne sait pas estimer (il suppose 100 lignes par
+défaut) — le coût estimé de la requête entière explosait à plusieurs centaines de millions alors
+qu'elle ne touche en réalité qu'une poignée de lignes. Corrigé en matérialisant d'abord la liste
+dans un tableau (`ARRAY(SELECT jsonb_array_elements_text(...))`) puis en joignant via `= ANY(...)`,
+que le planificateur sait estimer correctement ; `recompute_scores` `ANALYZE` désormais aussi les
+tables de score à la fin de chaque run, `score_run` étant trop petite pour qu'autovacuum la
+revisite spontanément. Résultat après correctif : la ligne p50/p95 ci-dessus, environ 25× sous le
+seuil plutôt que 2× au-dessus.
+
+**Un défaut d'affichage a aussi été trouvé et corrigé pendant la recette**, pas avant : les fiches
+de Bruno Retailleau et Nathalie Arthaud affichaient sept boîtes « données insuffisantes »
+identiques au lieu de la phrase unique expliquant pourquoi. `get_person_orientations` rend une
+ligne par thème éligible même à zéro contribution (c'est voulu, D4.7) : la liste n'est donc jamais
+vide dès qu'un run a des thèmes éligibles, ce qui est le cas normal, pas un cas limite. Le test qui
+aurait dû l'attraper testait un scénario sans aucun run de score, qui ne reproduit pas la situation
+réelle. Corrigé en distinguant « au moins une orientation avec une contribution réelle » de « la
+liste n'est pas vide », et un test de régression construit spécifiquement le cas (thèmes éligibles
+existants, personne à zéro contribution partout) plutôt que l'absence de run.
+
+**Recette sur les trois candidat·es qui ont des votes**, relue à la main :
+
+- **Marine Le Pen** (RN) — sécurité +0,47 (24 contributions, plutôt extension des pouvoirs de
+  police), environnement +0,28, institutions -0,37 (plutôt pouvoirs du Parlement et participation
+  citoyenne élargis). Défendable : le pôle sécuritaire est cohérent avec la ligne connue du parti.
+  Le signe côté institutions surprend un peu au premier regard (on attendrait plutôt une ligne
+  favorable à un exécutif fort côté RN), mais reste plausible scrutin par scrutin sans en avoir
+  relu le détail — exactement le genre d'écart qu'une relecture humaine devrait trancher, pas
+  cette recette.
+- **Gabriel Attal** (Renaissance) — sécurité +0,67 (14 contributions), social-fiscalité +0,45,
+  institutions -0,42. Le sécuritaire et le fiscal sont cohérents avec une ligne macroniste de
+  centre-droit. Le score institutions, comme pour Le Pen, va dans un sens qui n'est pas
+  l'intuition immédiate pour un ancien Premier ministre — même remarque, même réserve.
+- **Jean-Luc Mélenchon** (LFI) — sécurité -0,64 (plutôt libertés publiques et garanties
+  procédurales), institutions -0,59 (plutôt pouvoirs du Parlement), social-fiscalité -0,27. Les
+  trois sont directement cohérents avec la ligne LFI connue (6ᵉ République, libertés publiques).
+  Le plus défendable des trois, mais aussi construit sur le moins de contributions (5 par thème,
+  tout juste au-dessus du seuil) : l'incertitude affichée doit rester lisible en priorité ici.
+- **Désaccord à consigner** : le signe du thème institutions pour Le Pen et Attal ne correspond
+  pas à l'intuition de départ. Zéro catégorisation relue par un humain à ce stade (D4.1) : c'est
+  exactement le risque que ce plan nomme en tête de ses risques, pas une preuve d'erreur de
+  calcul — mais une bonne raison de prioriser la relecture humaine sur ce thème en particulier
+  avant toute communication publique de ces chiffres.
+
+**Retailleau et Arthaud** : les deux fiches disent maintenant, en toutes lettres, pourquoi elles
+sont vides — Retailleau (« aucun des votes de cette personne ne porte, pour l'instant, sur un
+scrutin catégorisé… ») parce que son unique vote est celui du Congrès, hors corpus ; Arthaud
+(« nous n'avons aucun mandat ni vote personnel… ») parce qu'elle n'a jamais siégé. Ni l'une ni
+l'autre n'affirme quoi que ce soit sur le monde, seulement sur les données (F2,
+[phase-2.1-fix.md](phase-2.1-fix.md)).
+
 ### Ordre des commits
 
 1. **Migration `0009_scores.sql`** seule, avec ses tests de contraintes.

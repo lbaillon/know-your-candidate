@@ -167,20 +167,37 @@ qu'elle vaut une relecture humaine ; il prétend qu'elle est traçable et corrig
 ## 6. Du vote au score
 
 Chaque scrutin catégorisé produit une contribution `(personne, thème, pôle, poids)`. Le score par thème
-est la moyenne pondérée de ces contributions, projetée sur l'axe.
+est la moyenne pondérée de ces contributions, projetée sur l'axe. La formule exacte, ses cas de test et
+ses décisions arbitrées vivent dans [phase-4-partis-scores.md](plans/phase-4-partis-scores.md) ; ce
+paragraphe en résume le principe et se met à jour quand elle change.
 
-- La pondération dépend du type de scrutin, de la position (abstention affaiblie) et de la confiance de la
-  catégorisation.
+- **Aucune pondération par type de scrutin (D4.11).** Le plan initial l'envisageait ; rien ne permet
+  d'affirmer qu'un scrutin solennel est plus révélateur qu'un scrutin ordinaire, et l'inventer serait
+  précisément le genre d'hypothèse que la mesure d'accord de la phase 3 a payée cher (voir
+  [phase-3.0-feedback.md](plans/phase-3.0-feedback.md), F9). La pondération dépend du poids du thème
+  dans le scrutin, de la confiance de la catégorisation, et de la **bipolarité** du scrutin — la part de
+  l'opposition venue des deux bords à la fois plutôt que d'un seul, qui dévalue les votes qui ne situent
+  personne (un budget rejeté à la fois par la gauche qui le juge insuffisant et la droite qui le juge
+  excessif, par exemple).
+- **Une abstention a un poids nul (D4.10), jamais faible.** Elle n'a pas de direction : lui en donner une,
+  même atténuée, tirerait mécaniquement les scores vers le centre sans que la donnée le soutienne.
+  L'abstention reste néanmoins conservée et affichée dans l'explication, avec la mention qu'elle n'entre
+  pas dans le calcul.
 - **En dessous d'un nombre minimal de contributions, aucun score n'est affiché.** On affiche
-  « données insuffisantes ». Trois votes ne font pas une orientation.
-- Le score d'un parti sur une période se calcule sur les votes de ses membres pendant cette période.
-- Le score affiché sur la fiche d'une personne pour un parti est celui du parti **restreint à la période
-  d'appartenance** de cette personne — c'est tout l'intérêt des `daterange`.
-- **Le score du parti ne se mélange jamais au score personnel.** Ils sont affichés côte à côte, jamais
+  « données insuffisantes » — avec le nombre réel de contributions, jamais une case vide. Trois votes ne
+  font pas une orientation.
+- **Seuls les groupes parlementaires sont scorés, jamais les partis (D4.8).** Le score d'un groupe sur
+  toute son existence se calcule sur les votes de tous ses membres ; celui affiché sur la fiche d'une
+  personne pour ce groupe est **restreint à la période de son propre mandat** dans ce groupe — c'est
+  tout l'intérêt des `daterange`. Aucune continuité n'est établie entre groupes successifs (LaREM /
+  Renaissance / Ensemble pour la République, par exemple) : c'est un choix éditorial que ce projet ne
+  fait pas ici.
+- **Le score du groupe ne se mélange jamais au score personnel.** Ils sont affichés côte à côte, jamais
   fusionnés en un chiffre unique.
 
-Quand un groupe s'est divisé sur un scrutin, l'information est conservée et affichée : c'est souvent plus
-intéressant qu'un score.
+Quand un groupe s'est divisé sur un scrutin, l'information est conservée et affichée via sa **cohésion**
+(part des votes du groupe alignés sur sa position majoritaire) : c'est souvent plus intéressant qu'un
+score seul.
 
 ## 7. Limites assumées, à afficher dans l'application
 
