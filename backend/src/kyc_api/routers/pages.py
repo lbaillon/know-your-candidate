@@ -82,6 +82,43 @@ async def person_detail(request: Request, slug: str, pool: Queryable = Depends(g
     )
 
 
+@router.get("/personne/{slug}/theme/{theme_slug}")
+async def person_theme_detail(
+    request: Request, slug: str, theme_slug: str, pool: Queryable = Depends(get_pool)
+):
+    """La page d'explication (D4, « L'explication est le produit ») : tous les scrutins
+    contributeurs d'une orientation, leur poids, la position votée. 404 si le thème n'est pas
+    éligible dans le run courant (D4.7) — il n'existe alors aucune contribution à montrer, pour
+    personne.
+    """
+    resolution = await persons_queries.resolve_slug(pool, slug)
+    if resolution is None:
+        raise HTTPException(status_code=404)
+    if not resolution.is_current:
+        return RedirectResponse(
+            url=f"/personne/{resolution.current_slug}/theme/{theme_slug}", status_code=301
+        )
+
+    person = await persons_queries.get_person_detail(pool, resolution.person_id)
+    if person is None:
+        raise HTTPException(status_code=404)
+
+    orientations = await scores_queries.get_person_orientations(pool, resolution.person_id)
+    orientation = next((o for o in orientations if o.theme.slug == theme_slug), None)
+    if orientation is None:
+        raise HTTPException(status_code=404)
+
+    contributions = await scores_queries.get_person_theme_contributions(
+        pool, resolution.person_id, orientation.theme.id
+    )
+
+    return templates.TemplateResponse(
+        request,
+        "person_theme.html.jinja",
+        {"person": person, "orientation": orientation, "contributions": contributions},
+    )
+
+
 @router.get("/personne/{slug}/votes")
 async def person_votes(
     request: Request,

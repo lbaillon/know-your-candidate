@@ -565,6 +565,23 @@
     transform: translate(-50%, -50%);
   }
 
+  /* Page d'explication (D4, « L'explication est le produit ») : sur le même modèle que
+   * .categorisation-liste. */
+  .contribution-liste {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-lg);
+  }
+  .contribution-liste__item {
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .contribution-liste__meta {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
   .categorisation-liste__methode {
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);

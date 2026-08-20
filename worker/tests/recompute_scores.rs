@@ -646,6 +646,110 @@ async fn the_materialized_views_only_reflect_the_current_run(pool: PgPool) {
     );
 }
 
+/// Test de recette nommé (plan phase 4, « Stratégie de test ») : le cas du cahier des charges.
+/// Une personne siège au PS de 2015 à 2018, puis à LFI de 2018 à aujourd'hui — deux mandats de
+/// groupe successifs, chacun avec ses propres scrutins catégorisés. Le score de mandat restreint
+/// à chaque période (D4.12) doit refléter *ce que le groupe a voté pendant cette période
+/// précisément*, pas un mélange des deux : c'est tout l'intérêt des `daterange`.
+#[sqlx::test(migrations = "../db/migrations")]
+async fn cahier_des_charges_ps_to_lfi_gives_distinct_scores_per_mandat_period(pool: PgPool) {
+    let theme_id = insert_theme(&pool, "social-fiscalite").await;
+    let author_id = insert_admin_user(&pool).await;
+    let person_id = insert_person(&pool, "PA-ELUE").await;
+    let organe_ps = insert_organe(&pool, "PO-PS", false).await;
+    let organe_lfi = insert_organe(&pool, "PO-LFI", false).await;
+    insert_group_axis(&pool, "v1").await;
+    set_parametres(&pool, 1, 1).await;
+
+    let mandat_ps = insert_mandat(
+        &pool,
+        "MDT-PS",
+        person_id,
+        organe_ps,
+        NaiveDate::from_ymd_opt(2015, 6, 17).unwrap(),
+        Some(NaiveDate::from_ymd_opt(2018, 6, 18).unwrap()),
+    )
+    .await;
+    let mandat_lfi = insert_mandat(
+        &pool,
+        "MDT-LFI",
+        person_id,
+        organe_lfi,
+        NaiveDate::from_ymd_opt(2018, 6, 18).unwrap(),
+        None,
+    )
+    .await;
+
+    // Cinq scrutins pendant la période PS : le groupe vote pour, à l'unanimité, sur un axe
+    // orienté +0.6 — c'est ce qui doit ressortir du score de mandat PS, et de lui seul.
+    for i in 0..5 {
+        let scrutin_id = insert_scrutin(
+            &pool,
+            &format!("SC-PS-{i}"),
+            i,
+            NaiveDate::from_ymd_opt(2016, 1, 1).unwrap()
+                + chrono::Duration::days(i64::from(i) * 30),
+        )
+        .await;
+        insert_scrutin_label(&pool, scrutin_id, theme_id, 0.600, 1.000, 1.000, author_id).await;
+        insert_estimate(&pool, scrutin_id, "v1", 0.0).await;
+        insert_scrutin_groupe(&pool, scrutin_id, 1, organe_ps, 100, 0).await;
+    }
+
+    // Cinq scrutins pendant la période LFI : le groupe vote pour, à l'unanimité, sur un axe
+    // orienté -0.6 cette fois — un signe opposé, pour que le test attrape un mélange des deux
+    // périodes aussi bien qu'un signe inversé.
+    for i in 0..5 {
+        let scrutin_id = insert_scrutin(
+            &pool,
+            &format!("SC-LFI-{i}"),
+            i,
+            NaiveDate::from_ymd_opt(2019, 1, 1).unwrap()
+                + chrono::Duration::days(i64::from(i) * 30),
+        )
+        .await;
+        insert_scrutin_label(&pool, scrutin_id, theme_id, -0.600, 1.000, 1.000, author_id).await;
+        insert_estimate(&pool, scrutin_id, "v1", 0.0).await;
+        insert_scrutin_groupe(&pool, scrutin_id, 1, organe_lfi, 100, 0).await;
+    }
+
+    recompute_scores::recompute(&pool).await.unwrap();
+
+    let ps_row = sqlx::query!(
+        "SELECT score::float8 AS \"score!\", cohesion::float8 AS \"cohesion!\", contributions
+         FROM mandat_theme_score WHERE mandat_id = $1 AND theme_id = $2",
+        mandat_ps,
+        theme_id,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(
+        (ps_row.score - 0.6).abs() < 1e-9,
+        "score PS attendu +0.60, obtenu {}",
+        ps_row.score
+    );
+    assert!((ps_row.cohesion - 1.0).abs() < 1e-9);
+    assert_eq!(ps_row.contributions, 500, "5 scrutins x 100 votants pour");
+
+    let lfi_row = sqlx::query!(
+        "SELECT score::float8 AS \"score!\", cohesion::float8 AS \"cohesion!\", contributions
+         FROM mandat_theme_score WHERE mandat_id = $1 AND theme_id = $2",
+        mandat_lfi,
+        theme_id,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(
+        (lfi_row.score - (-0.6)).abs() < 1e-9,
+        "score LFI attendu -0.60, obtenu {}",
+        lfi_row.score
+    );
+    assert!((lfi_row.cohesion - 1.0).abs() < 1e-9);
+    assert_eq!(lfi_row.contributions, 500);
+}
+
 /// Empreinte du run courant sur les trois tables de score, indépendante de l'ordre des lignes ou du
 /// `run_id` lui-même (deux runs différents doivent pouvoir produire la même empreinte).
 async fn fingerprint(pool: &PgPool) -> Vec<String> {

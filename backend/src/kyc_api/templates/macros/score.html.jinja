@@ -13,7 +13,7 @@
 {# Une orientation personnelle (D4.3) : le pôle nommé avant le chiffre, le curseur, et le niveau
    de preuve — jamais l'un sans les autres (D4.1). Sous le seuil de contributions, on rend
    « données insuffisantes » et le compte réel, jamais un curseur vide (D4.2). #}
-{% macro person_orientation(orientation, person_slug) %}
+{% macro person_orientation(orientation, person_slug, show_link=true) %}
 <article class="orientation" aria-labelledby="orientation-{{ orientation.theme.slug }}">
   <h3 id="orientation-{{ orientation.theme.slug }}">{{ orientation.theme.libelle }}</h3>
   {% if orientation.seuil_atteint %}
@@ -33,9 +33,11 @@
         · {{ orientation.abstentions }} abstention{{ 's' if orientation.abstentions != 1 else '' }} écartée{{ 's' if orientation.abstentions != 1 else '' }} du calcul
       {%- endif -%}
     </p>
-    <a href="/personne/{{ person_slug }}/theme/{{ orientation.theme.slug }}">
-      Voir les {{ orientation.contributions }} scrutin{{ 's' if orientation.contributions != 1 else '' }} et le détail du calcul
-    </a>
+    {% if show_link %}
+      <a href="/personne/{{ person_slug }}/theme/{{ orientation.theme.slug }}">
+        Voir les {{ orientation.contributions }} scrutin{{ 's' if orientation.contributions != 1 else '' }} et le détail du calcul
+      </a>
+    {% endif %}
   {% else %}
     <p class="orientation__insuffisant empty-state">
       {{ orientation_insuffisant_label(contributions=orientation.contributions) }}

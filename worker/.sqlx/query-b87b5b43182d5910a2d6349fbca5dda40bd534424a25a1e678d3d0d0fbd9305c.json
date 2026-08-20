@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT score::float8 AS \"score!\", cohesion::float8 AS \"cohesion!\", contributions\n         FROM mandat_theme_score WHERE mandat_id = $1 AND theme_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "score!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "cohesion!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "contributions",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "mandat_theme_score",
+            "name": "contributions"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "b87b5b43182d5910a2d6349fbca5dda40bd534424a25a1e678d3d0d0fbd9305c"
+}

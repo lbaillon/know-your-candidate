@@ -1,0 +1,30 @@
+{% extends "base.html.jinja" %}
+{% from "macros/score.html.jinja" import person_orientation %}
+
+{% block title %}{{ orientation.theme.libelle }} — {{ display_name(person.prenom, person.nom) }} — Know Your Candidate{% endblock %}
+
+{% block content %}
+  <article class="person-theme">
+    <p><a href="/personne/{{ person.slug }}">&larr; Retour à la fiche de {{ display_name(person.prenom, person.nom) }}</a></p>
+    <h1>{{ orientation.theme.libelle }} — {{ display_name(person.prenom, person.nom) }}</h1>
+
+    {{ person_orientation(orientation, person.slug, show_link=false) }}
+
+    <h2 id="scrutins-titre">Notamment parce que :</h2>
+    <ul class="contribution-liste" aria-labelledby="scrutins-titre">
+      {% for c in contributions %}
+        <li class="contribution-liste__item">
+          <a href="/scrutin/{{ c.legislature }}/{{ c.numero }}">{{ c.titre }}</a>
+          <p class="contribution-liste__meta">
+            {{ c.date_scrutin.strftime("%d/%m/%Y") }} — {{ vote_position_label(c.position) }}
+            {%- if c.apport is none %} <em>(n'entre pas dans le calcul)</em>
+            {%- else %} — apport {{ '%+.2f' % c.apport }}, poids {{ '%.3f' % c.poids }}
+            {%- endif -%}
+          </p>
+        </li>
+      {% else %}
+        <li class="empty-state">Aucun scrutin contributeur.</li>
+      {% endfor %}
+    </ul>
+  </article>
+{% endblock %}
