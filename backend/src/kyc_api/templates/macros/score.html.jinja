@@ -1,0 +1,45 @@
+{% macro _cursor(score, incertitude=none) %}
+  {% set pct = ((score + 1) / 2 * 100) %}
+  <div class="score-cursor__piste" role="img" aria-label="position {{ '%+.2f' % score }} sur l'axe">
+    {% if incertitude %}
+      {% set demi_largeur = (incertitude / 2 * 100) %}
+      <div class="score-cursor__incertitude"
+           style="left: {{ [pct - demi_largeur, 0] | max }}%; right: {{ [100 - pct - demi_largeur, 0] | max }}%;"></div>
+    {% endif %}
+    <div class="score-cursor__pointeau" style="left: {{ pct }}%;"></div>
+  </div>
+{% endmacro %}
+
+{# Une orientation personnelle (D4.3) : le pôle nommé avant le chiffre, le curseur, et le niveau
+   de preuve — jamais l'un sans les autres (D4.1). Sous le seuil de contributions, on rend
+   « données insuffisantes » et le compte réel, jamais un curseur vide (D4.2). #}
+{% macro person_orientation(orientation, person_slug) %}
+<article class="orientation" aria-labelledby="orientation-{{ orientation.theme.slug }}">
+  <h3 id="orientation-{{ orientation.theme.slug }}">{{ orientation.theme.libelle }}</h3>
+  {% if orientation.seuil_atteint %}
+    <p class="orientation__valeur">
+      {{ orientation_label(score=orientation.score, libelle_pole_negatif=orientation.theme.libelle_pole_negatif, libelle_pole_positif=orientation.theme.libelle_pole_positif) }}
+    </p>
+    <div class="score-cursor">
+      <div class="score-cursor__poles">
+        <span>{{ orientation.theme.libelle_pole_negatif }}</span>
+        <span>{{ orientation.theme.libelle_pole_positif }}</span>
+      </div>
+      {{ _cursor(orientation.score, orientation.incertitude) }}
+    </div>
+    <p class="orientation__preuve">
+      {{ orientation_preuve_label(contributions=orientation.contributions, relues=orientation.relues) }}
+      {%- if orientation.abstentions %}
+        · {{ orientation.abstentions }} abstention{{ 's' if orientation.abstentions != 1 else '' }} écartée{{ 's' if orientation.abstentions != 1 else '' }} du calcul
+      {%- endif -%}
+    </p>
+    <a href="/personne/{{ person_slug }}/theme/{{ orientation.theme.slug }}">
+      Voir les {{ orientation.contributions }} scrutin{{ 's' if orientation.contributions != 1 else '' }} et le détail du calcul
+    </a>
+  {% else %}
+    <p class="orientation__insuffisant empty-state">
+      {{ orientation_insuffisant_label(contributions=orientation.contributions) }}
+    </p>
+  {% endif %}
+</article>
+{% endmacro %}

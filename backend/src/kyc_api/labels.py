@@ -125,6 +125,61 @@ def categorisation_position_label(
     return f"plutôt : {pole} (position {position_pour:+.1f} sur l'axe {theme_libelle})"
 
 
+def orientation_label(*, score: float, libelle_pole_negatif: str, libelle_pole_positif: str) -> str:
+    """Le pôle est nommé avant le chiffre, toujours (D4.3, plan phase 4) — jamais un score affiché
+    seul. Même règle que `categorisation_position_label`, appliquée cette fois à un score plutôt
+    qu'à une catégorisation individuelle.
+    """
+    pole = libelle_pole_positif if score >= 0 else libelle_pole_negatif
+    return f"plutôt {pole} ({score:+.2f})"
+
+
+def orientation_preuve_label(*, contributions: int, relues: int) -> str:
+    """Le niveau de preuve accompagne toujours une orientation affichée (D4.1) : nombre de
+    scrutins et part relue par un humain — surtout quand cette part vaut zéro, ce qui est le cas
+    de toutes les catégorisations aujourd'hui.
+    """
+    scrutin_txt = f"{contributions} scrutin{'s' if contributions != 1 else ''}"
+    if relues == 0:
+        return f"{scrutin_txt} — aucune de ces catégorisations n'a encore été relue par un humain"
+    relu_txt = f"{relues} relu{'s' if relues != 1 else ''}"
+    return f"{scrutin_txt}, dont {relu_txt} par un humain"
+
+
+def orientation_insuffisant_label(*, contributions: int) -> str:
+    """Sous le seuil de contributions (D4.2), on écrit « données insuffisantes » accompagné du
+    compte réel — jamais un zéro nu, jamais une case vide.
+    """
+    if contributions == 0:
+        return "données insuffisantes : aucun vote exploitable sur ce thème pour l'instant"
+    scrutin_txt = f"{contributions} scrutin{'s' if contributions != 1 else ''}"
+    suffixe = "s" if contributions != 1 else ""
+    return f"données insuffisantes : seulement {scrutin_txt} exploitable{suffixe}"
+
+
+# Jamais « n'a jamais siégé » : c'est une affirmation sur le monde que l'absence de données ne
+# soutient pas (F2, docs/plans/phase-2.1-fix.md — le cas Retailleau y est déjà documenté : zéro
+# mandat en base ne prouvait pas zéro mandat réel, l'un tombait juste avant la fenêtre du
+# référentiel). On nomme la couverture réelle, jamais une conclusion sur la personne.
+NO_ORIENTATIONS_NEVER_SAT_LABEL = (
+    "Nous n'avons aucun mandat ni vote personnel pour cette personne. Notre corpus ne couvre que "
+    "les scrutins de l'Assemblée nationale, législatures 15 à 17 (depuis 2017) ; un mandat ou un "
+    "vote antérieur n'y figurerait pas, et nous ne pouvons donc calculer aucun score."
+)
+
+NO_ORIENTATIONS_UNCATEGORIZED_LABEL = (
+    "Aucun des votes de cette personne ne porte, pour l'instant, sur un scrutin catégorisé de "
+    "manière à produire un score. Notre corpus ne couvre que les scrutins publics de l'Assemblée "
+    "nationale (législatures 15 à 17) — un vote au Sénat, au Parlement européen, ou au Congrès du "
+    "Parlement n'y entre jamais."
+)
+
+
+def cohesion_label(*, cohesion: float) -> str:
+    """D4.4 : la cohésion se lit à côté du score, jamais fusionnée avec lui."""
+    return f"cohésion : {cohesion:.0%} des voix du groupe alignées sur sa position majoritaire"
+
+
 def categorisation_method_label(
     *,
     method: str,

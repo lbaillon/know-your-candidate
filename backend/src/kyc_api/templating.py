@@ -6,13 +6,19 @@ from fastapi.templating import Jinja2Templates
 from kyc_api.labels import (
     CONGRES_LABEL,
     MISE_AU_POINT_RESULTAT_INCHANGE,
+    NO_ORIENTATIONS_NEVER_SAT_LABEL,
+    NO_ORIENTATIONS_UNCATEGORIZED_LABEL,
     NON_INSCRIT_LABEL,
     PAR_DELEGATION_LABEL,
     PISTE_TITLES,
     candidate_statut_label,
     categorisation_method_label,
     categorisation_position_label,
+    cohesion_label,
     mise_au_point_label,
+    orientation_insuffisant_label,
+    orientation_label,
+    orientation_preuve_label,
     vote_position_label,
 )
 from kyc_api.photos import thumbnail_url
@@ -44,3 +50,9 @@ _env_globals["mise_au_point_label"] = mise_au_point_label
 _env_globals["MISE_AU_POINT_RESULTAT_INCHANGE"] = MISE_AU_POINT_RESULTAT_INCHANGE
 _env_globals["categorisation_position_label"] = categorisation_position_label
 _env_globals["categorisation_method_label"] = categorisation_method_label
+_env_globals["orientation_label"] = orientation_label
+_env_globals["orientation_preuve_label"] = orientation_preuve_label
+_env_globals["orientation_insuffisant_label"] = orientation_insuffisant_label
+_env_globals["cohesion_label"] = cohesion_label
+_env_globals["NO_ORIENTATIONS_NEVER_SAT_LABEL"] = NO_ORIENTATIONS_NEVER_SAT_LABEL
+_env_globals["NO_ORIENTATIONS_UNCATEGORIZED_LABEL"] = NO_ORIENTATIONS_UNCATEGORIZED_LABEL

@@ -513,6 +513,58 @@
     font-weight: 700;
     margin-bottom: 0;
   }
+  /* Curseur de score public (D4.3) : piste neutre non remplie, pôles nommés à chaque extrémité,
+   * un unique pointeau coloré par --color-accent, bande d'incertitude centrée sur le pointeau.
+   * Pas de dégradé rouge/bleu ni aucune autre couleur politique ici (D2.11 reste entière sur les
+   * pages publiques ; le curseur coloré du back-office, D3.21, est la seule exception assumée,
+   * et n'en sort pas — hors périmètre de la phase 4).
+   */
+  .orientation {
+    margin-top: var(--space-lg);
+  }
+  .orientation__valeur {
+    font-weight: 700;
+    margin-bottom: 0;
+  }
+  .orientation__preuve {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-top: var(--space-xs);
+  }
+  .score-cursor {
+    margin-top: var(--space-sm);
+    max-width: 28rem;
+  }
+  .score-cursor__poles {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-xs);
+  }
+  .score-cursor__piste {
+    position: relative;
+    height: 0.5rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+  }
+  .score-cursor__incertitude {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: var(--color-border-strong);
+    opacity: 0.35;
+  }
+  .score-cursor__pointeau {
+    position: absolute;
+    top: 50%;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background: var(--color-accent);
+    transform: translate(-50%, -50%);
+  }
+
   .categorisation-liste__methode {
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);

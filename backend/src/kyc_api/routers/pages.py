@@ -11,6 +11,7 @@ from kyc_api.documents import render_document
 from kyc_api.queries import candidates as candidates_queries
 from kyc_api.queries import labels as labels_queries
 from kyc_api.queries import persons as persons_queries
+from kyc_api.queries import scores as scores_queries
 from kyc_api.queries import scrutins as scrutins_queries
 from kyc_api.queries import themes as themes_queries
 from kyc_api.templating import templates
@@ -62,6 +63,7 @@ async def person_detail(request: Request, slug: str, pool: Queryable = Depends(g
     segments = await persons_queries.get_timeline_segments(pool, resolution.person_id)
     timeline = build_timeline(segments, today=date.today())
     recent_votes = await persons_queries.get_recent_votes(pool, resolution.person_id)
+    orientations = await scores_queries.get_person_orientations(pool, resolution.person_id)
 
     return templates.TemplateResponse(
         request,
@@ -70,6 +72,12 @@ async def person_detail(request: Request, slug: str, pool: Queryable = Depends(g
             "person": person,
             "timeline": timeline,
             "recent_votes": recent_votes,
+            "orientations": orientations,
+            # La personne a-t-elle jamais siégé (fiche vide "jamais vu de vote") ou a-t-elle des
+            # votes qui, simplement, ne portent pas encore sur un scrutin catégorisé ? Les deux
+            # cas exigent une phrase différente (plan phase 4, cas Retailleau) : `recent_votes`
+            # n'est pas tronqué à zéro, seulement à dix, donc sa non-vacuité suffit à trancher.
+            "a_des_votes": len(recent_votes) > 0,
         },
     )
 

@@ -2,6 +2,7 @@
 {% from "macros/timeline.html.jinja" import timeline_view %}
 {% from "macros/vote.html.jinja" import vote_item %}
 {% from "macros/source.html.jinja" import source_note %}
+{% from "macros/score.html.jinja" import person_orientation %}
 
 {% block title %}{{ display_name(person.prenom, person.nom) }} — Know Your Candidate{% endblock %}
 
@@ -59,10 +60,15 @@
 
     <section class="person-detail__orientations" aria-labelledby="orientations-titre">
       <h2 id="orientations-titre">Orientations</h2>
-      <p class="empty-state">
-        Les orientations thématiques de cette personne ne sont pas encore calculées : cette
-        fonctionnalité arrive en phase 4 — voir <a href="/methodologie">la méthodologie</a>.
-      </p>
+      {% if orientations %}
+        {% for orientation in orientations %}
+          {{ person_orientation(orientation, person.slug) }}
+        {% endfor %}
+      {% elif a_des_votes %}
+        <p class="empty-state">{{ NO_ORIENTATIONS_UNCATEGORIZED_LABEL }}</p>
+      {% else %}
+        <p class="empty-state">{{ NO_ORIENTATIONS_NEVER_SAT_LABEL }}</p>
+      {% endif %}
     </section>
   </article>
 {% endblock %}

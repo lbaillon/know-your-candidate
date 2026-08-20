@@ -97,18 +97,6 @@ async def test_a_person_with_an_uid_but_no_mandate_or_vote_gets_our_coverage_too
     assert "Nous n'avons aucun vote personnel" in response.text
 
 
-async def test_the_orientations_zone_always_shows_the_phase_4_placeholder(
-    client: AsyncClient, db_conn: asyncpg.Connection
-) -> None:
-    person_id = await factories.insert_person(db_conn, an_uid="PA1", prenom="Jean", nom="Dupont")
-    await factories.insert_slug(db_conn, person_id=person_id, slug="jean-dupont")
-    await factories.refresh_person_apercu(db_conn)
-
-    response = await client.get("/personne/jean-dupont")
-
-    assert "phase 4" in response.text
-
-
 async def test_a_person_who_sat_but_has_no_vote_gets_a_different_empty_state(
     client: AsyncClient, db_conn: asyncpg.Connection
 ) -> None:
