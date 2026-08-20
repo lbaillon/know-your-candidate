@@ -78,6 +78,11 @@ async def person_detail(request: Request, slug: str, pool: Queryable = Depends(g
             "timeline": timeline,
             "recent_votes": recent_votes,
             "orientations": orientations,
+            # `orientations` porte une ligne par thème éligible (D4.7), même à zéro contribution
+            # (cas Retailleau/Arthaud, F du cahier des charges) : sa non-vacuité ne dit donc rien.
+            # Ce qui distingue « rien à afficher pour cette personne » d'« au moins une orientation
+            # à afficher » est le compte réel de contributions, pas la longueur de la liste.
+            "a_au_moins_une_contribution": any(o.contributions > 0 for o in orientations),
             "mandat_groups": mandat_groups,
             # La personne a-t-elle jamais siégé (fiche vide "jamais vu de vote") ou a-t-elle des
             # votes qui, simplement, ne portent pas encore sur un scrutin catégorisé ? Les deux

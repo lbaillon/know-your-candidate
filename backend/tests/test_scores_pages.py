@@ -126,6 +126,30 @@ async def test_below_threshold_shows_insufficient_data_with_the_real_count(
     assert "score-cursor" not in response.text
 
 
+async def test_a_person_with_zero_contributions_on_every_eligible_theme_gets_one_message_not_seven(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    """Régression : le cas réel Retailleau/Arthaud. `get_person_orientations` rend une ligne par
+    thème éligible même à zéro contribution (D4.7), donc la liste n'est jamais vide dès qu'un run
+    a des thèmes éligibles — la véracité de la liste ne suffit pas à distinguer « rien pour cette
+    personne » de « quelque chose pour elle ». Sans ce test, la fiche affichait sept boîtes
+    « données insuffisantes » identiques au lieu de la phrase unique qui dit pourquoi.
+    """
+    theme_a = await factories.insert_theme(db_conn, slug="social-fiscalite", rang=1)
+    theme_b = await factories.insert_theme(db_conn, slug="securite", rang=2)
+    person_id = await factories.insert_person(db_conn, an_uid="PA1")
+    await factories.insert_slug(db_conn, person_id=person_id, slug="candidat-vide")
+    # Un run avec des thèmes éligibles existe (le cas normal une fois la phase 4 en service), mais
+    # cette personne n'a littéralement aucune contribution dessus.
+    await factories.insert_score_run(db_conn, eligible_theme_ids=[theme_a, theme_b])
+
+    response = await client.get("/personne/candidat-vide")
+
+    assert response.status_code == 200
+    assert response.text.count("données insuffisantes") == 0
+    assert "Notre corpus ne couvre que les scrutins de l'Assemblée nationale" in response.text
+
+
 async def test_a_person_with_no_mandate_or_vote_gets_our_coverage_not_a_claim_about_the_world(
     client: AsyncClient, db_conn: asyncpg.Connection
 ) -> None:

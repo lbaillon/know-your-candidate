@@ -60,7 +60,7 @@
 
     <section class="person-detail__orientations" aria-labelledby="orientations-titre">
       <h2 id="orientations-titre">Orientations</h2>
-      {% if orientations %}
+      {% if a_au_moins_une_contribution %}
         {% for orientation in orientations %}
           {{ person_orientation(orientation, person.slug) }}
         {% endfor %}
