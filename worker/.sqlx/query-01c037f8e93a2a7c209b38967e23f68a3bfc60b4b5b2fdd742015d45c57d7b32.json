@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE scrutin_label SET position_pour = -0.600 WHERE scrutin_id = $1 AND theme_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "01c037f8e93a2a7c209b38967e23f68a3bfc60b4b5b2fdd742015d45c57d7b32"
+}

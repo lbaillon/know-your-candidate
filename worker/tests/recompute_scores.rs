@@ -558,6 +558,94 @@ async fn two_consecutive_runs_produce_identical_scores(pool: PgPool) {
     assert_eq!(mandat_rows, 1);
 }
 
+#[sqlx::test(migrations = "../db/migrations")]
+async fn the_materialized_views_only_reflect_the_current_run(pool: PgPool) {
+    let theme_id = insert_theme(&pool, "theme-a").await;
+    let author_id = insert_admin_user(&pool).await;
+    let person_id = insert_person(&pool, "PA1").await;
+    let organe_id = insert_organe(&pool, "PO1", false).await;
+    insert_group_axis(&pool, "v1").await;
+    set_parametres(&pool, 1, 1).await;
+
+    let mandat_id = insert_mandat(
+        &pool,
+        "MDT1",
+        person_id,
+        organe_id,
+        NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
+        None,
+    )
+    .await;
+
+    let scrutins = seed_categorized_scrutins(
+        &pool,
+        theme_id,
+        author_id,
+        "v1",
+        1,
+        NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
+    )
+    .await;
+    insert_vote(&pool, scrutins[0], person_id, "pour", Some(organe_id)).await;
+    insert_scrutin_groupe(&pool, scrutins[0], 1, organe_id, 10, 0).await;
+
+    recompute_scores::recompute(&pool).await.unwrap();
+
+    let person_view_score: f64 = sqlx::query_scalar!(
+        "SELECT score::float8 AS \"score!\" FROM person_theme_score_courant WHERE person_id = $1 AND theme_id = $2",
+        person_id,
+        theme_id,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!((person_view_score - 0.6).abs() < 1e-9);
+
+    let mandat_view_score: f64 = sqlx::query_scalar!(
+        "SELECT score::float8 AS \"score!\" FROM mandat_theme_score_courant WHERE mandat_id = $1 AND theme_id = $2",
+        mandat_id,
+        theme_id,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!((mandat_view_score - 0.6).abs() < 1e-9);
+
+    // Un second run avec un score différent doit remplacer, pas s'ajouter à, la vue.
+    sqlx::query!(
+        "UPDATE scrutin_label SET position_pour = -0.600 WHERE scrutin_id = $1 AND theme_id = $2",
+        scrutins[0],
+        theme_id,
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    recompute_scores::recompute(&pool).await.unwrap();
+
+    let refreshed_score: f64 = sqlx::query_scalar!(
+        "SELECT score::float8 AS \"score!\" FROM person_theme_score_courant WHERE person_id = $1 AND theme_id = $2",
+        person_id,
+        theme_id,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!((refreshed_score - (-0.6)).abs() < 1e-9);
+
+    let total_rows: i64 = sqlx::query_scalar!(
+        "SELECT count(*) AS \"count!\" FROM person_theme_score_courant WHERE person_id = $1 AND theme_id = $2",
+        person_id,
+        theme_id,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        total_rows, 1,
+        "la vue ne porte qu'une ligne par (personne, thème) : la précédente est remplacée"
+    );
+}
+
 /// Empreinte du run courant sur les trois tables de score, indépendante de l'ordre des lignes ou du
 /// `run_id` lui-même (deux runs différents doivent pouvoir produire la même empreinte).
 async fn fingerprint(pool: &PgPool) -> Vec<String> {

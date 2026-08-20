@@ -161,8 +161,22 @@ pub async fn recompute(pool: &PgPool) -> anyhow::Result<Value> {
     .execute(pool)
     .await?;
 
+    // Migration 0010 : les vues de lecture ne portent que le run courant. `CONCURRENTLY` exige
+    // l'index unique posé par cette même migration et ne s'exécute pas dans une transaction —
+    // aucune n'est ouverte ici, comme le reste de ce job (voir refresh_views.rs).
+    sqlx::query!(r#"REFRESH MATERIALIZED VIEW CONCURRENTLY person_theme_score_courant"#)
+        .execute(pool)
+        .await?;
+    sqlx::query!(r#"REFRESH MATERIALIZED VIEW CONCURRENTLY mandat_theme_score_courant"#)
+        .execute(pool)
+        .await?;
+
     let counters = serde_json::json!({
         "themes_eligibles": eligible_themes.len(),
+        // Le backend lit cette liste pour savoir quels thèmes afficher (« données insuffisantes »
+        // vs. absent) sans redéfinir le seuil D4.7 côté Python : l'éligibilité gelée par CE run,
+        // pas recalculée contre la valeur *actuelle* de score_parametre qui a pu changer depuis.
+        "themes_eligibles_ids": eligible_themes,
         "score_contribution_ecrites": contributions_written,
         "person_theme_score_ecrites": person_scores_written,
         "groupe_theme_score_ecrites": groupe_scores_written,

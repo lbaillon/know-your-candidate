@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT score::float8 AS \"score!\" FROM mandat_theme_score_courant WHERE mandat_id = $1 AND theme_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "score!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "95a7e99cfa52783445f6b23e1e284ad764074f5ad99d195471e03d517a3bd41f"
+}

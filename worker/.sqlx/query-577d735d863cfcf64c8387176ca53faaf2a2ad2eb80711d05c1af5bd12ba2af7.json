@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "REFRESH MATERIALIZED VIEW CONCURRENTLY person_theme_score_courant",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "577d735d863cfcf64c8387176ca53faaf2a2ad2eb80711d05c1af5bd12ba2af7"
+}
