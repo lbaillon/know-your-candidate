@@ -1,0 +1,27 @@
+{% extends "base.html.jinja" %}
+{% from "macros/score.html.jinja" import groupe_orientation %}
+
+{% block title %}{{ organe.libelle }} — Know Your Candidate{% endblock %}
+
+{% block content %}
+  <article class="groupe-detail">
+    <h1>{{ organe.libelle }}</h1>
+    {% if organe.legislature %}
+      <p class="groupe-detail__meta">{{ organe.legislature }}e législature</p>
+    {% endif %}
+
+    <section aria-labelledby="orientations-titre">
+      <h2 id="orientations-titre">Orientations</h2>
+      {% if orientations %}
+        {% for orientation in orientations %}
+          {{ groupe_orientation(orientation) }}
+        {% endfor %}
+      {% else %}
+        <p class="empty-state">
+          Aucune orientation calculée pour ce groupe pour l'instant — voir
+          <a href="/methodologie">la méthodologie</a>.
+        </p>
+      {% endif %}
+    </section>
+  </article>
+{% endblock %}

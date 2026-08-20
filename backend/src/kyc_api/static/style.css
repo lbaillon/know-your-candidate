@@ -352,8 +352,17 @@
   }
   .person-detail__timeline,
   .person-detail__votes,
-  .person-detail__orientations {
+  .person-detail__orientations,
+  .person-detail__groupes {
     margin-top: var(--space-xl);
+  }
+  .mandat-orientations {
+    margin-top: var(--space-lg);
+  }
+  .mandat-orientations .orientation {
+    margin-top: var(--space-md);
+    padding-left: var(--space-md);
+    border-left: 2px solid var(--color-border);
   }
 
   /* La frise (D2.7) : chaque piste est son propre `<ol>` en grille CSS, alignée sur la même
@@ -563,6 +572,10 @@
     border-radius: 50%;
     background: var(--color-accent);
     transform: translate(-50%, -50%);
+  }
+
+  .groupe-detail__meta {
+    color: var(--color-text-muted);
   }
 
   /* Page d'explication (D4, « L'explication est le produit ») : sur le même modèle que

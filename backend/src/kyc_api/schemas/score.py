@@ -71,3 +71,16 @@ class GroupeOrientation(BaseModel):
     cohesion: float
     contributions: int
     membres: int
+
+
+class MandatOrientationGroup(BaseModel):
+    """Toutes les orientations de groupe d'un même mandat, repliées pour l'affichage — un bloc par
+    mandat sur la fiche personne (D4.12).
+    """
+
+    organe_an_uid: str
+    organe_libelle: str
+    organe_libelle_abrege: str | None
+    debut: date
+    fin: date | None
+    orientations: list[MandatOrientation]

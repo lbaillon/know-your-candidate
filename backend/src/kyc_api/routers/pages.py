@@ -10,6 +10,7 @@ from kyc_api.db import Queryable, get_pool
 from kyc_api.documents import render_document
 from kyc_api.queries import candidates as candidates_queries
 from kyc_api.queries import labels as labels_queries
+from kyc_api.queries import organes as organes_queries
 from kyc_api.queries import persons as persons_queries
 from kyc_api.queries import scores as scores_queries
 from kyc_api.queries import scrutins as scrutins_queries
@@ -64,6 +65,10 @@ async def person_detail(request: Request, slug: str, pool: Queryable = Depends(g
     timeline = build_timeline(segments, today=date.today())
     recent_votes = await persons_queries.get_recent_votes(pool, resolution.person_id)
     orientations = await scores_queries.get_person_orientations(pool, resolution.person_id)
+    mandat_orientations = await scores_queries.get_person_mandat_orientations(
+        pool, resolution.person_id
+    )
+    mandat_groups = scores_queries.group_mandat_orientations(mandat_orientations)
 
     return templates.TemplateResponse(
         request,
@@ -73,6 +78,7 @@ async def person_detail(request: Request, slug: str, pool: Queryable = Depends(g
             "timeline": timeline,
             "recent_votes": recent_votes,
             "orientations": orientations,
+            "mandat_groups": mandat_groups,
             # La personne a-t-elle jamais siégé (fiche vide "jamais vu de vote") ou a-t-elle des
             # votes qui, simplement, ne portent pas encore sur un scrutin catégorisé ? Les deux
             # cas exigent une phrase différente (plan phase 4, cas Retailleau) : `recent_votes`
@@ -176,6 +182,23 @@ async def person_votes(
             "du": du,
             "au": au,
         },
+    )
+
+
+@router.get("/groupe/{an_uid}")
+async def groupe_detail(request: Request, an_uid: str, pool: Queryable = Depends(get_pool)):
+    """Le score d'un groupe sur toute son existence (D4.4). Un organe non-inscrit rend 404 : ce
+    n'est pas un groupe (methodology.md § 2, « n'appartenir à aucun groupe n'est pas appartenir au
+    groupe des sans-groupe »), il n'a donc pas de fiche.
+    """
+    organe = await organes_queries.get_group_by_an_uid(pool, an_uid)
+    if organe is None or organe.is_non_inscrit:
+        raise HTTPException(status_code=404)
+
+    orientations = await scores_queries.get_groupe_orientations(pool, organe.organe_id)
+
+    return templates.TemplateResponse(
+        request, "groupe.html.jinja", {"organe": organe, "orientations": orientations}
     )
 
 

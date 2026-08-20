@@ -10,6 +10,22 @@
   </div>
 {% endmacro %}
 
+{# Le pôle nommé avant le chiffre (D4.3), toujours, suivi du curseur — factorisé ici parce que la
+   fiche personne, la page d'explication, la fiche groupe et les positions restreintes à un mandat
+   en ont chacune besoin, jamais fusionnées avec le score personnel (methodology.md § 6). #}
+{% macro _score_block(theme, score, incertitude=none) %}
+  <p class="orientation__valeur">
+    {{ orientation_label(score=score, libelle_pole_negatif=theme.libelle_pole_negatif, libelle_pole_positif=theme.libelle_pole_positif) }}
+  </p>
+  <div class="score-cursor">
+    <div class="score-cursor__poles">
+      <span>{{ theme.libelle_pole_negatif }}</span>
+      <span>{{ theme.libelle_pole_positif }}</span>
+    </div>
+    {{ _cursor(score, incertitude) }}
+  </div>
+{% endmacro %}
+
 {# Une orientation personnelle (D4.3) : le pôle nommé avant le chiffre, le curseur, et le niveau
    de preuve — jamais l'un sans les autres (D4.1). Sous le seuil de contributions, on rend
    « données insuffisantes » et le compte réel, jamais un curseur vide (D4.2). #}
@@ -17,16 +33,7 @@
 <article class="orientation" aria-labelledby="orientation-{{ orientation.theme.slug }}">
   <h3 id="orientation-{{ orientation.theme.slug }}">{{ orientation.theme.libelle }}</h3>
   {% if orientation.seuil_atteint %}
-    <p class="orientation__valeur">
-      {{ orientation_label(score=orientation.score, libelle_pole_negatif=orientation.theme.libelle_pole_negatif, libelle_pole_positif=orientation.theme.libelle_pole_positif) }}
-    </p>
-    <div class="score-cursor">
-      <div class="score-cursor__poles">
-        <span>{{ orientation.theme.libelle_pole_negatif }}</span>
-        <span>{{ orientation.theme.libelle_pole_positif }}</span>
-      </div>
-      {{ _cursor(orientation.score, orientation.incertitude) }}
-    </div>
+    {{ _score_block(orientation.theme, orientation.score, orientation.incertitude) }}
     <p class="orientation__preuve">
       {{ orientation_preuve_label(contributions=orientation.contributions, relues=orientation.relues) }}
       {%- if orientation.abstentions %}
@@ -44,4 +51,41 @@
     </p>
   {% endif %}
 </article>
+{% endmacro %}
+
+{# Le score d'un groupe sur toute son existence (D4.4), pour /groupe/{an_uid}. La cohésion se lit
+   à côté du score, jamais fusionnée avec lui : deux nombres différents, deux phrases. #}
+{% macro groupe_orientation(orientation) %}
+<article class="orientation" aria-labelledby="orientation-{{ orientation.theme.slug }}">
+  <h3 id="orientation-{{ orientation.theme.slug }}">{{ orientation.theme.libelle }}</h3>
+  {{ _score_block(orientation.theme, orientation.score) }}
+  <p class="orientation__preuve">
+    {{ cohesion_label(cohesion=orientation.cohesion) }} ·
+    {{ orientation.contributions }} votes comptés · {{ orientation.membres }} membres au total
+  </p>
+</article>
+{% endmacro %}
+
+{# Les positions des groupes où une personne a effectivement siégé, restreintes à la période de
+   chaque mandat (D4.12) — jamais le repli « positions du parti » (D4.8), et jamais le même
+   curseur que le score personnel (methodology.md § 6 : « le score du parti ne se mélange jamais
+   au score personnel »). Un bloc par mandat, un curseur par thème à l'intérieur. #}
+{% macro mandat_orientation_group(group) %}
+<section class="mandat-orientations" aria-labelledby="mandat-{{ group.organe_an_uid }}-titre">
+  <h3 id="mandat-{{ group.organe_an_uid }}-titre">
+    <a href="/groupe/{{ group.organe_an_uid }}">{{ group.organe_libelle }}</a>
+    {%- if group.fin %} — du {{ group.debut.strftime("%d/%m/%Y") }} au {{ group.fin.strftime("%d/%m/%Y") }}
+    {%- else %} — depuis le {{ group.debut.strftime("%d/%m/%Y") }}{% endif -%}
+  </h3>
+  {% for orientation in group.orientations %}
+    <article class="orientation">
+      <h4>{{ orientation.theme.libelle }}</h4>
+      {{ _score_block(orientation.theme, orientation.score) }}
+      <p class="orientation__preuve">
+        {{ cohesion_label(cohesion=orientation.cohesion) }} ·
+        {{ orientation.contributions }} votes comptés sur cette période
+      </p>
+    </article>
+  {% endfor %}
+</section>
 {% endmacro %}

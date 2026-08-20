@@ -2,7 +2,7 @@
 {% from "macros/timeline.html.jinja" import timeline_view %}
 {% from "macros/vote.html.jinja" import vote_item %}
 {% from "macros/source.html.jinja" import source_note %}
-{% from "macros/score.html.jinja" import person_orientation %}
+{% from "macros/score.html.jinja" import person_orientation, mandat_orientation_group %}
 
 {% block title %}{{ display_name(person.prenom, person.nom) }} — Know Your Candidate{% endblock %}
 
@@ -70,5 +70,14 @@
         <p class="empty-state">{{ NO_ORIENTATIONS_NEVER_SAT_LABEL }}</p>
       {% endif %}
     </section>
+
+    {% if mandat_groups %}
+      <section class="person-detail__groupes" aria-labelledby="groupes-titre">
+        <h2 id="groupes-titre">Positions des groupes où {{ display_name(person.prenom, person.nom) }} a siégé</h2>
+        {% for group in mandat_groups %}
+          {{ mandat_orientation_group(group) }}
+        {% endfor %}
+      </section>
+    {% endif %}
   </article>
 {% endblock %}

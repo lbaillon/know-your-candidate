@@ -3,7 +3,8 @@ ici, aucune requête ailleurs (CLAUDE.md) ; les gabarits et l'API consomment les
 Pydantic (D2.10).
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
+from itertools import groupby
 
 from asyncpg import Record
 
@@ -11,6 +12,7 @@ from kyc_api.db import Queryable
 from kyc_api.schemas.score import (
     GroupeOrientation,
     MandatOrientation,
+    MandatOrientationGroup,
     PersonOrientation,
     ScoreContributionDetail,
 )
@@ -144,6 +146,32 @@ async def get_person_mandat_orientations(
             )
         )
     return orientations
+
+
+def _mandat_group_key(o: MandatOrientation) -> tuple[str, str, str | None, date, date | None]:
+    return (o.organe_an_uid, o.organe_libelle, o.organe_libelle_abrege, o.debut, o.fin)
+
+
+def group_mandat_orientations(
+    orientations: list[MandatOrientation],
+) -> list[MandatOrientationGroup]:
+    """Un bloc par mandat (D4.12) : `get_person_mandat_orientations` trie déjà par période, ce
+    regroupement replie donc des lignes déjà consécutives, il ne trie jamais rien lui-même.
+    """
+    groups = []
+    for key, members in groupby(orientations, key=_mandat_group_key):
+        organe_an_uid, organe_libelle, organe_libelle_abrege, debut, fin = key
+        groups.append(
+            MandatOrientationGroup(
+                organe_an_uid=organe_an_uid,
+                organe_libelle=organe_libelle,
+                organe_libelle_abrege=organe_libelle_abrege,
+                debut=debut,
+                fin=fin,
+                orientations=list(members),
+            )
+        )
+    return groups
 
 
 async def get_groupe_orientations(pool: Queryable, organe_id: int) -> list[GroupeOrientation]:
