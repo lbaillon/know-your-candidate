@@ -263,3 +263,84 @@ async def test_du_and_au_are_accepted_as_iso_dates(
 
     assert response.status_code == 200
     assert response.json()["data"] == []
+
+
+async def test_the_person_page_and_the_scores_api_agree_on_the_same_values(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    theme_id = await factories.insert_theme(
+        db_conn,
+        slug="social-fiscalite",
+        libelle_pole_negatif="redistribution",
+        libelle_pole_positif="maîtrise de la fiscalité",
+    )
+    person_id = await factories.insert_person(db_conn, an_uid="PA1", prenom="Jean", nom="Dupont")
+    await factories.insert_slug(db_conn, person_id=person_id, slug="jean-dupont")
+    run_id = await factories.insert_score_run(db_conn, eligible_theme_ids=[theme_id])
+    scrutin_id = await factories.insert_scrutin(db_conn, an_uid="SC1")
+    await factories.insert_score_contribution(
+        db_conn,
+        run_id=run_id,
+        person_id=person_id,
+        theme_id=theme_id,
+        scrutin_id=scrutin_id,
+        position="pour",
+        apport=0.42,
+        poids=1.0,
+    )
+    await factories.insert_person_theme_score(
+        db_conn, run_id=run_id, person_id=person_id, theme_id=theme_id, score=0.42, contributions=5
+    )
+    await factories.refresh_score_views(db_conn)
+
+    page = await client.get("/personne/jean-dupont")
+    api = await client.get("/api/v1/personnes/jean-dupont/scores")
+    api_body = api.json()
+
+    assert api.status_code == 200
+    assert len(api_body["data"]) == 1
+    assert api_body["data"][0]["theme"]["slug"] == "social-fiscalite"
+    assert api_body["data"][0]["score"] == 0.42
+    assert "+0.42" in page.text
+
+
+async def test_the_explanation_page_and_the_contributions_api_agree_on_the_same_values(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    theme_id = await factories.insert_theme(db_conn, slug="securite")
+    person_id = await factories.insert_person(db_conn, an_uid="PA1", prenom="Jean", nom="Dupont")
+    await factories.insert_slug(db_conn, person_id=person_id, slug="jean-dupont")
+    run_id = await factories.insert_score_run(db_conn, eligible_theme_ids=[theme_id])
+    scrutin_id = await factories.insert_scrutin(db_conn, an_uid="SC1", titre="un scrutin précis")
+    await factories.insert_score_contribution(
+        db_conn,
+        run_id=run_id,
+        person_id=person_id,
+        theme_id=theme_id,
+        scrutin_id=scrutin_id,
+        position="contre",
+        apport=-0.6,
+        poids=1.0,
+    )
+    await factories.refresh_score_views(db_conn)
+
+    page = await client.get("/personne/jean-dupont/theme/securite")
+    api = await client.get("/api/v1/personnes/jean-dupont/themes/securite/contributions")
+    api_body = api.json()
+
+    assert api.status_code == 200
+    assert len(api_body["data"]) == 1
+    assert api_body["data"][0]["scrutin_an_uid"] == "SC1"
+    assert api_body["data"][0]["apport"] == -0.6
+    assert "un scrutin précis" in page.text
+
+
+async def test_scores_api_404_for_an_ineligible_or_unknown_theme(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    person_id = await factories.insert_person(db_conn, an_uid="PA1", prenom="Jean", nom="Dupont")
+    await factories.insert_slug(db_conn, person_id=person_id, slug="jean-dupont")
+
+    response = await client.get("/api/v1/personnes/jean-dupont/themes/inconnu/contributions")
+
+    assert response.status_code == 404
