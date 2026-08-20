@@ -283,6 +283,7 @@ struct EstimateBatch {
     separations: Vec<f64>,
     couvertures: Vec<f64>,
     votants: Vec<i32>,
+    bipolarites: Vec<f64>,
 }
 
 impl EstimateBatch {
@@ -293,6 +294,7 @@ impl EstimateBatch {
             separations: Vec::new(),
             couvertures: Vec::new(),
             votants: Vec::new(),
+            bipolarites: Vec::new(),
         }
     }
 
@@ -302,6 +304,7 @@ impl EstimateBatch {
         self.separations.push(estimation.separation);
         self.couvertures.push(estimation.couverture);
         self.votants.push(estimation.votants_couverts as i32);
+        self.bipolarites.push(estimation.bipolarite);
     }
 
     fn is_empty(&self) -> bool {
@@ -320,21 +323,23 @@ impl EstimateBatch {
         sqlx::query!(
             r#"
             INSERT INTO scrutin_axis_estimate
-                (scrutin_id, strategy, axis_version, position_pour, separation, couverture, votants_couverts)
+                (scrutin_id, strategy, axis_version, position_pour, separation, couverture, votants_couverts, bipolarite)
             SELECT scrutin_id, strategy, axis_version, position_pour::numeric, separation::numeric,
-                   couverture::numeric, votants_couverts
-            FROM UNNEST($1::bigint[], $2::text[], $3::text[], $4::float8[], $5::float8[], $6::float8[], $7::integer[])
-                AS t(scrutin_id, strategy, axis_version, position_pour, separation, couverture, votants_couverts)
+                   couverture::numeric, votants_couverts, bipolarite::numeric
+            FROM UNNEST($1::bigint[], $2::text[], $3::text[], $4::float8[], $5::float8[], $6::float8[], $7::integer[], $8::float8[])
+                AS t(scrutin_id, strategy, axis_version, position_pour, separation, couverture, votants_couverts, bipolarite)
             ON CONFLICT (scrutin_id, strategy, axis_version) DO UPDATE SET
                 position_pour    = EXCLUDED.position_pour,
                 separation       = EXCLUDED.separation,
                 couverture       = EXCLUDED.couverture,
                 votants_couverts = EXCLUDED.votants_couverts,
+                bipolarite       = EXCLUDED.bipolarite,
                 computed_at      = now()
             WHERE scrutin_axis_estimate.position_pour    IS DISTINCT FROM EXCLUDED.position_pour
                OR scrutin_axis_estimate.separation       IS DISTINCT FROM EXCLUDED.separation
                OR scrutin_axis_estimate.couverture       IS DISTINCT FROM EXCLUDED.couverture
                OR scrutin_axis_estimate.votants_couverts IS DISTINCT FROM EXCLUDED.votants_couverts
+               OR scrutin_axis_estimate.bipolarite       IS DISTINCT FROM EXCLUDED.bipolarite
             "#,
             &self.scrutin_ids,
             &strategies as _,
@@ -343,6 +348,7 @@ impl EstimateBatch {
             &self.separations,
             &self.couvertures,
             &self.votants,
+            &self.bipolarites,
         )
         .execute(pool)
         .await?;
@@ -351,6 +357,7 @@ impl EstimateBatch {
         self.separations.clear();
         self.couvertures.clear();
         self.votants.clear();
+        self.bipolarites.clear();
         Ok(())
     }
 }
@@ -397,6 +404,8 @@ async fn compute_estimates(
     let mut refus_effectif = 0i64;
     let mut refus_unanime = 0i64;
     let mut couvertures: Vec<f64> = Vec::new();
+    let mut bipolarites: Vec<f64> = Vec::new();
+    let mut bipolarite_superieure_a_seuil = 0i64;
 
     let mut batch = EstimateBatch::new();
     let mut anomalies: Vec<AnomalyRecord> = Vec::new();
@@ -409,6 +418,8 @@ async fn compute_estimates(
                          refus_effectif: &mut i64,
                          refus_unanime: &mut i64,
                          couvertures: &mut Vec<f64>,
+                         bipolarites: &mut Vec<f64>,
+                         bipolarite_superieure_a_seuil: &mut i64,
                          batch: &mut EstimateBatch,
                          anomalies: &mut Vec<AnomalyRecord>| {
         *examined += 1;
@@ -416,6 +427,10 @@ async fn compute_estimates(
             Ok(estimation) => {
                 *written += 1;
                 couvertures.push(estimation.couverture);
+                bipolarites.push(estimation.bipolarite);
+                if estimation.bipolarite > 0.5 {
+                    *bipolarite_superieure_a_seuil += 1;
+                }
                 batch.push(scrutin_id, estimation);
             }
             Err(Refus::AncrageInsuffisant) => {
@@ -460,6 +475,8 @@ async fn compute_estimates(
                     &mut refus_effectif,
                     &mut refus_unanime,
                     &mut couvertures,
+                    &mut bipolarites,
+                    &mut bipolarite_superieure_a_seuil,
                     &mut batch,
                     &mut anomalies,
                 );
@@ -492,6 +509,8 @@ async fn compute_estimates(
             &mut refus_effectif,
             &mut refus_unanime,
             &mut couvertures,
+            &mut bipolarites,
+            &mut bipolarite_superieure_a_seuil,
             &mut batch,
             &mut anomalies,
         );
@@ -503,6 +522,7 @@ async fn compute_estimates(
     }
 
     let couverture_mediane = median(&mut couvertures);
+    let bipolarite_mediane = median(&mut bipolarites);
 
     Ok(serde_json::json!({
         "scrutins_examines": examined,
@@ -511,6 +531,8 @@ async fn compute_estimates(
         "refus_effectif": refus_effectif,
         "refus_unanime": refus_unanime,
         "couverture_mediane": couverture_mediane,
+        "bipolarite_mediane": bipolarite_mediane,
+        "bipolarite_superieure_a_0_5": bipolarite_superieure_a_seuil,
         "duree_ms": started.elapsed().as_millis() as i64,
     }))
 }

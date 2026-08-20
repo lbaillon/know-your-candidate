@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO theme (slug, libelle, description, libelle_pole_negatif, libelle_pole_positif, rang)\n        VALUES ($1, $1, 'description', 'pôle négatif', 'pôle positif', 1)\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cba616b5ce13746e7b254851bda5923ffe2006a32edab6c081aed214a03314b2"
+}

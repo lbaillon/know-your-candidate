@@ -176,3 +176,65 @@ fn identical_coordinates_give_zero_separation() {
 
     assert_close(estimation.separation, 0.0);
 }
+
+/// D4.9 : une opposition venue d'un seul bord (le cas normal, gauche OU droite) ne situe pas moins
+/// bien la personne qu'un vote classique — bipolarité nulle.
+#[test]
+fn opposition_from_a_single_side_gives_zero_bipolarite() {
+    let groupes = [
+        covered_group(200, 0, 0.0),  // camp pour, centré en 0.0
+        covered_group(0, 100, -0.5), // camp contre, entièrement à gauche de mu_plus
+    ];
+
+    let estimation = axis::estimate(&groupes).expect("scrutin exploitable");
+
+    assert_close(estimation.bipolarite, 0.0);
+}
+
+/// Le cas budgétaire de phase 3 (F9, phase-3.0-feedback.md) : un texte porté par le centre, rejeté
+/// à parts égales par les deux extrêmes. La bipolarité doit valoir 1 — ce scrutin ne situe
+/// personne, quel que soit son `position_pour`.
+#[test]
+fn opposition_evenly_split_across_both_extremes_gives_maximal_bipolarite() {
+    let groupes = [
+        covered_group(200, 0, 0.0), // majorité centrale, pour
+        covered_group(0, 50, -1.0), // extrême gauche, contre
+        covered_group(0, 50, 1.0),  // extrême droite, contre
+    ];
+
+    let estimation = axis::estimate(&groupes).expect("scrutin exploitable");
+
+    assert_close(estimation.bipolarite, 1.0);
+}
+
+/// Une opposition majoritairement mais pas exclusivement d'un bord donne une bipolarité
+/// intermédiaire, proportionnelle au plus petit des deux camps.
+#[test]
+fn a_lopsided_two_sided_opposition_gives_intermediate_bipolarite() {
+    let groupes = [
+        covered_group(200, 0, 0.0), // camp pour, centré en 0.0
+        covered_group(0, 80, -0.5), // contre, à gauche
+        covered_group(0, 20, 0.5),  // contre, à droite (minoritaire)
+    ];
+
+    let estimation = axis::estimate(&groupes).expect("scrutin exploitable");
+
+    // g = 80/100, d = 20/100 -> bipolarite = 2 * min(0.8, 0.2) = 0.4
+    assert_close(estimation.bipolarite, 0.4);
+}
+
+/// Un votant « contre » situé exactement à `mu_plus` ne compte d'aucun côté : ni gauche, ni droite.
+#[test]
+fn a_contre_vote_exactly_at_mu_plus_counts_on_neither_side() {
+    let groupes = [
+        covered_group(100, 0, 0.0), // camp pour, mu_plus = 0.0
+        covered_group(0, 50, 0.0),  // contre, exactement à mu_plus
+        covered_group(0, 50, -1.0), // contre, à gauche
+    ];
+
+    let estimation = axis::estimate(&groupes).expect("scrutin exploitable");
+
+    // contre_total = 100 ; gauche = 50 (le groupe à -1.0), droite = 0, le groupe à 0.0 n'est
+    // compté nulle part -> g = 0.5, d = 0.0 -> bipolarite = 0.0
+    assert_close(estimation.bipolarite, 0.0);
+}

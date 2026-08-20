@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO score_contribution (run_id, person_id, theme_id, scrutin_id, position, apport, poids)\n        VALUES ($1, $2, $3, $4, 'pour', NULL, 0.50000)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int2",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a76886b86241332a66740a5278f03227c7b41a9315834832d758d13af601afaa"
+}

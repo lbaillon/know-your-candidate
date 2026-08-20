@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO scrutin_axis_estimate\n                (scrutin_id, strategy, axis_version, position_pour, separation, couverture, votants_couverts, bipolarite)\n            SELECT scrutin_id, strategy, axis_version, position_pour::numeric, separation::numeric,\n                   couverture::numeric, votants_couverts, bipolarite::numeric\n            FROM UNNEST($1::bigint[], $2::text[], $3::text[], $4::float8[], $5::float8[], $6::float8[], $7::integer[], $8::float8[])\n                AS t(scrutin_id, strategy, axis_version, position_pour, separation, couverture, votants_couverts, bipolarite)\n            ON CONFLICT (scrutin_id, strategy, axis_version) DO UPDATE SET\n                position_pour    = EXCLUDED.position_pour,\n                separation       = EXCLUDED.separation,\n                couverture       = EXCLUDED.couverture,\n                votants_couverts = EXCLUDED.votants_couverts,\n                bipolarite       = EXCLUDED.bipolarite,\n                computed_at      = now()\n            WHERE scrutin_axis_estimate.position_pour    IS DISTINCT FROM EXCLUDED.position_pour\n               OR scrutin_axis_estimate.separation       IS DISTINCT FROM EXCLUDED.separation\n               OR scrutin_axis_estimate.couverture       IS DISTINCT FROM EXCLUDED.couverture\n               OR scrutin_axis_estimate.votants_couverts IS DISTINCT FROM EXCLUDED.votants_couverts\n               OR scrutin_axis_estimate.bipolarite       IS DISTINCT FROM EXCLUDED.bipolarite\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TextArray",
+        "TextArray",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Int4Array",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "75a2237c20b527fe4da9a09adffe86cba8ba146006a1f01ec86215bc7046fd28"
+}

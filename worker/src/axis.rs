@@ -24,6 +24,11 @@ pub struct Estimation {
     pub separation: f64,
     pub couverture: f64,
     pub votants_couverts: i64,
+    /// D4.9, docs/plans/phase-4-partis-scores.md : part du camp « contre » située de part et
+    /// d'autre du camp « pour ». 0 quand l'opposition est d'un seul bord (le cas normal), 1 quand
+    /// elle est également répartie des deux côtés — signe qu'un budget ou un texte de compromis
+    /// est rejeté à la fois par la gauche et par la droite, et qu'il ne situe donc personne.
+    pub bipolarite: f64,
 }
 
 /// Les trois raisons pour lesquelles aucune estimation n'est écrite (D3.9). Ce sont des compteurs
@@ -94,7 +99,27 @@ pub fn estimate(groupes: &[GroupeVote]) -> Result<Estimation, Refus> {
         separation: separation(&covered, votants_couverts),
         couverture,
         votants_couverts,
+        bipolarite: bipolarite(&covered, mu_plus, contre_total),
     })
+}
+
+/// `2 × min(g, d)` (D4.9) où `g` et `d` sont les parts du camp « contre » situées strictement à
+/// gauche, respectivement à droite, de `mu_plus` — la position moyenne du camp « pour ». Un
+/// votant « contre » exactement sur `mu_plus` ne compte d'aucun côté : cas limite qui n'affecte
+/// ni le sens ni les bornes de la mesure.
+fn bipolarite(covered: &[(i64, i64, f64)], mu_plus: f64, contre_total: i64) -> f64 {
+    let mut gauche = 0i64;
+    let mut droite = 0i64;
+    for &(_, contre, x) in covered {
+        match x.partial_cmp(&mu_plus) {
+            Some(std::cmp::Ordering::Less) => gauche += contre,
+            Some(std::cmp::Ordering::Greater) => droite += contre,
+            _ => {}
+        }
+    }
+    let g = gauche as f64 / contre_total as f64;
+    let d = droite as f64 / contre_total as f64;
+    2.0 * g.min(d)
 }
 
 /// Meilleure séparation obtenue en essayant, pour chaque seuil pris au milieu de deux coordonnées
