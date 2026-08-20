@@ -41,24 +41,29 @@ async def get_person_orientations(pool: Queryable, person_id: int) -> list[Perso
     score personnel, le thème apparaît avec son compte réel de contributions : `score_contribution`
     n'applique jamais le seuil `contributions_min` à l'écriture (D4.2).
     """
+    # `ARRAY(SELECT jsonb_array_elements_text(...))` plutôt qu'un `jsonb_array_elements_text(...)`
+    # utilisé directement comme source d'une jointure : la seconde forme fait perdre à Postgres
+    # toute estimation fiable du nombre de lignes produites (il suppose 100 par défaut), ce qui
+    # gonfle le coût estimé de la requête entière à plusieurs centaines de millions et déclenche la
+    # compilation JIT pour une requête qui ne touche en réalité que quelques lignes — mesuré à
+    # ~280 ms au lieu de ~0,3 ms sur le corpus réel (voir le commit qui l'a corrigé).
     rows = await pool.fetch(
         f"""
         WITH courant AS (
-            SELECT id, counters FROM score_run WHERE is_current
-        ),
-        eligibles AS (
-            SELECT (jsonb_array_elements_text(
-                        coalesce(counters -> 'themes_eligibles_ids', '[]'::jsonb)
-                    ))::smallint AS theme_id
-            FROM courant
+            SELECT id,
+                   ARRAY(
+                       SELECT jsonb_array_elements_text(
+                                  coalesce(counters -> 'themes_eligibles_ids', '[]'::jsonb)
+                              )::smallint
+                   ) AS eligible_ids
+            FROM score_run WHERE is_current
         )
         SELECT {_THEME_FIELDS},
                ptc.score::float8 AS score, ptc.incertitude::float8 AS incertitude, ptc.relues,
                coalesce(sc.contributions, 0) AS contributions,
                coalesce(sc.abstentions, 0) AS abstentions
-        FROM eligibles e
-        JOIN theme t ON t.id = e.theme_id
-        JOIN courant c ON true
+        FROM courant c
+        JOIN theme t ON t.id = ANY(c.eligible_ids)
         LEFT JOIN person_theme_score_courant ptc ON ptc.person_id = $1 AND ptc.theme_id = t.id
         LEFT JOIN LATERAL (
             SELECT count(*) FILTER (WHERE scc.poids > 0)         AS contributions,

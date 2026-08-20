@@ -171,6 +171,19 @@ pub async fn recompute(pool: &PgPool) -> anyhow::Result<Value> {
         .execute(pool)
         .await?;
 
+    // `score_run` ne grossit que d'une ligne par recalcul : autovacuum n'a souvent pas de raison
+    // de la ré-analyser avant longtemps, et des statistiques périmées sur une table aussi petite
+    // ont fait sous-estimer sa cardinalité à ce point que le planificateur déclenchait la
+    // compilation JIT sur des lectures qui ne touchent que quelques lignes (mesuré : ~280 ms au
+    // lieu de ~0,3 ms sur `queries/scores.py::get_person_orientations`). `ANALYZE` explicite ici,
+    // pas laissé à autovacuum, sur les tables que les pages lisent à chaque requête.
+    sqlx::query!(
+        r#"ANALYZE score_run, person_theme_score_courant, mandat_theme_score_courant,
+                    score_contribution, groupe_theme_score"#
+    )
+    .execute(pool)
+    .await?;
+
     let counters = serde_json::json!({
         "themes_eligibles": eligible_themes.len(),
         // Le backend lit cette liste pour savoir quels thèmes afficher (« données insuffisantes »

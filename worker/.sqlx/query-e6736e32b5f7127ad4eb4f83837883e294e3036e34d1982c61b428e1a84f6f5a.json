@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "ANALYZE score_run, person_theme_score_courant, mandat_theme_score_courant,\n                    score_contribution, groupe_theme_score",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "e6736e32b5f7127ad4eb4f83837883e294e3036e34d1982c61b428e1a84f6f5a"
+}
