@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO scrutin_label (scrutin_id, theme_id, poids, position_pour, confiance, justification, method, author_id)\n        VALUES ($1, $2, $3::float8::numeric, $4::float8::numeric, $5::float8::numeric,\n                'justification suffisamment longue', 'manual', $6)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int2",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7a63704d93b15341a59a9a9bf03a752881279f47bce51918b2abcfb66472d966"
+}

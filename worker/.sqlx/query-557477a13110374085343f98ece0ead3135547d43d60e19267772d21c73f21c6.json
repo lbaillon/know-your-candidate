@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT contributions_min, scrutins_min_par_theme, formula_version FROM score_parametre WHERE id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "contributions_min",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "score_parametre",
+            "name": "contributions_min"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "scrutins_min_par_theme",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "score_parametre",
+            "name": "scrutins_min_par_theme"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "formula_version",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "score_parametre",
+            "name": "formula_version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "557477a13110374085343f98ece0ead3135547d43d60e19267772d21c73f21c6"
+}

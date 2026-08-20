@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT contributions FROM person_theme_score WHERE person_id = $1 AND theme_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "contributions",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "person_theme_score",
+            "name": "contributions"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2af122f48add5629e7550102b86fa4e424863aa681d9c6d41366d89bb0c6077a"
+}

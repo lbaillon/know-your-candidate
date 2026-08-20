@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT t.id\n        FROM theme t\n        WHERE t.libelle_pole_positif IS NOT NULL\n          AND (\n              SELECT count(*) FROM scrutin_label sl\n              WHERE sl.theme_id = t.id AND sl.position_pour IS NOT NULL\n          ) >= $1::bigint\n        ORDER BY t.id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "160e13e36a568acbec0e6dfd018f9d9f9acb98fa7715b28359422ee7de9c8285"
+}

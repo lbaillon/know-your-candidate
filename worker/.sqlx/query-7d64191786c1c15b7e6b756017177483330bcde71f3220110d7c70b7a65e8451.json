@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT contributions FROM mandat_theme_score WHERE mandat_id = $1 AND theme_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "contributions",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "mandat_theme_score",
+            "name": "contributions"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7d64191786c1c15b7e6b756017177483330bcde71f3220110d7c70b7a65e8451"
+}

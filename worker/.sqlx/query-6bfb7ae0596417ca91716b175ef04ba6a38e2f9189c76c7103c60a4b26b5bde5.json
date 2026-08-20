@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT format('person:%s:%s:%s:%s:%s:%s', person_id, theme_id, score, incertitude, contributions, abstentions)\n        FROM person_theme_score ptc\n        JOIN score_run sr ON sr.id = ptc.run_id AND sr.is_current\n        UNION ALL\n        SELECT format('groupe:%s:%s:%s:%s:%s:%s', organe_id, theme_id, score, cohesion, contributions, membres)\n        FROM groupe_theme_score gts\n        JOIN score_run sr ON sr.id = gts.run_id AND sr.is_current\n        UNION ALL\n        SELECT format('mandat:%s:%s:%s:%s:%s', mandat_id, theme_id, score, cohesion, contributions)\n        FROM mandat_theme_score mts\n        JOIN score_run sr ON sr.id = mts.run_id AND sr.is_current\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "format",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6bfb7ae0596417ca91716b175ef04ba6a38e2f9189c76c7103c60a4b26b5bde5"
+}

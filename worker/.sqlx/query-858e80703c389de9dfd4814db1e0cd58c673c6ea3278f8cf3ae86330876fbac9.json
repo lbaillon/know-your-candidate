@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"count!\" FROM person_theme_score ptc\n         JOIN score_run sr ON sr.id = ptc.run_id AND sr.is_current\n         WHERE ptc.person_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "858e80703c389de9dfd4814db1e0cd58c673c6ea3278f8cf3ae86330876fbac9"
+}

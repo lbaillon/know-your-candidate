@@ -5,6 +5,7 @@ pub mod ingest_scrutins;
 pub mod label_scrutins_heuristic;
 pub mod noop;
 pub mod queue;
+pub mod recompute_scores;
 pub mod refresh_views;
 pub mod seed_candidates;
 pub mod seed_themes;
@@ -309,6 +310,7 @@ async fn execute(ctx: &JobContext, job: &queue::ClaimedJob) -> anyhow::Result<()
         "seed_candidates" => seed_candidates::run(ctx, &job.payload).await,
         "seed_themes" => seed_themes::run(ctx, &job.payload).await,
         "label_scrutins_heuristic" => label_scrutins_heuristic::run(ctx, &job.payload).await,
+        "recompute_scores" => recompute_scores::run(ctx, &job.payload).await,
         "refresh_views" => refresh_views::run(ctx, &job.payload).await,
         other => anyhow::bail!("type de job inconnu : {other}"),
     }

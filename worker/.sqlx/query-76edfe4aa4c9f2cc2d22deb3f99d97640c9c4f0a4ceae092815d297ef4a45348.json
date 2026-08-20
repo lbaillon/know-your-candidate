@@ -1,0 +1,96 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT v.person_id, sl.theme_id, sl.scrutin_id,\n               v.position::text AS \"position!\",\n               sl.position_pour::float8 AS \"position_pour!\",\n               sl.poids::float8 AS \"poids_theme!\",\n               sl.confiance::float8 AS \"confiance!\",\n               sae.bipolarite::float8 AS \"bipolarite!\",\n               (sl.reviewed_at IS NOT NULL) AS \"reviewed!\"\n        FROM scrutin_label sl\n        JOIN scrutin_axis_estimate sae\n            ON sae.scrutin_id = sl.scrutin_id AND sae.strategy = $3\n           AND sae.axis_version = $1 AND sae.bipolarite IS NOT NULL\n        JOIN vote v ON v.scrutin_id = sl.scrutin_id AND v.position <> 'non_votant'\n        WHERE sl.theme_id = ANY($2::smallint[]) AND sl.position_pour IS NOT NULL\n        ORDER BY v.person_id, sl.theme_id, sl.scrutin_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "person_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "vote",
+            "name": "person_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "theme_id",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "scrutin_label",
+            "name": "theme_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "scrutin_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "scrutin_label",
+            "name": "scrutin_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "position!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "position_pour!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "poids_theme!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "confiance!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "bipolarite!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "reviewed!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int2Array",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "76edfe4aa4c9f2cc2d22deb3f99d97640c9c4f0a4ceae092815d297ef4a45348"
+}

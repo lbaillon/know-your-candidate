@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO scrutin (an_uid, numero, legislature, date_scrutin, type_code, titre,\n                              mode_publication, nombre_votants, suffrages_exprimes, pour, contre,\n                              abstentions, non_votants, effectif, source_document_id)\n        VALUES ($1, $2, 17, $3, 'SPO', 'titre', 'DecompteNominatif', 0, 0, 0, 0, 0, 0, 577, $4)\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "scrutin",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Date",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6754a723a7c7c1632b1ecef4c1de15aee854adfbcb09ed34d60eef2e1b80fc4f"
+}

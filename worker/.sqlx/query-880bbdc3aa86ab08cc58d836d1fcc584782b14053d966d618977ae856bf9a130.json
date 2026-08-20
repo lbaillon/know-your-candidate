@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT organe_id, count(DISTINCT person_id) AS membres\n        FROM mandat\n        WHERE type_organe = 'GP'\n        GROUP BY organe_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "organe_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "mandat",
+            "name": "organe_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "membres",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "880bbdc3aa86ab08cc58d836d1fcc584782b14053d966d618977ae856bf9a130"
+}

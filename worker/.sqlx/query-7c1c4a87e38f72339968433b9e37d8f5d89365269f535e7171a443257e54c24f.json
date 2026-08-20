@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE score_parametre SET contributions_min = $1, scrutins_min_par_theme = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7c1c4a87e38f72339968433b9e37d8f5d89365269f535e7171a443257e54c24f"
+}

@@ -1,6 +1,7 @@
 """Suivi des jobs et test de fumée `noop` (livrables 8 et 9) — voir
-docs/plans/phase-3-categorisation.md, section « Suivi des jobs et test de fumée ». Aucune route
-publique ne crée de job (CLAUDE.md) : ce routeur vit entièrement derrière `require_admin`.
+docs/plans/phase-3-categorisation.md, section « Suivi des jobs et test de fumée », étendue par
+docs/plans/phase-4-partis-scores.md (D4.5). Aucune route publique ne crée de job (CLAUDE.md) : ce
+routeur vit entièrement derrière `require_admin`.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -15,9 +16,14 @@ from kyc_api.templating import templates
 
 router = APIRouter()
 
-# Rien d'autre en phase 3 (plan) : les jobs d'ingestion restent en ligne de commande
-# (`cargo run -- enqueue ...`), la phase 5 étendra cette liste si elle en a besoin.
-ALLOWED_JOB_TYPES = frozenset({"noop", "label_scrutins_heuristic", "seed_themes", "refresh_views"})
+# Jobs d'ingestion (ingest_acteurs, ingest_scrutins, enrich_wikidata, seed_candidates, assign_slugs)
+# toujours en ligne de commande (`cargo run -- enqueue ...`) : rien de plus depuis la phase 3, la
+# phase 5 étendra cette liste si elle en a besoin. `recompute_scores` rejoint la liste blanche en
+# phase 4 (D4.5) : rafraîchissement des scores déclenché à la main depuis le back-office, jamais
+# planifié — éviter les recalculs surprises.
+ALLOWED_JOB_TYPES = frozenset(
+    {"noop", "label_scrutins_heuristic", "seed_themes", "refresh_views", "recompute_scores"}
+)
 
 
 @router.get("/jobs")

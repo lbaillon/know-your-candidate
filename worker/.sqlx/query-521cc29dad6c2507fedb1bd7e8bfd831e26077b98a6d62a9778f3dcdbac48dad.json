@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE score_run SET finished_at = now(), counters = $2 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "521cc29dad6c2507fedb1bd7e8bfd831e26077b98a6d62a9778f3dcdbac48dad"
+}

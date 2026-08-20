@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"count!\" FROM mandat_theme_score mts\n         JOIN score_run sr ON sr.id = mts.run_id AND sr.is_current\n         WHERE mts.mandat_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "3784c24c5a4242275519a06e7447626340c957676eadb4a706237a70bcb793c9"
+}
