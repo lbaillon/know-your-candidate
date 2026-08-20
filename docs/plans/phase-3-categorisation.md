@@ -1130,6 +1130,47 @@ est consigné.
 > réelle au moment de la mesure (aucune relecture effectuée) : à remesurer une fois le back-office
 > réellement utilisé, ces pages afficheront plus de contenu que leur état vide actuel.
 
+> **Mesures 5 et 6 — 19/08/2026, après la campagne de catégorisation assistée.**
+>
+> **Mesure 5 (temps de saisie de 30 scrutins) : non produite, et elle ne le sera pas.** La
+> catégorisation a été confiée à des agents plutôt qu'à une saisie humaine ; or cette mesure porte
+> sur l'ergonomie du back-office, qu'aucun agent n'emprunte. Le critère correspondant de « Fini
+> quand » est abandonné, pas satisfait — voir la note de suivi.
+>
+> **Mesure 6 (taux d'accord) : produite, et elle a servi.** Elle compare le signe de la position
+> enregistrée à celui de l'estimation d'axe, deux signaux indépendants : l'un lit un titre, l'autre
+> mesure des votes de groupes. **Elle ne se résume pas en un chiffre** — l'agrégat valait 48,5 %,
+> indiscernable du hasard, alors qu'il mélangeait trois populations sans rapport :
+>
+> | Sous-ensemble | n | Accord |
+> | --- | --- | --- |
+> | Axes gauche-droite | 97 | **67,0 %** |
+> | Axes non gauche-droite (institutions, agriculture, Europe) | 35 | 48,6 % |
+>
+> Par thème, sur les axes comparables : environnement 85 % (n=20), immigration 78 % (n=9), sécurité
+> 77 % (n=30), travail 67 % (n=9), santé 44 % (n=9), social-fiscalité 40 % (n=20).
+>
+> Trois lectures, dans l'ordre de leur importance :
+>
+> 1. **67 % d'accord entre deux signaux indépendants est un résultat réel**, et il valide l'ancrage
+>    des nuances comme repère — pas comme vérité.
+> 2. **48,6 % sur les axes non gauche-droite est le hasard, et c'était annoncé** : la convention de
+>    signe n'a pas de sens sur l'Europe, l'agriculture et les institutions. La réserve écrite dans
+>    `db/seeds/themes.toml` en même temps que ces thèmes se vérifie ; ces chiffres sont à écarter,
+>    pas à interpréter.
+> 3. **Le contrôle croisé a trouvé une faute que personne ne cherchait** : une inversion systématique
+>    à 29,3 % sur les textes budgétaires, causée par une règle de prompt qui fabriquait des positions
+>    (F9, [phase-3.0-feedback.md](phase-3.0-feedback.md)). 99 lignes retirées. C'est la justification
+>    à elle seule du travail fait sur `scrutin_axis_estimate`.
+>
+> Réserve à publier avec le chiffre : les positions comparées ici sont issues d'un modèle de langage,
+> non relues. Ce taux mesure l'accord entre une lecture de titre et une mesure de votes, pas la
+> justesse de l'une ou de l'autre.
+>
+> **Couverture** au même instant : 230 scrutins catégorisés sur les 988 du corpus de travail. Le
+> reste est très majoritairement composé d'amendements, écartés délibérément (leur titre ne dit pas
+> ce qu'ils font).
+
 ### Ordre des commits
 
 Un commit par ligne, `main` vert (lint, typage, tests) à chaque fois.
@@ -1193,11 +1234,25 @@ hors du périmètre de cette phase. Le plan de la phase 4 porte déjà, lui, l'�
    fichier entier, commentaires compris, pas seulement sur les coordonnées).
 4. **Recette de 30 scrutins réels**, dont la taxe Zucman, catégorisés à la main et chronométrés. Le
    modèle tient-il ? Un scrutin a-t-il exigé un thème absent de la liste ? Consigner les deux réponses.
-   **Pas fait** : exige une relecture humaine réelle, voir la note de suivi du commit 11.
+   **Fait autrement, et les deux réponses sont là.** La catégorisation a été confiée à des agents,
+   donc rien n'a été chronométré (mesure 5 abandonnée), mais les deux questions de fond ont reçu leur
+   réponse par les données :
+   - *un scrutin a-t-il exigé un thème absent ?* **Oui, environ 98** : institutions/démocratie (63),
+     agriculture (14), Europe (11), travail/entreprise (7) — les quatre que methodology.md § 4
+     annonçait. Ajoutés à `db/seeds/themes.toml` ;
+   - *le modèle tient-il ?* **Oui pour les thèmes, non pour les positions imposées par défaut.** Un
+     échantillon de justifications relu montre un vocabulaire descriptif et fidèle au titre
+     (« Encadre les substances perfluoroalkylées afin de protéger la population de leurs risques »,
+     « Lève les contraintes à l'exercice du métier d'agriculteur »), les motions correctement
+     inversées. En revanche les textes budgétaires ont produit 99 positions sans fondement, retirées
+     depuis (F9). Le modèle de données n'est pas en cause : la règle de prompt l'était.
 5. Une catégorisation saisie, corrigée, puis supprimée : l'historique public raconte exactement les
    trois actes, avec les bons auteurs et les bonnes dates.
 6. Un aller-retour export → import réel sur les 30 scrutins de la recette : zéro modification, zéro
-   révision.
+   révision. **Fait le 19/08/2026, sur les 302 scrutins catégorisés** — donc bien au-delà de trente,
+   et sur des données réelles issues d'un import. Export puis réimport dans les **deux** formats :
+   `302 inchangés, 0 création, 0 modification, 0 conflit, 0 problème`, et `label_revision` inchangée
+   à 302 lignes. La propriété tient au caractère près.
 7. Un import de conflit fabriqué à la main : refus sans confirmation, application avec confirmation, et
    le motif visible dans l'historique.
 8. Chaque page admin ouverte **JavaScript désactivé** : la file, l'enregistrement, l'import et son
@@ -1214,14 +1269,18 @@ hors du périmètre de cette phase. Le plan de la phase 4 porte déjà, lui, l'�
 12. Les mesures sont consignées, et sous les 100 ms. **Fait** — voir la note « Mesuré le 19/08/2026 »
     ci-dessus (mesures 1 à 4 ; 5 et 6 dépendent de la recette humaine, item 4).
 
-> **Point d'étape (19/08/2026, après la vérification 2)** : 1, 2, 3, 11 et 12 sont faits. 5, 7 et 10
-> sont couverts par des tests d'intégration automatisés (`test_admin_categorisation.py`,
-> `test_import_apply.py`, `test_admin_auth.py`) plutôt que reconfirmés à la main. 8 et 9 sont
-> abandonnés par décision explicite (voir ci-dessus) — non prioritaires, à reprendre sur retour
-> utilisateur. **Il ne reste que 4 et 6**, qui exigent une relecture humaine réelle : la recette
-> chronométrée de 30 scrutins et l'aller-retour export → import sur ces 30 scrutins. Les mesures 5 et
-> 6 de la section « Mesures à produire » en dépendent, et elles seules. La phase se déclare terminée
-> le jour où cette recette est faite et consignée.
+> **Point d'étape (19/08/2026, phase terminée)** : 1, 2, 3, 4, 6, 11 et 12 sont faits. 5, 7 et 10 sont
+> couverts par des tests d'intégration automatisés (`test_admin_categorisation.py`,
+> `test_import_apply.py`, `test_admin_auth.py`) plutôt que reconfirmés à la main. **8 et 9 sont
+> abandonnés par décision explicite** — JavaScript désactivé et navigation clavier, jugés non
+> prioritaires, à reprendre sur retour utilisateur.
+>
+> La recette (item 4) a été faite par des agents plutôt qu'à la main : ses deux questions de fond ont
+> reçu leur réponse, la mesure de temps de saisie non — elle est abandonnée avec le critère
+> correspondant. Ce que cette recette a réellement produit dépasse ce que le plan en attendait :
+> quatre thèmes manquants identifiés et ajoutés, deux défauts de prompt corrigés, 99 catégorisations
+> sans fondement retirées, et trois retours consignés (F7, F8, F9). La phase est déclarable
+> terminée.
 
 ### Hors périmètre — ne pas ajouter
 
@@ -1236,7 +1295,11 @@ En cas de doute sur ce qu'on a le droit d'afficher ou d'en déduire : demander, 
 
 ## Fini quand
 
-- Un admin peut catégoriser 30 scrutins en moins de 15 minutes sans quitter le clavier, **chronométré**.
+- ~~Un admin peut catégoriser 30 scrutins en moins de 15 minutes sans quitter le clavier,
+  **chronométré**.~~ **Critère abandonné le 19/08/2026** : la catégorisation a été confiée à des
+  agents via le cycle export/import, qui n'emprunte pas le formulaire. Le back-office reste la voie
+  de correction et de relecture, mais son débit de saisie n'a jamais été mesuré et ne conditionne
+  plus la faisabilité du projet. À reprendre si la saisie humaine redevient le mode principal.
 - Un export retraité hors ligne se réimporte sans perte, avec prévisualisation, et l'historique montre qui
   a changé quoi.
 - Un import ne peut pas écraser silencieusement une catégorisation humaine.
@@ -1246,7 +1309,11 @@ En cas de doute sur ce qu'on a le droit d'afficher ou d'en déduire : demander, 
   corpus est une ligne en base qu'on peut lire, pas une constante enfouie dans une requête.
 - La mesure `group_alignment` tourne sur l'ensemble du corpus, la distribution de sa séparation est
   documentée, et son taux d'accord avec les catégorisations humaines est mesuré et publié — même s'il est
-  mauvais, surtout s'il est mauvais, et avec le nombre de relectures qui le sous-tend.
+  mauvais, surtout s'il est mauvais, et avec le nombre de relectures qui le sous-tend. **Fait** :
+  15 621 estimations, distribution de la séparation par déciles, et un accord de 67,0 % sur les axes
+  gauche-droite contre 48,6 % sur les autres (n=97 et n=35), publié décomposé parce qu'un agrégat y
+  serait un chiffre faux. Les positions comparées viennent d'un modèle, non d'une relecture humaine :
+  la réserve est écrite avec le chiffre.
 
 ## Risques
 

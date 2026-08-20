@@ -83,6 +83,31 @@ contournée.
    `group_axis` est à relâcher à ce moment-là. Si la phase 4 déborde, ce point part en
    [phase 6](phase-6-backlog-v2.md) — nommé, pas oublié.
 
+## Un fait mesuré en phase 3, à traiter ici : l'opposition bipolaire
+
+La phase 3 a mesuré l'accord entre les catégorisations et l'estimation d'axe des groupes. Sur les
+textes budgétaires, l'accord tombait à **29,3 %** — *sous* le hasard, donc une inversion
+systématique. La cause n'est pas un défaut de calcul, elle est structurelle : sur un budget, ceux qui
+votent pour sont la majorité gouvernementale, donc le centre, et ceux qui votent contre sont **les
+deux extrêmes à la fois**. La moyenne d'axe du camp « contre » retombe vers le centre, et le signe
+s'inverse.
+
+Ce cas n'est pas propre aux budgets : il apparaît chaque fois qu'un texte est rejeté par la gauche
+parce qu'il ne va pas assez loin et par la droite parce qu'il va trop loin — la loi climat de 2021 et
+les textes « pouvoir d'achat » de 2022 en sont d'autres exemples relevés. **Un tel vote ne situe
+personne sur un axe** : deux personnes aux positions opposées y votent identiquement.
+
+Conséquence pour le calcul des scores : la pondération doit **dévaluer ces scrutins**, et
+`scrutin_axis_estimate.separation` ne suffit pas à les détecter — elle mesure si un seuil sépare bien
+les deux camps, pas si le camp minoritaire est idéologiquement homogène (F1,
+[phase-3.0-feedback.md](phase-3.0-feedback.md)). Il manque une mesure, à définir ici : quelque chose
+comme la **dispersion du camp « contre » sur l'axe**, ou la part de ce camp située de part et
+d'autre du camp « pour ». Elle se calcule à partir de `scrutin_groupe` et de l'ancrage, exactement
+comme la séparation, et vient s'ajouter à la même table.
+
+C'est le premier arbitrage à instruire de cette phase : sans lui, les scores mélangeront des votes
+qui informent et des votes qui n'informent pas, avec le même poids.
+
 ## Décisions à trancher
 
 | # | Question | Proposition |

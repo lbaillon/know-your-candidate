@@ -318,3 +318,57 @@ sur l'ensemble d'un texte à l'apostrophe courbe : si le rang de priorité cessa
 le départage par date rendrait l'amendement et le test tomberait. Vérifié en rejouant l'ancien `CASE`
 à la main sur les deux mêmes lignes — il classe bien l'amendement en tête, le test discrimine donc
 réellement le défaut et ne se contente pas de constater le comportement corrigé.
+
+## F9 — Une règle de prompt a fabriqué 99 positions sans fondement, et le contrôle croisé les a trouvées
+
+**Où** : `scripts/prompt_categorisation.md`, règle 7 (retirée) ; 99 lignes de `scrutin_label`
+retirées de la base le 19/08/2026.
+
+**Ce que la règle disait.** Après la première campagne, des lois de finances étaient sautées par les
+agents au motif qu'elles « contiennent des mesures de sens opposés ». Jugeant qu'un budget est le
+vote politique par excellence et qu'il ne pouvait pas rester hors du corpus, une règle 7 a été
+ajoutée : un texte budgétaire prend son thème dominant, avec une confiance basse et une position
+modérée. Elle a été appliquée à la lettre.
+
+**Ce qu'elle a produit.** Sur les 103 lignes budgétaires importées, **69 portaient exactement
+`+0.300`**, 27 exactement `-0.300` (les motions, qui héritaient de l'inversion), et 4 la valeur
+`0.200`. Trente-quatre justifications disaient noir sur blanc que « l'orientation d'ensemble n'est
+pas précisée par le titre » — **tout en affichant une position**. Les autres se contentaient de
+reformuler le titre (« Article 2 du projet de loi de finances pour 2026 »). Une position publiée,
+adossée à un aveu d'ignorance : exactement ce que la règle 1 de methodology.md interdit.
+
+**Comment on l'a vu.** Par la mesure 6, le contrôle croisé avec l'estimation d'axe. L'agrégat
+donnait 48,5 % d'accord de signe — indiscernable du hasard. Décomposé, il révélait trois
+populations :
+
+| Sous-ensemble | n | Accord |
+| --- | --- | --- |
+| Axes gauche-droite, hors budgets | 95 | 68,4 % |
+| **Textes budgétaires** | 99 | **29,3 %** |
+| Axes non gauche-droite (institutions, agriculture, Europe) | 35 | 48,6 % |
+
+Les 29,3 % ne sont pas du bruit : *sous* le hasard, donc **inversion systématique**. La raison est
+structurelle et vaut d'être retenue — sur un budget, ceux qui votent pour sont la majorité
+gouvernementale, donc le centre, et ceux qui votent contre sont **les deux extrêmes à la fois**. La
+moyenne d'axe du camp « contre » retombe vers le centre, et le signe s'inverse. Ce vote ne situe
+personne.
+
+**Décision.** Règle 7 retirée : un texte budgétaire redevient un cas de saut, et le prompt le dit
+explicitement plutôt que de le laisser déduire. Les 99 lignes concernées ont été retirées de la base
+(72 scrutins), en conservant les **quatre** qui affirment réellement une orientation citable — les
+trois budgets rectificatifs de 2020 « orientés vers la dépense de soutien plutôt que la maîtrise
+budgétaire », et une loi de règlement classée `autre` sans position. Le retrait est passé par
+`queries.labels.replace_labels`, la fonction du back-office : même transaction, une `label_revision`
+par scrutin avec l'état avant, un `apres` vide et le motif, une `admin_action`. Un `DELETE` sec
+aurait effacé la trace d'une décision éditoriale, ce que le projet s'interdit.
+
+État après retrait : 236 lignes sur 230 scrutins, et l'accord remonte à **67,0 %** sur le
+sous-ensemble comparable (97 lignes).
+
+**Deux leçons, la seconde plus utile que la première.** Une règle qui impose une valeur là où la
+donnée n'en porte aucune ne produit pas une nuance, elle produit une constante — et une constante se
+voit : 69 valeurs identiques étaient la signature du défaut. Surtout, **c'est le contrôle croisé qui
+a trouvé la faute, pas une relecture**. Deux signaux indépendants — l'un lit un titre, l'autre mesure
+des votes de groupes — se contredisant de façon systématique, cela ne peut pas être du hasard, et
+c'est le seul outil du projet capable de repérer une erreur que personne ne cherchait. Il justifie à
+lui seul le temps passé sur `scrutin_axis_estimate`.

@@ -16,21 +16,51 @@
 \echo 'Compare le SIGNE de la position saisie à celui de la position mesurée, sur les scrutins qui'
 \echo 'ont les deux. Les positions nulles des deux côtés sont exclues : un signe nul ne s’oppose à rien.'
 
-SELECT count(*)                                                         AS comparables,
+-- Décomposé, et jamais rendu en un seul chiffre : la moyenne mélange des populations où la
+-- comparaison a un sens et d'autres où elle n'en a aucun. Mesuré le 19/08/2026, l'agrégat valait
+-- 48,5 % — indiscernable du hasard — alors que le sous-ensemble comparable était à 68,4 %. Un
+-- taux global est ici un chiffre faux, pas un résumé.
+WITH comparables AS (
+    SELECT t.slug,
+           l.position_pour AS saisie,
+           e.position_pour AS mesuree,
+           t.libelle_pole_negatif IS NOT NULL
+               AND t.slug NOT IN ('institutions-democratie', 'agriculture', 'europe')
+               AS axe_gauche_droite
+    FROM scrutin_label l
+    JOIN theme t ON t.id = l.theme_id
+    JOIN scrutin_axis_estimate e ON e.scrutin_id = l.scrutin_id
+    JOIN group_axis g ON g.version = e.axis_version AND g.is_current
+    WHERE l.position_pour IS NOT NULL
+      AND l.position_pour <> 0
+      AND e.position_pour <> 0
+)
+SELECT CASE WHEN axe_gauche_droite THEN 'axes gauche-droite (comparable)'
+            ELSE 'axes non gauche-droite (hors sujet)' END AS sous_ensemble,
+       count(*)                                            AS comparables,
+       count(*) FILTER (WHERE sign(saisie) = sign(mesuree)) AS accords,
+       round(100.0 * count(*) FILTER (WHERE sign(saisie) = sign(mesuree)) / count(*), 1) AS pct
+FROM comparables
+GROUP BY 1
+ORDER BY 2 DESC;
+
+\echo ''
+\echo '--- le même détail, thème par thème'
+
+SELECT t.slug,
+       count(*)                                                             AS comparables,
        count(*) FILTER (WHERE sign(l.position_pour) = sign(e.position_pour)) AS accords,
-       round(
-           100.0 * count(*) FILTER (WHERE sign(l.position_pour) = sign(e.position_pour))
-           / nullif(count(*), 0),
-           1
-       )                                                                AS taux_accord_pct,
-       count(*) FILTER (WHERE l.method = 'manual')                      AS dont_saisies_a_la_main,
-       count(*) FILTER (WHERE l.reviewed_at IS NOT NULL)                AS dont_relues
+       round(100.0 * count(*) FILTER (WHERE sign(l.position_pour) = sign(e.position_pour))
+             / count(*), 1)                                                 AS pct
 FROM scrutin_label l
+JOIN theme t ON t.id = l.theme_id
 JOIN scrutin_axis_estimate e ON e.scrutin_id = l.scrutin_id
 JOIN group_axis g ON g.version = e.axis_version AND g.is_current
 WHERE l.position_pour IS NOT NULL
   AND l.position_pour <> 0
-  AND e.position_pour <> 0;
+  AND e.position_pour <> 0
+GROUP BY 1
+ORDER BY 2 DESC;
 
 \echo ''
 \echo '=== 2. File de relecture : les désaccords, les plus fiables en premier'
