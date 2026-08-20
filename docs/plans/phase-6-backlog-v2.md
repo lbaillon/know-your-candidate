@@ -41,6 +41,25 @@ Garde-fous à définir **avant** toute ligne de code :
 
 Ce n'est pas un sujet technique : sans réponse claire à ces questions, la fonctionnalité ne se fait pas.
 
+## Continuité entre partis, et rattachement des personnes hors Assemblée
+
+La [phase 4](phase-4-partis-scores.md) score les **groupes parlementaires** tels que l'Assemblée les
+publie, sans jamais affirmer qu'un groupe succède à un autre (D4.8). C'est le choix prudent : dire que
+LaREM, Renaissance et Ensemble pour la République « sont le même parti » est un arbitrage éditorial
+contestable, et rien n'obligeait à le prendre pour livrer des scores.
+
+Ce que ce choix laisse ouvert est mesuré, pas supposé : **deux candidat·es sur cinq n'ont aucun vote
+exploitable** (Bruno Retailleau, sénateur, dont l'unique vote en base est celui du Congrès sur l'IVG ;
+Nathalie Arthaud, jamais élue). Le repli prévu à l'origine — afficher les positions du parti auquel la
+personne appartient — supposerait deux choses que nous n'avons pas : une table de partis reliant les
+groupes successifs, et l'appartenance partisane des personnes hors Assemblée (Wikidata `P102`, non
+ingéré).
+
+**Condition de déclenchement** : ce sujet ne devient rentable que le jour où une source de votes hors
+Assemblée est ingérée. Tant que Retailleau n'a pas de votes au Sénat dans la base, lui attribuer les
+positions du groupe LR ne comble pas le trou — cela le déguise. Les deux sujets se traitent donc
+ensemble, ou pas du tout.
+
 ## Ancrage gauche-droite dynamique
 
 En phase 3, l'ordonnancement des groupes vit dans un fichier seed dérivé de la grille des nuances
