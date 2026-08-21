@@ -21,6 +21,7 @@
 
 use std::collections::HashMap;
 
+use futures_util::TryStreamExt as _;
 use serde_json::Value;
 use sqlx::PgPool;
 
@@ -457,7 +458,14 @@ async fn compute_person_scores(
     axis_version: &str,
     contributions_min: i16,
 ) -> anyhow::Result<(i64, i64)> {
-    let rows = sqlx::query_as!(
+    // `.fetch(pool)` plutôt que `.fetch_all(pool)` (F3, docs/plans/phase-4.1-partis-scores.md) :
+    // 105 385 lignes passe aujourd'hui sans peine, mais le corpus catégorisé et le seuil de
+    // participation sont tous deux voués à grossir, et la phase 5 vise un hébergement où « mémoire
+    // et CPU sont serrés ». Le flux retient une connexion du pool pendant toute sa durée, tandis
+    // que les `flush()` ci-dessous en acquièrent une seconde sur ce même pool : sûr avec les 10
+    // connexions configurées (voir db.rs), ce qui deviendrait un verrou mort avec un pool à une
+    // seule connexion.
+    let mut rows = sqlx::query_as!(
         VoteRow,
         r#"
         SELECT v.person_id, sl.theme_id, sl.scrutin_id,
@@ -479,8 +487,7 @@ async fn compute_person_scores(
         eligible_themes,
         STRATEGY,
     )
-    .fetch_all(pool)
-    .await?;
+    .fetch(pool);
 
     let mut contribution_batch = ContributionBatch::new(run_id);
     let mut score_batch = PersonScoreBatch::new(run_id);
@@ -490,7 +497,7 @@ async fn compute_person_scores(
     let mut current_key: Option<(i64, i16)> = None;
     let mut group: Vec<VoteRow> = Vec::new();
 
-    for row in rows {
+    while let Some(row) = rows.try_next().await? {
         let key = (row.person_id, row.theme_id);
         if current_key != Some(key) && !group.is_empty() {
             let (written, scored) = process_person_theme_group(

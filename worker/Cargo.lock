@@ -990,6 +990,7 @@ dependencies = [
  "bytes",
  "chrono",
  "dotenvy",
+ "futures-util",
  "percent-encoding",
  "reqwest",
  "serde",
