@@ -176,8 +176,18 @@ NO_ORIENTATIONS_UNCATEGORIZED_LABEL = (
 
 
 def cohesion_label(*, cohesion: float) -> str:
-    """D4.4 : la cohésion se lit à côté du score, jamais fusionnée avec lui."""
-    return f"cohésion : {cohesion:.0%} des voix du groupe alignées sur sa position majoritaire"
+    """D4.4 : la cohésion se lit à côté du score, jamais fusionnée avec lui.
+
+    Par construction (« part des voix alignées sur la position majoritaire »), la cohésion ne
+    descend jamais sous 50 % : un lecteur qui la suppose sur une échelle 0-100 % lirait
+    « moyennement cohésif » à 58 % là où il faut lire « aussi divisé qu'un groupe peut l'être »
+    (F4, docs/plans/phase-4.1-partis-scores.md). La borne basse est donc explicite dans la phrase
+    plutôt que dans le calcul : ça explique le nombre sans le transformer.
+    """
+    return (
+        f"cohésion : {cohesion:.0%} des voix du groupe alignées sur sa position majoritaire "
+        "(l'échelle va de 50 %, un groupe coupé en deux, à 100 %, un vote unanime)"
+    )
 
 
 def categorisation_method_label(
