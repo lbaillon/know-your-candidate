@@ -266,8 +266,18 @@ async fn load_axis(
         }
     }
 
+    // Même piège qu'en `recompute_scores` (phase 4.1) : un unique
+    // `UPDATE group_axis SET is_current = (version = $1)` fait cohabiter deux lignes courantes le
+    // temps d'une ligne, et `group_axis_courant_idx` — index unique partiel, non DEFERRABLE — le
+    // refuse. Le déclencheur n'est pas le nombre de lignes mais leur ordre physique de balayage :
+    // il suffit que la ligne à activer soit vue avant celle à désactiver, ce qui arrive dès qu'on
+    // revient à une version antérieure. Deux UPDATE jamais chevauchants dans la même transaction,
+    // au prix d'un instant sans ligne courante, invisible aux lecteurs MVCC avant le commit.
+    sqlx::query!("UPDATE group_axis SET is_current = false WHERE is_current")
+        .execute(&mut *tx)
+        .await?;
     sqlx::query!(
-        "UPDATE group_axis SET is_current = (version = $1)",
+        "UPDATE group_axis SET is_current = true WHERE version = $1",
         seed.version,
     )
     .execute(&mut *tx)

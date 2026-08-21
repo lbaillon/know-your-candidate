@@ -627,3 +627,40 @@ async fn a_unanimous_scrutin_is_refused_and_journalized(pool: PgPool) {
     assert_eq!(counters["estimations_ecrites"], 0);
     assert_eq!(counters["refus_unanime"], 1);
 }
+
+/// Revenir à une version d'ancrage déjà chargée — un retour en arrière de grille, que ce job
+/// autorise explicitement puisqu'un rechargement à contenu identique est idempotent.
+///
+/// Ce test échoue sur un unique `UPDATE group_axis SET is_current = (version = $1)` : l'index
+/// unique partiel `group_axis_courant_idx` n'est pas DEFERRABLE, donc Postgres le vérifie ligne à
+/// ligne dans l'ordre physique de balayage. Ici la ligne à ACTIVER (`v1`, insérée en premier) est
+/// balayée avant celle à DÉSACTIVER (`v2`) : les deux sont `is_current` en même temps l'espace
+/// d'une ligne, et la contrainte rejette. Même piège que dans `recompute_scores` (phase 4.1), à la
+/// différence près que le déclencheur n'est pas le nombre de lignes mais leur ordre physique — il
+/// suffit de deux.
+#[sqlx::test(migrations = "../db/migrations")]
+async fn returning_to_an_earlier_version_flips_is_current_back(pool: PgPool) {
+    insert_gp(&pool, "PO_G", 17).await;
+    insert_gp(&pool, "PO_D", 17).await;
+    insert_gp(&pool, "PO_E", 17).await;
+
+    for (version, droite) in [("v1", "PO_D"), ("v2", "PO_E"), ("v1", "PO_D")] {
+        let file = write_toml(&seed_toml(version, "PO_G", droite));
+        label_scrutins_heuristic::label(
+            &pool,
+            start_run(&pool).await,
+            "group_alignment",
+            file.path().to_str().unwrap(),
+            &Scope::default(),
+        )
+        .await
+        .unwrap();
+    }
+
+    let current: Vec<String> =
+        sqlx::query_scalar!("SELECT version FROM group_axis WHERE is_current")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+    assert_eq!(current, vec!["v1".to_string()]);
+}

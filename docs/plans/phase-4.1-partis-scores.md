@@ -464,3 +464,29 @@ tranche la question de l'option D (vérification 6) :
   vote contre pour insuffisance est indétectable quand les deux lectures concordent **à tort**
   (observé sur les deux votes « article 1er de la Constitution » de Mélenchon, qui restent comptés
   malgré le correctif) — une limite structurelle, pas un défaut de ce correctif.
+
+## F5 — La bascule `is_current` de `group_axis` portait le même défaut
+
+Trouvé pendant l'implémentation, hors du périmètre initial des quatre défauts, et corrigé ici.
+
+`recompute_scores` basculait le run courant par un unique `UPDATE score_run SET is_current =
+(id = $1)`. Postgres vérifie l'index unique partiel `score_run_courant_idx` — non DEFERRABLE —
+ligne à ligne pendant le balayage : si la ligne à activer est vue avant celle à désactiver, les
+deux sont courantes le temps d'une ligne et l'écriture est rejetée. Le job a fonctionné tant que
+l'ordre physique était favorable, puis a cassé sur la base réelle.
+
+**Le déclencheur n'est pas le nombre de lignes mais leur ordre physique de balayage** — il suffit
+de deux lignes. `label_scrutins_heuristic::load_axis` portait le même `UPDATE group_axis SET
+is_current = (version = $1)`, et son cas de déclenchement est parfaitement banal : **revenir à une
+version d'ancrage antérieure**, que ce job autorise explicitement puisqu'un rechargement à contenu
+identique est idempotent. La ligne à activer est alors physiquement avant celle à désactiver.
+Reproduit par le test `returning_to_an_earlier_version_flips_is_current_back`, qui échoue sur
+l'ancien code avec `duplicate key value violates unique constraint "group_axis_courant_idx"`.
+
+Corrigé comme dans `recompute_scores` : deux `UPDATE` jamais chevauchants dans la même
+transaction, au prix d'un instant sans ligne courante — invisible aux lecteurs MVCC avant le
+commit.
+
+`person_slug` (phase 2) n'est pas concerné : `assign_slugs` insère un slug courant pour les
+personnes qui n'en ont pas, sans jamais en désactiver un autre. Il ne reste aucune bascule
+`is_current` en un seul `UPDATE` dans le worker.
