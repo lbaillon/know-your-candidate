@@ -22,6 +22,10 @@
           <a href="/methodologie">la méthodologie</a>.
         </p>
       {% endif %}
+      {% set masques_txt = themes_masques_label(themes_masques) %}
+      {% if masques_txt %}
+        <p class="orientations__masques">{{ masques_txt }}</p>
+      {% endif %}
     </section>
   </article>
 {% endblock %}

@@ -19,6 +19,7 @@ from kyc_api.labels import (
     orientation_insuffisant_label,
     orientation_label,
     orientation_preuve_label,
+    themes_masques_label,
     vote_position_label,
 )
 from kyc_api.photos import thumbnail_url
@@ -56,3 +57,4 @@ _env_globals["orientation_insuffisant_label"] = orientation_insuffisant_label
 _env_globals["cohesion_label"] = cohesion_label
 _env_globals["NO_ORIENTATIONS_NEVER_SAT_LABEL"] = NO_ORIENTATIONS_NEVER_SAT_LABEL
 _env_globals["NO_ORIENTATIONS_UNCATEGORIZED_LABEL"] = NO_ORIENTATIONS_UNCATEGORIZED_LABEL
+_env_globals["themes_masques_label"] = themes_masques_label

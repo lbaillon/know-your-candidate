@@ -69,6 +69,7 @@ async def person_detail(request: Request, slug: str, pool: Queryable = Depends(g
         pool, resolution.person_id
     )
     mandat_groups = scores_queries.group_mandat_orientations(mandat_orientations)
+    themes_masques = await scores_queries.count_hidden_eligible_themes(pool)
 
     return templates.TemplateResponse(
         request,
@@ -84,6 +85,7 @@ async def person_detail(request: Request, slug: str, pool: Queryable = Depends(g
             # à afficher » est le compte réel de contributions, pas la longueur de la liste.
             "a_au_moins_une_contribution": any(o.contributions > 0 for o in orientations),
             "mandat_groups": mandat_groups,
+            "themes_masques": themes_masques,
             # La personne a-t-elle jamais siégé (fiche vide "jamais vu de vote") ou a-t-elle des
             # votes qui, simplement, ne portent pas encore sur un scrutin catégorisé ? Les deux
             # cas exigent une phrase différente (plan phase 4, cas Retailleau) : `recent_votes`
@@ -201,9 +203,12 @@ async def groupe_detail(request: Request, an_uid: str, pool: Queryable = Depends
         raise HTTPException(status_code=404)
 
     orientations = await scores_queries.get_groupe_orientations(pool, organe.organe_id)
+    themes_masques = await scores_queries.count_hidden_eligible_themes(pool)
 
     return templates.TemplateResponse(
-        request, "groupe.html.jinja", {"organe": organe, "orientations": orientations}
+        request,
+        "groupe.html.jinja",
+        {"organe": organe, "orientations": orientations, "themes_masques": themes_masques},
     )
 
 

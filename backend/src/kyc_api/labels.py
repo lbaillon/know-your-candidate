@@ -190,6 +190,24 @@ def cohesion_label(*, cohesion: float) -> str:
     )
 
 
+def themes_masques_label(count: int) -> str | None:
+    """F2, docs/plans/phase-4.1-partis-scores.md : les thèmes dont l'axe ne se lit pas
+    gauche-droite restent calculés mais ne sont jamais publiés — notre mesure de contrôle ne sait
+    pas les valider sur ces axes. `None` quand aucun thème éligible n'est concerné, pour ne pas
+    afficher une phrase vide.
+    """
+    if count == 0:
+        return None
+    if count == 1:
+        return (
+            "1 thème est calculé mais non publié : notre mesure de contrôle ne sait pas le valider."
+        )
+    return (
+        f"{count} thèmes sont calculés mais non publiés : notre mesure de contrôle ne sait pas "
+        "les valider."
+    )
+
+
 def categorisation_method_label(
     *,
     method: str,

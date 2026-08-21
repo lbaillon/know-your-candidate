@@ -204,3 +204,46 @@ async def test_a_person_with_an_out_of_corpus_vote_gets_the_uncategorized_messag
     assert response.status_code == 200
     assert "Aucun des votes de cette personne ne porte" in response.text
     assert "jamais siégé" not in response.text
+
+
+async def test_a_non_left_right_theme_never_shows_a_public_orientation(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    """F2, docs/plans/phase-4.1-partis-scores.md : institutions/démocratie reste calculé (la
+    ligne existe dans person_theme_score) mais ne doit jamais apparaître sur la fiche publique.
+    """
+    theme_id = await factories.insert_theme(
+        db_conn, slug="institutions-democratie", axe_gauche_droite=False
+    )
+    person_id = await factories.insert_person(db_conn, an_uid="PA1")
+    await factories.insert_slug(db_conn, person_id=person_id, slug="candidat-cinq")
+    run_id = await factories.insert_score_run(db_conn, eligible_theme_ids=[theme_id])
+    await factories.insert_person_theme_score(
+        db_conn, run_id=run_id, person_id=person_id, theme_id=theme_id, score=-0.4, contributions=10
+    )
+    await factories.refresh_score_views(db_conn)
+
+    response = await client.get("/personne/candidat-cinq")
+
+    assert response.status_code == 200
+    assert "orientation-institutions-democratie" not in response.text
+    assert "1 thème est calculé mais non publié" in response.text
+
+
+async def test_no_footer_sentence_when_no_theme_is_hidden(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    theme_id = await factories.insert_theme(db_conn, slug="securite", axe_gauche_droite=True)
+    person_id = await factories.insert_person(db_conn, an_uid="PA1")
+    await factories.insert_slug(db_conn, person_id=person_id, slug="candidat-six")
+    run_id = await factories.insert_score_run(db_conn, eligible_theme_ids=[theme_id])
+    await factories.insert_person_theme_score(
+        db_conn, run_id=run_id, person_id=person_id, theme_id=theme_id, score=0.4, contributions=10
+    )
+    await factories.refresh_score_views(db_conn)
+
+    response = await client.get("/personne/candidat-six")
+
+    assert response.status_code == 200
+    assert "calculé mais non publié" not in response.text
+    assert "calculés mais non publiés" not in response.text

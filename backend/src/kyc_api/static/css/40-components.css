@@ -321,6 +321,14 @@
     color: var(--color-text-muted);
     margin-top: var(--space-xs);
   }
+  /* F2, phase 4.1 : la phrase de bas de bloc qui dit combien de thèmes sont calculés mais non
+   * publiés (axe qui ne se lit pas gauche-droite). */
+  .orientations__masques {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-top: var(--space-lg);
+    font-style: italic;
+  }
   .score-cursor {
     margin-top: var(--space-sm);
     max-width: 28rem;

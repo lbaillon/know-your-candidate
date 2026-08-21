@@ -96,3 +96,27 @@ async def test_person_without_a_mandate_has_no_groupe_section(
 
     assert response.status_code == 200
     assert "Positions des groupes où" not in response.text
+
+
+async def test_groupe_page_shows_the_hidden_themes_footer(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    left_right = await factories.insert_theme(db_conn, slug="securite", axe_gauche_droite=True)
+    hidden = await factories.insert_theme(
+        db_conn, slug="institutions-democratie", axe_gauche_droite=False, rang=2
+    )
+    organe_id = await factories.insert_organe(db_conn, an_uid="PO3", libelle="Groupe Trois")
+    run_id = await factories.insert_score_run(db_conn, eligible_theme_ids=[left_right, hidden])
+    await factories.insert_groupe_theme_score(
+        db_conn, run_id=run_id, organe_id=organe_id, theme_id=left_right, score=0.2, cohesion=0.8
+    )
+    # Le thème caché est bien calculé (F2 : « le calcul continue de les produire en base »).
+    await factories.insert_groupe_theme_score(
+        db_conn, run_id=run_id, organe_id=organe_id, theme_id=hidden, score=-0.5, cohesion=0.7
+    )
+
+    response = await client.get("/groupe/PO3")
+
+    assert response.status_code == 200
+    assert "orientation-institutions-democratie" not in response.text
+    assert "1 thème est calculé mais non publié" in response.text

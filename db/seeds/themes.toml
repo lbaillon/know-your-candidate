@@ -29,9 +29,18 @@
 # catégorisation décrit le réel, elle ne se plie pas à ce que la mesure sait vérifier — mais tout
 # taux d'accord calculé sur ces thèmes est à écarter, pas à interpréter (voir scripts/README.md,
 # étape 5).
+#
+# Cette réserve est devenue une colonne (`axe_gauche_droite`, phase 4.1, F1/F2) parce qu'elle
+# commande maintenant du calcul et de l'affichage, pas seulement une lecture prudente d'un script :
+# `false` ne dit pas qu'un thème est moins légitime, il dit que notre mesure automatique de
+# contrôle ne sait pas l'arbitrer, et qu'il n'est donc ni filtré par le désaccord de mesure (F1) ni
+# publié sur une page publique tant qu'aucune relecture humaine ne lui donne un fondement.
+# `axe_gauche_droite` est un champ obligatoire : `seed_themes` refuse un fichier qui l'omet, pour
+# forcer la question à chaque thème ajouté plus tard.
 
 [[theme]]
 slug = "social-fiscalite"
+axe_gauche_droite = true
 libelle = "Social / fiscalité"
 description = "Prélèvements, prestations, retraites, salaires, protection sociale."
 pole_negatif = "redistribution et protection sociale étendue"
@@ -40,6 +49,7 @@ rang = 10
 
 [[theme]]
 slug = "environnement"
+axe_gauche_droite = true
 libelle = "Environnement"
 description = "Climat, énergie, biodiversité, pollution, transition écologique."
 pole_negatif = "contrainte réglementaire et transition rapide"
@@ -48,6 +58,7 @@ rang = 20
 
 [[theme]]
 slug = "sante"
+axe_gauche_droite = true
 libelle = "Santé"
 description = "Hôpital, sécurité sociale, accès aux soins, politiques de santé publique."
 pole_negatif = "financement collectif et service public renforcé"
@@ -56,6 +67,7 @@ rang = 30
 
 [[theme]]
 slug = "education"
+axe_gauche_droite = true
 libelle = "Éducation"
 description = "École, enseignement supérieur, recherche, formation."
 pole_negatif = "moyens publics et unification du système"
@@ -64,6 +76,7 @@ rang = 40
 
 [[theme]]
 slug = "securite"
+axe_gauche_droite = true
 libelle = "Sécurité"
 description = "Police, justice pénale, prévention de la délinquance, ordre public."
 pole_negatif = "libertés publiques, prévention, garanties procédurales"
@@ -72,6 +85,7 @@ rang = 50
 
 [[theme]]
 slug = "immigration"
+axe_gauche_droite = true
 libelle = "Immigration"
 description = "Droit d'asile, séjour, travail des étranger·es, politique migratoire."
 pole_negatif = "droits des étrangers et facilitation du séjour"
@@ -80,6 +94,7 @@ rang = 60
 
 [[theme]]
 slug = "institutions-democratie"
+axe_gauche_droite = false
 libelle = "Institutions / démocratie"
 description = "Droit électoral, Constitution, justice et magistrature, collectivités, statuts d'outre-mer."
 pole_negatif = "pouvoirs du Parlement et participation citoyenne élargis"
@@ -88,6 +103,7 @@ rang = 70
 
 [[theme]]
 slug = "travail-entreprise"
+axe_gauche_droite = true
 libelle = "Travail / entreprise"
 description = "Droit du travail, chômage, dialogue social, réglementation des entreprises."
 pole_negatif = "protection des salariés et droits collectifs"
@@ -96,6 +112,7 @@ rang = 80
 
 [[theme]]
 slug = "agriculture"
+axe_gauche_droite = false
 libelle = "Agriculture"
 description = "Production agricole, revenu des agriculteurs, normes sanitaires et environnementales, pêche."
 pole_negatif = "régulation des marchés et contraintes environnementales"
@@ -104,6 +121,7 @@ rang = 90
 
 [[theme]]
 slug = "europe"
+axe_gauche_droite = false
 libelle = "Europe"
 description = "Traités, intégration européenne, souveraineté nationale, engagements internationaux."
 pole_negatif = "approfondissement de l'intégration européenne"
@@ -112,6 +130,7 @@ rang = 100
 
 [[theme]]
 slug = "autre"
+axe_gauche_droite = false
 libelle = "Autre"
 description = "Ne relève d'aucun des thèmes ci-dessus."
 rang = 999

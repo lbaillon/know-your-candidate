@@ -5,7 +5,10 @@ ailleurs (CLAUDE.md).
 from kyc_api.db import Queryable
 from kyc_api.schemas.theme import Theme
 
-_FIELDS = "id, slug, libelle, description, libelle_pole_negatif, libelle_pole_positif, rang"
+_FIELDS = (
+    "id, slug, libelle, description, libelle_pole_negatif, libelle_pole_positif, rang, "
+    "axe_gauche_droite"
+)
 
 
 async def list_active(pool: Queryable) -> list[Theme]:

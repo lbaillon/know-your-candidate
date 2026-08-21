@@ -24,6 +24,10 @@ struct SeedFile {
 #[serde(deny_unknown_fields)]
 struct RawTheme {
     slug: String,
+    // Pas de `#[serde(default)]` : un fichier qui omet ce champ doit échouer au parsing plutôt
+    // qu'hériter d'une valeur par défaut silencieuse (F2, docs/plans/phase-4.1-partis-scores.md).
+    // C'est ce qui force la question à être posée pour tout thème ajouté plus tard.
+    axe_gauche_droite: bool,
     libelle: String,
     description: String,
     pole_negatif: Option<String>,
@@ -33,6 +37,7 @@ struct RawTheme {
 
 struct ValidTheme {
     slug: String,
+    axe_gauche_droite: bool,
     libelle: String,
     description: String,
     pole_negatif: Option<String>,
@@ -79,6 +84,7 @@ pub async fn seed(pool: &PgPool, path: &str) -> anyhow::Result<Value> {
     let poles_positifs: Vec<Option<&str>> =
         themes.iter().map(|t| t.pole_positif.as_deref()).collect();
     let rangs: Vec<i16> = themes.iter().map(|t| t.rang).collect();
+    let axes_gauche_droite: Vec<bool> = themes.iter().map(|t| t.axe_gauche_droite).collect();
 
     let existing_before: std::collections::HashSet<String> =
         sqlx::query_scalar!("SELECT slug FROM theme")
@@ -89,16 +95,17 @@ pub async fn seed(pool: &PgPool, path: &str) -> anyhow::Result<Value> {
 
     let result = sqlx::query!(
         r#"
-        INSERT INTO theme (slug, libelle, description, libelle_pole_negatif, libelle_pole_positif, rang, actif)
-        SELECT slug, libelle, description, pole_negatif, pole_positif, rang, true
-        FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::smallint[])
-            AS t(slug, libelle, description, pole_negatif, pole_positif, rang)
+        INSERT INTO theme (slug, libelle, description, libelle_pole_negatif, libelle_pole_positif, rang, axe_gauche_droite, actif)
+        SELECT slug, libelle, description, pole_negatif, pole_positif, rang, axe_gauche_droite, true
+        FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::smallint[], $7::boolean[])
+            AS t(slug, libelle, description, pole_negatif, pole_positif, rang, axe_gauche_droite)
         ON CONFLICT (slug) DO UPDATE SET
             libelle              = EXCLUDED.libelle,
             description          = EXCLUDED.description,
             libelle_pole_negatif = EXCLUDED.libelle_pole_negatif,
             libelle_pole_positif = EXCLUDED.libelle_pole_positif,
             rang                 = EXCLUDED.rang,
+            axe_gauche_droite    = EXCLUDED.axe_gauche_droite,
             actif                = true,
             updated_at           = now()
         WHERE theme.libelle              IS DISTINCT FROM EXCLUDED.libelle
@@ -106,6 +113,7 @@ pub async fn seed(pool: &PgPool, path: &str) -> anyhow::Result<Value> {
            OR theme.libelle_pole_negatif IS DISTINCT FROM EXCLUDED.libelle_pole_negatif
            OR theme.libelle_pole_positif IS DISTINCT FROM EXCLUDED.libelle_pole_positif
            OR theme.rang                 IS DISTINCT FROM EXCLUDED.rang
+           OR theme.axe_gauche_droite    IS DISTINCT FROM EXCLUDED.axe_gauche_droite
            OR theme.actif                IS DISTINCT FROM true
         "#,
         &slugs as _,
@@ -114,6 +122,7 @@ pub async fn seed(pool: &PgPool, path: &str) -> anyhow::Result<Value> {
         &poles_negatifs as _,
         &poles_positifs as _,
         &rangs,
+        &axes_gauche_droite,
     )
     .execute(&mut *tx)
     .await?;
@@ -192,6 +201,7 @@ fn parse_and_validate(raw: &str) -> anyhow::Result<Vec<ValidTheme>> {
 
         out.push(ValidTheme {
             slug: theme.slug,
+            axe_gauche_droite: theme.axe_gauche_droite,
             libelle: theme.libelle,
             description: theme.description,
             pole_negatif,

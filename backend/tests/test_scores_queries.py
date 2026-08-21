@@ -226,3 +226,80 @@ async def test_groupe_orientation_lists_the_group_score(db_conn: asyncpg.Connect
     assert orientation.score == -0.2
     assert orientation.cohesion == 0.95
     assert orientation.membres == 45
+
+
+# --- F2, docs/plans/phase-4.1-partis-scores.md : un thème dont l'axe ne se lit pas gauche-droite
+# reste calculé mais n'apparaît jamais dans une lecture publique. -------------------------------
+
+
+async def test_a_non_left_right_theme_never_appears_in_person_orientations(
+    db_conn: asyncpg.Connection,
+) -> None:
+    theme_id = await insert_theme(db_conn, slug="institutions-democratie", axe_gauche_droite=False)
+    person_id = await insert_person(db_conn)
+    run_id = await insert_score_run(db_conn, eligible_theme_ids=[theme_id])
+    await insert_person_theme_score(
+        db_conn, run_id=run_id, person_id=person_id, theme_id=theme_id, score=-0.4, contributions=10
+    )
+    await refresh_score_views(db_conn)
+
+    orientations = await scores_queries.get_person_orientations(db_conn, person_id)
+
+    assert orientations == []
+
+
+async def test_a_non_left_right_theme_never_appears_in_mandat_orientations(
+    db_conn: asyncpg.Connection,
+) -> None:
+    theme_id = await insert_theme(db_conn, slug="agriculture", axe_gauche_droite=False)
+    person_id = await insert_person(db_conn)
+    organe_id = await insert_organe(db_conn, an_uid="PO1")
+    await insert_mandat(
+        db_conn, an_uid="MDT1", person_id=person_id, organe_id=organe_id, debut=date(2022, 6, 1)
+    )
+    mandat_id = await db_conn.fetchval("SELECT id FROM mandat WHERE an_uid = $1", "MDT1")
+    run_id = await insert_score_run(db_conn, eligible_theme_ids=[theme_id])
+    await insert_mandat_theme_score(
+        db_conn, run_id=run_id, mandat_id=mandat_id, theme_id=theme_id, score=0.3, cohesion=0.9
+    )
+    await refresh_score_views(db_conn)
+
+    orientations = await scores_queries.get_person_mandat_orientations(db_conn, person_id)
+
+    assert orientations == []
+
+
+async def test_a_non_left_right_theme_never_appears_in_groupe_orientations(
+    db_conn: asyncpg.Connection,
+) -> None:
+    theme_id = await insert_theme(db_conn, slug="europe", axe_gauche_droite=False)
+    organe_id = await insert_organe(db_conn, an_uid="PO1")
+    run_id = await insert_score_run(db_conn, eligible_theme_ids=[theme_id])
+    await insert_groupe_theme_score(
+        db_conn, run_id=run_id, organe_id=organe_id, theme_id=theme_id, score=0.1, cohesion=0.6
+    )
+
+    orientations = await scores_queries.get_groupe_orientations(db_conn, organe_id)
+
+    assert orientations == []
+
+
+async def test_count_hidden_eligible_themes_counts_only_non_left_right_eligible_ones(
+    db_conn: asyncpg.Connection,
+) -> None:
+    left_right = await insert_theme(db_conn, slug="securite", axe_gauche_droite=True)
+    hidden_a = await insert_theme(db_conn, slug="institutions-democratie", axe_gauche_droite=False)
+    hidden_b = await insert_theme(db_conn, slug="agriculture", axe_gauche_droite=False, rang=2)
+    await insert_score_run(db_conn, eligible_theme_ids=[left_right, hidden_a, hidden_b])
+
+    count = await scores_queries.count_hidden_eligible_themes(db_conn)
+
+    assert count == 2
+
+
+async def test_count_hidden_eligible_themes_is_zero_without_a_current_run(
+    db_conn: asyncpg.Connection,
+) -> None:
+    count = await scores_queries.count_hidden_eligible_themes(db_conn)
+
+    assert count == 0

@@ -28,6 +28,7 @@ async fn seeds_a_theme_with_an_axis(pool: PgPool) {
         r#"
         [[theme]]
         slug = "social-fiscalite"
+        axe_gauche_droite = true
         libelle = "Social / fiscalité"
         description = "Prélèvements, prestations, retraites."
         pole_negatif = "redistribution"
@@ -65,6 +66,7 @@ async fn seeds_a_theme_without_an_axis(pool: PgPool) {
         r#"
         [[theme]]
         slug = "autre"
+        axe_gauche_droite = true
         libelle = "Autre"
         description = "Ne relève d'aucun thème."
         rang = 99
@@ -91,6 +93,7 @@ async fn a_theme_with_only_one_pole_is_rejected_without_writing_anything(pool: P
         r#"
         [[theme]]
         slug = "boiteux"
+        axe_gauche_droite = true
         libelle = "Boiteux"
         description = "Un seul pôle renseigné."
         pole_negatif = "seulement celui-ci"
@@ -109,12 +112,14 @@ async fn a_duplicate_slug_in_the_file_is_rejected(pool: PgPool) {
         r#"
         [[theme]]
         slug = "double"
+        axe_gauche_droite = true
         libelle = "Premier"
         description = "d1"
         rang = 1
 
         [[theme]]
         slug = "double"
+        axe_gauche_droite = true
         libelle = "Second"
         description = "d2"
         rang = 2
@@ -132,12 +137,14 @@ async fn a_duplicate_rang_is_rejected(pool: PgPool) {
         r#"
         [[theme]]
         slug = "a"
+        axe_gauche_droite = true
         libelle = "A"
         description = "da"
         rang = 1
 
         [[theme]]
         slug = "b"
+        axe_gauche_droite = true
         libelle = "B"
         description = "db"
         rang = 1
@@ -155,6 +162,7 @@ async fn a_misspelled_table_key_is_rejected_without_writing_anything(pool: PgPoo
         r#"
         [[themes]]
         slug = "a"
+        axe_gauche_droite = true
         libelle = "A"
         description = "da"
         rang = 1
@@ -171,6 +179,7 @@ async fn rerunning_the_same_file_is_a_no_op(pool: PgPool) {
     let contents = r#"
         [[theme]]
         slug = "social-fiscalite"
+        axe_gauche_droite = true
         libelle = "Social / fiscalité"
         description = "Prélèvements, prestations, retraites."
         pole_negatif = "redistribution"
@@ -199,12 +208,14 @@ async fn removing_a_theme_from_the_file_deactivates_it_instead_of_deleting_it(po
         r#"
         [[theme]]
         slug = "a"
+        axe_gauche_droite = true
         libelle = "A"
         description = "da"
         rang = 1
 
         [[theme]]
         slug = "b"
+        axe_gauche_droite = true
         libelle = "B"
         description = "db"
         rang = 2
@@ -218,6 +229,7 @@ async fn removing_a_theme_from_the_file_deactivates_it_instead_of_deleting_it(po
         r#"
         [[theme]]
         slug = "a"
+        axe_gauche_droite = true
         libelle = "A"
         description = "da"
         rang = 1
@@ -243,12 +255,14 @@ async fn a_theme_reappearing_in_the_file_is_reactivated(pool: PgPool) {
         r#"
         [[theme]]
         slug = "a"
+        axe_gauche_droite = true
         libelle = "A"
         description = "da"
         rang = 1
 
         [[theme]]
         slug = "b"
+        axe_gauche_droite = true
         libelle = "B"
         description = "db"
         rang = 2
@@ -262,6 +276,7 @@ async fn a_theme_reappearing_in_the_file_is_reactivated(pool: PgPool) {
         r#"
         [[theme]]
         slug = "a"
+        axe_gauche_droite = true
         libelle = "A"
         description = "da"
         rang = 1
@@ -275,12 +290,14 @@ async fn a_theme_reappearing_in_the_file_is_reactivated(pool: PgPool) {
         r#"
         [[theme]]
         slug = "a"
+        axe_gauche_droite = true
         libelle = "A"
         description = "da"
         rang = 1
 
         [[theme]]
         slug = "b"
+        axe_gauche_droite = true
         libelle = "B"
         description = "db"
         rang = 2
@@ -301,4 +318,93 @@ async fn a_theme_reappearing_in_the_file_is_reactivated(pool: PgPool) {
 async fn missing_file_fails_cleanly(pool: PgPool) {
     let result = seed_themes::seed(&pool, "/does/not/exist.toml").await;
     assert!(result.is_err());
+}
+
+/// F2, docs/plans/phase-4.1-partis-scores.md : `axe_gauche_droite` est obligatoire, précisément
+/// pour forcer la question à chaque thème ajouté. Un fichier qui l'omet doit échouer au parsing,
+/// avant toute écriture — pas hériter d'une valeur par défaut silencieuse.
+#[sqlx::test(migrations = "../db/migrations")]
+async fn a_file_missing_axe_gauche_droite_is_rejected_without_writing_anything(pool: PgPool) {
+    let file = write_toml(
+        r#"
+        [[theme]]
+        slug = "sans-axe-precise"
+        libelle = "Sans axe précisé"
+        description = "N'indique pas axe_gauche_droite."
+        rang = 1
+        "#,
+    );
+
+    let result = seed_themes::seed(&pool, file.path().to_str().unwrap()).await;
+    assert!(
+        result.is_err(),
+        "axe_gauche_droite manquant doit être rejeté"
+    );
+    assert_eq!(theme_count(&pool).await, 0);
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn axe_gauche_droite_is_written_as_given(pool: PgPool) {
+    let file = write_toml(
+        r#"
+        [[theme]]
+        slug = "institutions-democratie"
+        axe_gauche_droite = false
+        libelle = "Institutions"
+        description = "Ne se lit pas gauche-droite."
+        pole_negatif = "pouvoirs du Parlement"
+        pole_positif = "autorité de l'exécutif"
+        rang = 1
+        "#,
+    );
+
+    seed_themes::seed(&pool, file.path().to_str().unwrap())
+        .await
+        .unwrap();
+
+    let axe: bool = sqlx::query_scalar!(
+        "SELECT axe_gauche_droite FROM theme WHERE slug = 'institutions-democratie'"
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(!axe);
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn changing_axe_gauche_droite_alone_counts_as_an_update(pool: PgPool) {
+    let first = write_toml(
+        r#"
+        [[theme]]
+        slug = "a"
+        axe_gauche_droite = true
+        libelle = "A"
+        description = "da"
+        rang = 1
+        "#,
+    );
+    seed_themes::seed(&pool, first.path().to_str().unwrap())
+        .await
+        .unwrap();
+
+    let second = write_toml(
+        r#"
+        [[theme]]
+        slug = "a"
+        axe_gauche_droite = false
+        libelle = "A"
+        description = "da"
+        rang = 1
+        "#,
+    );
+    let counters = seed_themes::seed(&pool, second.path().to_str().unwrap())
+        .await
+        .unwrap();
+    assert_eq!(counters["themes_mis_a_jour"], 1);
+
+    let axe: bool = sqlx::query_scalar!("SELECT axe_gauche_droite FROM theme WHERE slug = 'a'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert!(!axe);
 }

@@ -141,18 +141,21 @@ async def insert_theme(
     rang: int = 1,
     libelle_pole_negatif: str | None = "pôle négatif",
     libelle_pole_positif: str | None = "pôle positif",
+    axe_gauche_droite: bool = True,
 ) -> int:
     row = await conn.fetchrow(
         """
         INSERT INTO theme
-            (slug, libelle, description, libelle_pole_negatif, libelle_pole_positif, rang)
-        VALUES ($1, $1, 'description du thème', $2, $3, $4)
+            (slug, libelle, description, libelle_pole_negatif, libelle_pole_positif, rang,
+             axe_gauche_droite)
+        VALUES ($1, $1, 'description du thème', $2, $3, $4, $5)
         RETURNING id
         """,
         slug,
         libelle_pole_negatif,
         libelle_pole_positif,
         rang,
+        axe_gauche_droite,
     )
     assert row is not None
     return row["id"]
