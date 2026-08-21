@@ -194,6 +194,16 @@ paragraphe en résume le principe et se met à jour quand elle change.
   fait pas ici.
 - **Le score du groupe ne se mélange jamais au score personnel.** Ils sont affichés côte à côte, jamais
   fusionnés en un chiffre unique.
+- **Une contribution dont la catégorisation humaine et la mesure automatique d'axe se contredisent en
+  signe ne compte pas** (phase 4.1, F1). Voter contre un texte peut vouloir dire deux choses opposées —
+  s'opposer à ce qu'il fait, ou le juger insuffisant — et `apport` ne sait choisir qu'à partir du signe
+  du vote : quand la mesure indépendante situe le scrutin du côté opposé à la catégorisation, on ne sait
+  pas laquelle des deux lectures a tort, seulement qu'elles ne concordent pas, et la contribution est
+  écartée plutôt que comptée dans le mauvais sens. Elle reste écrite (poids nul, raison visible dans
+  l'explication) : ce n'est jamais un silence. Ce filtre ne s'applique qu'aux thèmes dont l'axe se lit
+  gauche-droite — ailleurs (institutions/démocratie, agriculture, Europe) la mesure est du bruit par
+  construction et ne peut rien arbitrer, et ces thèmes ne sont d'ailleurs pas publiés du tout tant
+  qu'aucune relecture humaine ne leur donne un fondement (phase 4.1, F2).
 
 Quand un groupe s'est divisé sur un scrutin, l'information est conservée et affichée via sa **cohésion**
 (part des votes du groupe alignés sur sa position majoritaire) : c'est souvent plus intéressant qu'un

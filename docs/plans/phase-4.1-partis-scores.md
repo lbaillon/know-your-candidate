@@ -391,3 +391,76 @@ calcul ne bougent.
    filtre ne suffit pas, et la bonne réponse devient de ne rien publier avant relecture humaine. Ne
    pas trancher cette question à l'instinct — la poser explicitement avec les cas trouvés.
 7. Les mesures sont consignées : poids écarté par thème, orientations perdues, personnes affectées.
+
+## Mesures et recette, consignées le 21/08/2026
+
+Toutes les vérifications de la section précédente sont passées. `make lint`, `make typecheck`,
+`make test` verts ; deux exécutions consécutives de `recompute_scores` sur le corpus réel donnent
+des empreintes `md5` identiques sur `person_theme_score` (ecartes_desaccord inclus) et sur
+`mandat_theme_score`.
+
+**D4.9 gagne un voisin** : `bipolarite` (D4.9) et `desaccord_mesure` (F1) sont deux garde-fous
+indépendants construits sur la même mesure automatique d'axe (`scrutin_axis_estimate`), mais qui
+détectent deux défauts différents — la bipolarité dévalue un scrutin qui ne situe personne (rejeté
+par les deux extrêmes à la fois), le désaccord de mesure écarte une contribution où la
+catégorisation et la mesure se contredisent frontalement sur le camp qui a raison. Les deux
+s'appliquent en cascade dans la même formule (`poids = poids_theme × confiance × (1 −
+bipolarite)`, puis mis à zéro si `desaccord_mesure`), jamais l'un à la place de l'autre.
+
+**Orientations avant/après** (run 6, dernier run de la phase 4, contre le run courant de la
+phase 4.1) :
+
+| | Avant (phase 4) | Après (phase 4.1) |
+| --- | --- | --- |
+| Lignes `person_theme_score` (tous thèmes) | 4 424 | 3 148 |
+| Personnes avec au moins une orientation (tous thèmes) | 1 030 | 930 |
+| Lignes publiques (thèmes gauche-droite seulement, F2) | — (F2 n'existait pas) | **1 911** |
+| Personnes avec au moins une orientation publique | — | **786** |
+| Personnes ayant perdu au moins une orientation | — | **766** |
+
+**Poids écarté par désaccord de mesure, par thème gauche-droite** (part des contributions
+pour/contre écartées, run courant) :
+
+| Thème | Contributions écartées | Total pour/contre | Part écartée |
+| --- | --- | --- | --- |
+| sante | 2 061 | 3 907 | 52,8 % |
+| social-fiscalite | 5 174 | 9 890 | 52,3 % |
+| travail-entreprise | 1 227 | 3 927 | 31,2 % |
+| securite | 2 869 | 13 097 | 21,9 % |
+| environnement | 1 045 | 8 448 | 12,4 % |
+
+Comparable aux 38,0 % mesurés en tête de ce plan sur l'ensemble des thèmes gauche-droite avant
+correctif — dans le même ordre de grandeur, thème par thème, ce qui confirme que le filtre retire
+bien ce qu'il devait retirer, ni plus ni moins.
+
+**Recette, seconde relecture, sur les trois candidat·es qui ont des votes** — c'est ici que se
+tranche la question de l'option D (vérification 6) :
+
+- **Jean-Luc Mélenchon** — **plus aucune orientation publique.** `institutions-democratie` reste
+  calculé (−0,589, 5 contributions) mais n'est plus publié (F2) ; les cinq thèmes gauche-droite
+  restants (social-fiscalite, environnement, sante, securite, travail-entreprise) ont chacun perdu
+  assez de contributions pour repasser sous `contributions_min` — de 1 à 3 contributions réelles
+  restantes selon le thème, contre 5 minimum requis. Ce n'est pas un échec du filtre : c'est le
+  filtre qui fait exactement ce qu'il doit faire quand le corpus disponible pour cette personne est
+  trop mince et trop contredit pour soutenir une affirmation. Sa fiche dit maintenant « données
+  insuffisantes » partout plutôt qu'un score inversé — l'issue la plus honnête possible avec 149
+  scrutins catégorisés.
+- **Marine Le Pen** — sécurité +0,57 (20 contributions, 4 écartées), social-fiscalite +0,40 (6
+  contributions, **9 écartées** — plus d'écartées que de retenues, à noter), environnement +0,43 (9
+  contributions, 1 écartée), travail-entreprise +0,23 (5 contributions tout juste, 2 écartées).
+  Les quatre restent défendables : la ligne sécuritaire et la ligne fiscale sont cohérentes avec le
+  RN connu. `institutions-democratie` (−0,365) n'est plus publié — l'incohérence relevée à la
+  première lecture (RN, Attal et Mélenchon du même côté) disparaît de l'affichage public avec elle.
+- **Gabriel Attal** — sécurité +0,67 (13 contributions, 1 écartée), social-fiscalite +0,32 (5
+  contributions tout juste, 2 écartées). Les deux restent cohérents avec une ligne Renaissance de
+  centre-droit. `agriculture` (+0,37) reste calculé mais non publié (F2, axe non gauche-droite) ;
+  `institutions-democratie` (−0,416) de même.
+- **Conclusion sur l'option D** : le filtre suffit. Aucune orientation restante n'est indéfendable —
+  Le Pen et Attal gardent des scores directionnellement cohérents avec ce qu'on sait de leurs partis,
+  et Mélenchon, plutôt que de porter un score indéfendable, n'en porte plus aucun. L'option D (ne
+  rien publier avant relecture humaine, pour tout le monde) resterait disproportionnée : elle
+  supprimerait des orientations déjà correctes pour supprimer des cas que le filtre traite déjà
+  correctement lui-même. Le vrai residuel documenté reste celui écrit dans la décision arbitrée : un
+  vote contre pour insuffisance est indétectable quand les deux lectures concordent **à tort**
+  (observé sur les deux votes « article 1er de la Constitution » de Mélenchon, qui restent comptés
+  malgré le correctif) — une limite structurelle, pas un défaut de ce correctif.

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE score_run SET is_current = false WHERE is_current",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "0ce8987b38e8fdc9ef4b01c5d2e845faf12283104d24b6eaecc7756b8711d9c9"
+}

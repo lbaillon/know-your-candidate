@@ -462,7 +462,13 @@ charges ; il mérite son test nommé.
 4. `EXPLAIN (ANALYZE, BUFFERS)` sur la fiche personne enrichie et sur la page d'explication ;
 5. p50/p95 de rendu des deux routes — le seuil de 100 ms de la phase 2 s'applique.
 
-**Résultats, mesurés le 20/08/2026 sur la base réelle, à l'issue de la phase :**
+**Ces mesures sont périmées depuis la phase 4.1** (F1 : une contribution dont la catégorisation et
+la mesure automatique d'axe se contredisent en signe est écartée du calcul ; F2 : les thèmes dont
+l'axe ne se lit pas gauche-droite ne sont plus publiés). Elles restent ci-dessous pour l'historique
+du calcul initial — non corrigé, non défendable en l'état, voir [phase-4.1-partis-scores.md](phase-4.1-partis-scores.md)
+pour les chiffres à jour et pourquoi ils ont changé.
+
+**Résultats, mesurés le 20/08/2026 sur la base réelle, à l'issue de la phase (périmés, voir ci-dessus) :**
 
 | Mesure | Résultat |
 | --- | --- |
@@ -500,7 +506,10 @@ réelle. Corrigé en distinguant « au moins une orientation avec une contributi
 liste n'est pas vide », et un test de régression construit spécifiquement le cas (thèmes éligibles
 existants, personne à zéro contribution partout) plutôt que l'absence de run.
 
-**Recette sur les trois candidat·es qui ont des votes**, relue à la main :
+**Recette sur les trois candidat·es qui ont des votes** (relue à la main — **périmée**, voir
+[phase-4.1-partis-scores.md](phase-4.1-partis-scores.md) pour la relecture qui a suivi F1/F2 ; le
+désaccord sur institutions-democratie noté ci-dessous n'était pas une coïncidence, c'est exactement
+ce que F2 a mesuré et corrigé) :
 
 - **Marine Le Pen** (RN) — sécurité +0,47 (24 contributions, plutôt extension des pouvoirs de
   police), environnement +0,28, institutions -0,37 (plutôt pouvoirs du Parlement et participation
