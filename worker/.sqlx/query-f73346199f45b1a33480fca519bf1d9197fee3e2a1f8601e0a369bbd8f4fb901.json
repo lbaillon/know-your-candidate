@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ecartes_desaccord FROM person_theme_score WHERE run_id = $1 AND person_id = $2 AND theme_id = $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ecartes_desaccord",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "person_theme_score",
+            "name": "ecartes_desaccord"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f73346199f45b1a33480fca519bf1d9197fee3e2a1f8601e0a369bbd8f4fb901"
+}

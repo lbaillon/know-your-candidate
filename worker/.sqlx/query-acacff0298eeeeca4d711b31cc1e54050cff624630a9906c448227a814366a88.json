@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT axe_gauche_droite FROM theme WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "axe_gauche_droite",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "theme",
+            "name": "axe_gauche_droite"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "acacff0298eeeeca4d711b31cc1e54050cff624630a9906c448227a814366a88"
+}

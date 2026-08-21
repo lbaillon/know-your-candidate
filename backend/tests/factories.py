@@ -238,12 +238,21 @@ async def insert_score_contribution(
     position: str,
     apport: float | None,
     poids: float,
+    exclusion: str | None = None,
 ) -> None:
+    """`exclusion` vaut automatiquement `'abstention'` pour une abstention (F1,
+    docs/plans/phase-4.1-partis-scores.md) : la contrainte
+    `score_contribution_abstention_toujours_exclue` l'exige, et les appelants existants qui ne
+    connaissent pas encore cette colonne n'ont rien à changer. Passer explicitement
+    `'desaccord_mesure'` pour une contribution écartée pour désaccord entre les deux lectures.
+    """
+    if exclusion is None and position == "abstention":
+        exclusion = "abstention"
     await conn.execute(
         """
         INSERT INTO score_contribution
-            (run_id, person_id, theme_id, scrutin_id, position, apport, poids)
-        VALUES ($1, $2, $3, $4, $5::vote_position, $6, $7)
+            (run_id, person_id, theme_id, scrutin_id, position, apport, poids, exclusion)
+        VALUES ($1, $2, $3, $4, $5::vote_position, $6, $7, $8::contribution_exclusion)
         """,
         run_id,
         person_id,
@@ -252,6 +261,7 @@ async def insert_score_contribution(
         position,
         apport,
         poids,
+        exclusion,
     )
 
 

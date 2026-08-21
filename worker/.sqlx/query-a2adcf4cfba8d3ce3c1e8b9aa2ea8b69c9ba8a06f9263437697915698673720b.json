@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO person_theme_score (run_id, person_id, theme_id, score, incertitude, contributions)\n        VALUES ($1, $2, $3, 0.200, 0.100, 5)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a2adcf4cfba8d3ce3c1e8b9aa2ea8b69c9ba8a06f9263437697915698673720b"
+}
