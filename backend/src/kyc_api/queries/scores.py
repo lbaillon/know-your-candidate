@@ -67,6 +67,7 @@ async def get_person_orientations(pool: Queryable, person_id: int) -> list[Perso
         )
         SELECT {_THEME_FIELDS},
                ptc.score::float8 AS score, ptc.incertitude::float8 AS incertitude, ptc.relues,
+               ptc.ecartes_desaccord,
                coalesce(sc.contributions, 0) AS contributions,
                coalesce(sc.abstentions, 0) AS abstentions
         FROM courant c
@@ -88,6 +89,7 @@ async def get_person_orientations(pool: Queryable, person_id: int) -> list[Perso
             score=row["score"],
             incertitude=row["incertitude"],
             relues=row["relues"],
+            ecartes_desaccord=row["ecartes_desaccord"],
             contributions=row["contributions"],
             abstentions=row["abstentions"],
         )
@@ -131,7 +133,8 @@ async def get_person_theme_contributions(
         """
         SELECT s.id AS scrutin_id, s.an_uid AS scrutin_an_uid, s.legislature, s.numero, s.titre,
                s.date_scrutin, sc.position::text AS position,
-               sc.apport::float8 AS apport, sc.poids::float8 AS poids
+               sc.apport::float8 AS apport, sc.poids::float8 AS poids,
+               sc.exclusion::text AS exclusion
         FROM score_contribution sc
         JOIN score_run sr ON sr.id = sc.run_id AND sr.is_current
         JOIN scrutin s ON s.id = sc.scrutin_id

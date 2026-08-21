@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT contributions FROM groupe_theme_score WHERE organe_id = $1 AND theme_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "contributions",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "groupe_theme_score",
+            "name": "contributions"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8aa04858ae5c9052bd0ed5e91a16c78dec8367de424cdc2819aa707bb38ebb22"
+}

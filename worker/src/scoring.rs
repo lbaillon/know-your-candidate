@@ -31,6 +31,26 @@ pub fn poids(poids_theme: f64, confiance: f64, bipolarite: f64) -> f64 {
     poids_theme * confiance * (1.0 - bipolarite)
 }
 
+/// F1, docs/plans/phase-4.1-partis-scores.md : une contribution dont la catégorisation humaine et
+/// la mesure automatique d'axe se contredisent en signe ne compte pas — sur cette contradiction,
+/// on ne sait pas laquelle des deux lectures a tort, seulement qu'elles ne concordent pas. Ne
+/// s'applique que sur un thème dont l'axe se lit gauche-droite (`axe_gauche_droite`) : ailleurs
+/// (institutions, agriculture, Europe), la mesure est du bruit par construction et ne peut arbitrer
+/// quoi que ce soit (F2). Une mesure exactement nulle ne tranche rien non plus : retenue, pas
+/// écartée. Le produit des deux signes (plutôt que `f64::signum`, qui rend ±1 pour un zéro signé)
+/// gère aussi le cas défensif d'un `label_position_pour` nul — impossible en pratique, mais le
+/// code ne doit pas s'y fier : un produit nul n'est jamais strictement négatif, donc jamais écarté.
+pub fn desaccord_mesure(
+    axe_gauche_droite: bool,
+    label_position_pour: f64,
+    estimate_position_pour: f64,
+) -> bool {
+    if !axe_gauche_droite || estimate_position_pour == 0.0 {
+        return false;
+    }
+    label_position_pour * estimate_position_pour < 0.0
+}
+
 /// Une contribution déjà réduite aux deux nombres dont `aggregate` a besoin : `apport` porte
 /// `None` pour une abstention (D4.10), `poids` y vaut alors zéro par construction du schéma
 /// (`score_contribution_abstention_sans_poids`).

@@ -39,6 +39,10 @@
       {%- if orientation.abstentions %}
         · {{ orientation.abstentions }} abstention{{ 's' if orientation.abstentions != 1 else '' }} écartée{{ 's' if orientation.abstentions != 1 else '' }} du calcul
       {%- endif -%}
+      {%- set ecartes_txt = ecartes_desaccord_label(orientation.ecartes_desaccord) %}
+      {%- if ecartes_txt %}
+        · {{ ecartes_txt }}
+      {%- endif -%}
     </p>
     {% if show_link %}
       <a href="/personne/{{ person_slug }}/theme/{{ orientation.theme.slug }}">

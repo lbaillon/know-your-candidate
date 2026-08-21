@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT poids::float8 AS \"poids!\", exclusion::text AS \"exclusion\"\n         FROM score_contribution WHERE person_id = $1 AND theme_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "poids!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "exclusion",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "da2bb43fa4f4faddd2c35b58bec06055e9d973bf69db3f0aa55e5ba863ae596c"
+}

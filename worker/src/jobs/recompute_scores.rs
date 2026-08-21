@@ -152,15 +152,29 @@ pub async fn recompute(pool: &PgPool) -> anyhow::Result<Value> {
         _ => (0i64, 0i64, 0i64, 0i64),
     };
 
-    // Bascule atomique, sur le modèle de `group_axis` (label_scrutins_heuristic) : un seul UPDATE
-    // met à false toute autre ligne et à true celle-ci, sans jamais violer l'index partiel
-    // « au plus un run courant ».
+    // PIÈGE TROUVÉ EN CONDITIONS RÉELLES (phase 4.1) : un seul `UPDATE score_run SET is_current =
+    // (id = $1)` reproduit fidèlement `label_scrutins_heuristic`, mais l'index partiel
+    // `score_run_courant_idx` n'est pas DEFERRABLE — chaque ligne est vérifiée au fur et à mesure
+    // que Postgres l'écrit, dans l'ordre physique de balayage, pas dans un ordre logique. Avec une
+    // seule ligne existante (les tests, les tout premiers runs réels), la ligne à désactiver était
+    // toujours traitée avant la nouvelle : jamais de doublon transitoire. Une fois `score_run`
+    // passée à sept lignes, Postgres a traité la nouvelle ligne (id=7, à activer) avant l'ancienne
+    // (id=6, à désactiver) : les deux lignes se sont retrouvées `is_current = true` en même temps,
+    // et la contrainte a rejeté l'écriture — reproduit à la main hors de ce job pour confirmer.
+    // Corrigé en deux UPDATE dans la même transaction (jamais chevauchants, donc jamais de
+    // doublon), au prix d'un instant où aucune ligne n'est courante — invisible aux lecteurs
+    // MVCC tant que la transaction n'a pas validé.
+    let mut tx = pool.begin().await?;
+    sqlx::query!(r#"UPDATE score_run SET is_current = false WHERE is_current"#)
+        .execute(&mut *tx)
+        .await?;
     sqlx::query!(
-        r#"UPDATE score_run SET is_current = (id = $1)"#,
+        r#"UPDATE score_run SET is_current = true WHERE id = $1"#,
         score_run_id
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+    tx.commit().await?;
 
     // Migration 0010 : les vues de lecture ne portent que le run courant. `CONCURRENTLY` exige
     // l'index unique posé par cette même migration et ne s'exécute pas dans une transaction —
@@ -229,6 +243,7 @@ struct VoteRow {
     poids_theme: f64,
     confiance: f64,
     bipolarite: f64,
+    estimate_position_pour: f64,
     reviewed: bool,
 }
 
@@ -240,6 +255,7 @@ struct ContributionBatch {
     positions: Vec<String>,
     apports: Vec<Option<f64>>,
     poids: Vec<f64>,
+    exclusions: Vec<Option<String>>,
 }
 
 impl ContributionBatch {
@@ -252,9 +268,11 @@ impl ContributionBatch {
             positions: Vec::new(),
             apports: Vec::new(),
             poids: Vec::new(),
+            exclusions: Vec::new(),
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn push(
         &mut self,
         person_id: i64,
@@ -263,6 +281,7 @@ impl ContributionBatch {
         position: &str,
         apport: Option<f64>,
         poids: f64,
+        exclusion: Option<&str>,
     ) {
         self.person_ids.push(person_id);
         self.theme_ids.push(theme_id);
@@ -270,6 +289,7 @@ impl ContributionBatch {
         self.positions.push(position.to_string());
         self.apports.push(apport);
         self.poids.push(poids);
+        self.exclusions.push(exclusion.map(str::to_string));
     }
 
     fn len(&self) -> usize {
@@ -282,10 +302,12 @@ impl ContributionBatch {
         }
         sqlx::query!(
             r#"
-            INSERT INTO score_contribution (run_id, person_id, theme_id, scrutin_id, position, apport, poids)
-            SELECT $1, person_id, theme_id, scrutin_id, position::vote_position, apport::numeric, poids::numeric
-            FROM UNNEST($2::bigint[], $3::smallint[], $4::bigint[], $5::text[], $6::float8[], $7::float8[])
-                AS t(person_id, theme_id, scrutin_id, position, apport, poids)
+            INSERT INTO score_contribution
+                (run_id, person_id, theme_id, scrutin_id, position, apport, poids, exclusion)
+            SELECT $1, person_id, theme_id, scrutin_id, position::vote_position, apport::numeric,
+                   poids::numeric, exclusion::contribution_exclusion
+            FROM UNNEST($2::bigint[], $3::smallint[], $4::bigint[], $5::text[], $6::float8[], $7::float8[], $8::text[])
+                AS t(person_id, theme_id, scrutin_id, position, apport, poids, exclusion)
             "#,
             self.run_id,
             &self.person_ids,
@@ -294,6 +316,7 @@ impl ContributionBatch {
             &self.positions,
             &self.apports as &[Option<f64>],
             &self.poids,
+            &self.exclusions as &[Option<String>],
         )
         .execute(pool)
         .await?;
@@ -303,6 +326,7 @@ impl ContributionBatch {
         self.positions.clear();
         self.apports.clear();
         self.poids.clear();
+        self.exclusions.clear();
         Ok(())
     }
 }
@@ -316,6 +340,7 @@ struct PersonScoreBatch {
     contributions: Vec<i32>,
     abstentions: Vec<i32>,
     relues: Vec<i32>,
+    ecartes_desaccord: Vec<i32>,
 }
 
 impl PersonScoreBatch {
@@ -329,6 +354,7 @@ impl PersonScoreBatch {
             contributions: Vec::new(),
             abstentions: Vec::new(),
             relues: Vec::new(),
+            ecartes_desaccord: Vec::new(),
         }
     }
 
@@ -342,6 +368,7 @@ impl PersonScoreBatch {
         contributions: i32,
         abstentions: i32,
         relues: i32,
+        ecartes_desaccord: i32,
     ) {
         self.person_ids.push(person_id);
         self.theme_ids.push(theme_id);
@@ -350,6 +377,7 @@ impl PersonScoreBatch {
         self.contributions.push(contributions);
         self.abstentions.push(abstentions);
         self.relues.push(relues);
+        self.ecartes_desaccord.push(ecartes_desaccord);
     }
 
     fn len(&self) -> usize {
@@ -363,10 +391,10 @@ impl PersonScoreBatch {
         sqlx::query!(
             r#"
             INSERT INTO person_theme_score
-                (run_id, person_id, theme_id, score, incertitude, contributions, abstentions, relues)
-            SELECT $1, person_id, theme_id, score::numeric, incertitude::numeric, contributions, abstentions, relues
-            FROM UNNEST($2::bigint[], $3::smallint[], $4::float8[], $5::float8[], $6::integer[], $7::integer[], $8::integer[])
-                AS t(person_id, theme_id, score, incertitude, contributions, abstentions, relues)
+                (run_id, person_id, theme_id, score, incertitude, contributions, abstentions, relues, ecartes_desaccord)
+            SELECT $1, person_id, theme_id, score::numeric, incertitude::numeric, contributions, abstentions, relues, ecartes_desaccord
+            FROM UNNEST($2::bigint[], $3::smallint[], $4::float8[], $5::float8[], $6::integer[], $7::integer[], $8::integer[], $9::integer[])
+                AS t(person_id, theme_id, score, incertitude, contributions, abstentions, relues, ecartes_desaccord)
             "#,
             self.run_id,
             &self.person_ids,
@@ -376,6 +404,7 @@ impl PersonScoreBatch {
             &self.contributions,
             &self.abstentions,
             &self.relues,
+            &self.ecartes_desaccord,
         )
         .execute(pool)
         .await?;
@@ -386,6 +415,7 @@ impl PersonScoreBatch {
         self.contributions.clear();
         self.abstentions.clear();
         self.relues.clear();
+        self.ecartes_desaccord.clear();
         Ok(())
     }
 }
@@ -394,12 +424,20 @@ impl PersonScoreBatch {
 /// contributions dans `contribution_batch` (le seuil ne s'applique jamais à l'écriture de la
 /// preuve, D4.2 protège l'affichage d'un score, pas la trace), et pousse une ligne dans
 /// `score_batch` seulement si le nombre de contributions qui pèsent atteint `contributions_min`.
+///
+/// `axe_gauche_droite` vient du thème du groupe (constant pour tout le groupe, une seule valeur
+/// par `theme_id`) : F1, docs/plans/phase-4.1-partis-scores.md — une contribution dont la
+/// catégorisation et la mesure automatique d'axe se contredisent en signe est écartée
+/// (`exclusion = 'desaccord_mesure'`, poids nul), mais seulement sur un thème dont l'axe se lit
+/// gauche-droite ; ailleurs la mesure est du bruit par construction (F2) et ne doit rien filtrer.
+///
 /// Rend `(nombre de contributions écrites, une ligne de score a-t-elle été écrite ?)`.
 fn process_person_theme_group(
     group: &[VoteRow],
     contribution_batch: &mut ContributionBatch,
     score_batch: &mut PersonScoreBatch,
     contributions_min: i16,
+    axe_gauche_droite: bool,
 ) -> anyhow::Result<(i64, bool)> {
     if group.is_empty() {
         return Ok((0, false));
@@ -408,14 +446,27 @@ fn process_person_theme_group(
     let theme_id = group[0].theme_id;
 
     let mut scoring_contributions = Vec::with_capacity(group.len());
+    let mut ecartes_desaccord = 0i32;
     for r in group {
         let position = parse_position(&r.position)?;
         let apport = scoring::apport(position, r.position_pour);
-        let poids = if position == Position::Abstention {
-            0.0
+
+        let (poids, exclusion) = if position == Position::Abstention {
+            (0.0, Some("abstention"))
+        } else if scoring::desaccord_mesure(
+            axe_gauche_droite,
+            r.position_pour,
+            r.estimate_position_pour,
+        ) {
+            ecartes_desaccord += 1;
+            (0.0, Some("desaccord_mesure"))
         } else {
-            scoring::poids(r.poids_theme, r.confiance, r.bipolarite)
+            (
+                scoring::poids(r.poids_theme, r.confiance, r.bipolarite),
+                None,
+            )
         };
+
         scoring_contributions.push(Contribution { apport, poids });
         contribution_batch.push(
             person_id,
@@ -424,6 +475,7 @@ fn process_person_theme_group(
             &r.position,
             apport,
             poids,
+            exclusion,
         );
     }
 
@@ -440,11 +492,37 @@ fn process_person_theme_group(
             aggregate.contributions as i32,
             aggregate.abstentions as i32,
             relues,
+            ecartes_desaccord,
         );
         wrote_score = true;
     }
 
     Ok((group.len() as i64, wrote_score))
+}
+
+/// `axe_gauche_droite` par thème éligible (F1/F2, docs/plans/phase-4.1-partis-scores.md) — une
+/// seule petite requête, réutilisée par les trois calculs plutôt qu'une jointure `theme`
+/// supplémentaire dans chacun d'eux côté personne (les calculs de groupe et de mandat, eux,
+/// filtrent directement en SQL, voir plus bas).
+async fn theme_axe_map(
+    pool: &PgPool,
+    eligible_themes: &[i16],
+) -> anyhow::Result<HashMap<i16, bool>> {
+    struct Row {
+        id: i16,
+        axe_gauche_droite: bool,
+    }
+    let rows = sqlx::query_as!(
+        Row,
+        r#"SELECT id, axe_gauche_droite FROM theme WHERE id = ANY($1::smallint[])"#,
+        eligible_themes,
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|r| (r.id, r.axe_gauche_droite))
+        .collect())
 }
 
 /// Balaie les votes des scrutins catégorisés sur un thème éligible (non-votants déjà exclus par la
@@ -458,6 +536,7 @@ async fn compute_person_scores(
     axis_version: &str,
     contributions_min: i16,
 ) -> anyhow::Result<(i64, i64)> {
+    let axe_map = theme_axe_map(pool, eligible_themes).await?;
     // `.fetch(pool)` plutôt que `.fetch_all(pool)` (F3, docs/plans/phase-4.1-partis-scores.md) :
     // 105 385 lignes passe aujourd'hui sans peine, mais le corpus catégorisé et le seuil de
     // participation sont tous deux voués à grossir, et la phase 5 vise un hébergement où « mémoire
@@ -474,6 +553,7 @@ async fn compute_person_scores(
                sl.poids::float8 AS "poids_theme!",
                sl.confiance::float8 AS "confiance!",
                sae.bipolarite::float8 AS "bipolarite!",
+               sae.position_pour::float8 AS "estimate_position_pour!",
                (sl.reviewed_at IS NOT NULL) AS "reviewed!"
         FROM scrutin_label sl
         JOIN scrutin_axis_estimate sae
@@ -500,11 +580,13 @@ async fn compute_person_scores(
     while let Some(row) = rows.try_next().await? {
         let key = (row.person_id, row.theme_id);
         if current_key != Some(key) && !group.is_empty() {
+            let axe_gauche_droite = axe_map.get(&group[0].theme_id).copied().unwrap_or(true);
             let (written, scored) = process_person_theme_group(
                 &group,
                 &mut contribution_batch,
                 &mut score_batch,
                 contributions_min,
+                axe_gauche_droite,
             )?;
             contributions_written += written;
             if scored {
@@ -522,11 +604,13 @@ async fn compute_person_scores(
         group.push(row);
     }
     if !group.is_empty() {
+        let axe_gauche_droite = axe_map.get(&group[0].theme_id).copied().unwrap_or(true);
         let (written, scored) = process_person_theme_group(
             &group,
             &mut contribution_batch,
             &mut score_batch,
             contributions_min,
+            axe_gauche_droite,
         )?;
         contributions_written += written;
         if scored {
@@ -741,9 +825,20 @@ async fn compute_groupe_scores(
         JOIN organe o ON o.id = sg.organe_id AND NOT o.is_non_inscrit
         JOIN scrutin_label sl ON sl.scrutin_id = sg.scrutin_id AND sl.theme_id = ANY($2::smallint[])
                               AND sl.position_pour IS NOT NULL
+        JOIN theme t ON t.id = sl.theme_id
         JOIN scrutin_axis_estimate sae
             ON sae.scrutin_id = sg.scrutin_id AND sae.strategy = $3
            AND sae.axis_version = $1 AND sae.bipolarite IS NOT NULL
+           -- F1, docs/plans/phase-4.1-partis-scores.md : un scrutin où la catégorisation et la
+           -- mesure automatique se contredisent en signe ne compte pas pour un groupe non plus —
+           -- « une condition supplémentaire dans la jointure SQL », pas un exclusion tracé comme
+           -- côté personne (les groupes n'ont pas de page d'explication scrutin par scrutin).
+           -- Jamais appliqué hors d'un axe gauche-droite (F2), ni sur une mesure exactement nulle.
+           AND (
+               NOT t.axe_gauche_droite
+               OR sae.position_pour = 0
+               OR sign(sl.position_pour) = sign(sae.position_pour)
+           )
         ORDER BY sg.organe_id, sl.theme_id, sg.scrutin_id
         "#,
         axis_version,
@@ -948,9 +1043,16 @@ async fn compute_mandat_scores(
         JOIN scrutin s ON s.id = sg.scrutin_id AND m.period @> s.date_scrutin
         JOIN scrutin_label sl ON sl.scrutin_id = sg.scrutin_id AND sl.theme_id = ANY($2::smallint[])
                               AND sl.position_pour IS NOT NULL
+        JOIN theme t ON t.id = sl.theme_id
         JOIN scrutin_axis_estimate sae
             ON sae.scrutin_id = sg.scrutin_id AND sae.strategy = $3
            AND sae.axis_version = $1 AND sae.bipolarite IS NOT NULL
+           -- F1 : même filtre que compute_groupe_scores, voir son commentaire.
+           AND (
+               NOT t.axe_gauche_droite
+               OR sae.position_pour = 0
+               OR sign(sl.position_pour) = sign(sae.position_pour)
+           )
         WHERE m.type_organe = 'GP'
         ORDER BY m.id, sl.theme_id, sg.scrutin_id
         "#,

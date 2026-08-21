@@ -22,6 +22,17 @@ async fn insert_theme(pool: &PgPool, slug: &str) -> i16 {
     .unwrap()
 }
 
+async fn set_axe_gauche_droite(pool: &PgPool, theme_id: i16, value: bool) {
+    sqlx::query!(
+        "UPDATE theme SET axe_gauche_droite = $2 WHERE id = $1",
+        theme_id,
+        value,
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
 async fn insert_person(pool: &PgPool, an_uid: &str) -> i64 {
     sqlx::query_scalar!(
         "INSERT INTO person (an_uid, nom, prenom) VALUES ($1, 'Dupont', 'Jean') RETURNING id",
@@ -196,14 +207,27 @@ async fn insert_group_axis(pool: &PgPool, version: &str) {
 }
 
 async fn insert_estimate(pool: &PgPool, scrutin_id: i64, version: &str, bipolarite: f64) {
+    insert_estimate_at(pool, scrutin_id, version, 0.0, bipolarite).await;
+}
+
+/// F1, docs/plans/phase-4.1-partis-scores.md : variante qui contrôle `position_pour` de la mesure
+/// automatique, pour construire un désaccord de signe avec la catégorisation.
+async fn insert_estimate_at(
+    pool: &PgPool,
+    scrutin_id: i64,
+    version: &str,
+    position_pour: f64,
+    bipolarite: f64,
+) {
     sqlx::query!(
         r#"
         INSERT INTO scrutin_axis_estimate
             (scrutin_id, strategy, axis_version, position_pour, separation, couverture, votants_couverts, bipolarite)
-        VALUES ($1, 'group_alignment', $2, 0.000, 0.900, 0.950, 400, $3::float8::numeric)
+        VALUES ($1, 'group_alignment', $2, $3::float8::numeric, 0.900, 0.950, 400, $4::float8::numeric)
         "#,
         scrutin_id,
         version,
+        position_pour,
         bipolarite,
     )
     .execute(pool)
@@ -748,6 +772,239 @@ async fn cahier_des_charges_ps_to_lfi_gives_distinct_scores_per_mandat_period(po
     );
     assert!((lfi_row.cohesion - 1.0).abs() < 1e-9);
     assert_eq!(lfi_row.contributions, 500);
+}
+
+// --- F1, docs/plans/phase-4.1-partis-scores.md : une contribution dont les deux lectures se
+// contredisent en signe ne compte pas. ------------------------------------------------------------
+
+/// Reconstruit exactement le cas réel qui a motivé la phase 4.1 : Mélenchon vote contre trois
+/// textes environnementaux dont `position_pour` est négatif, mais la mesure automatique d'axe les
+/// classe du côté positif. Sans le correctif, ces trois « contre » produiraient un score positif
+/// franc ; avec, les trois contributions sont écartées et il n'y a pas assez de contributions
+/// restantes pour publier une orientation — « données insuffisantes », pas un score inversé.
+#[sqlx::test(migrations = "../db/migrations")]
+async fn melenchon_environnement_case_end_to_end(pool: PgPool) {
+    let theme_id = insert_theme(&pool, "environnement").await;
+    let author_id = insert_admin_user(&pool).await;
+    let person_id = insert_person(&pool, "PA-MELENCHON").await;
+    insert_group_axis(&pool, "v1").await;
+    set_parametres(&pool, 5, 1).await;
+
+    for i in 0..3 {
+        let an_uid = format!("SC-ENV-{i}");
+        let scrutin_id = insert_scrutin(
+            &pool,
+            &an_uid,
+            i,
+            NaiveDate::from_ymd_opt(2021, 1, 1).unwrap()
+                + chrono::Duration::days(i64::from(i) * 30),
+        )
+        .await;
+        // Catégorisation : voter pour = "contrainte réglementaire" (position_pour négatif).
+        insert_scrutin_label(&pool, scrutin_id, theme_id, -0.600, 1.000, 1.000, author_id).await;
+        // Mesure automatique : classe pourtant ce scrutin du côté positif -- désaccord de signe.
+        insert_estimate_at(&pool, scrutin_id, "v1", 0.300, 0.0).await;
+        insert_vote(&pool, scrutin_id, person_id, "contre", None).await;
+    }
+
+    recompute_scores::recompute(&pool).await.unwrap();
+
+    let score_row = sqlx::query!(
+        "SELECT count(*) AS \"count!\" FROM person_theme_score WHERE person_id = $1 AND theme_id = $2",
+        person_id,
+        theme_id,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        score_row.count, 0,
+        "les trois contributions sont écartées : aucune orientation, pas un score inversé"
+    );
+
+    let contributions = sqlx::query!(
+        "SELECT poids::float8 AS \"poids!\", exclusion::text AS \"exclusion\"
+         FROM score_contribution WHERE person_id = $1 AND theme_id = $2",
+        person_id,
+        theme_id,
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        contributions.len(),
+        3,
+        "les contributions restent écrites, elles ne disparaissent pas"
+    );
+    for c in &contributions {
+        assert_eq!(c.poids, 0.0);
+        assert_eq!(c.exclusion.as_deref(), Some("desaccord_mesure"));
+    }
+}
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn ecartes_desaccord_counter_is_exact(pool: PgPool) {
+    let theme_id = insert_theme(&pool, "securite").await;
+    let author_id = insert_admin_user(&pool).await;
+    let person_id = insert_person(&pool, "PA1").await;
+    insert_group_axis(&pool, "v1").await;
+    set_parametres(&pool, 1, 1).await;
+
+    // Deux scrutins en désaccord, trois en accord : 5 contributions au total, 2 écartées.
+    for i in 0..2 {
+        let an_uid = format!("SC-DIS-{i}");
+        let scrutin_id = insert_scrutin(
+            &pool,
+            &an_uid,
+            i,
+            NaiveDate::from_ymd_opt(2022, 1, 1).unwrap(),
+        )
+        .await;
+        insert_scrutin_label(&pool, scrutin_id, theme_id, 0.500, 1.000, 1.000, author_id).await;
+        insert_estimate_at(&pool, scrutin_id, "v1", -0.400, 0.0).await;
+        insert_vote(&pool, scrutin_id, person_id, "pour", None).await;
+    }
+    for i in 0..3 {
+        let an_uid = format!("SC-OK-{i}");
+        let scrutin_id = insert_scrutin(
+            &pool,
+            &an_uid,
+            100 + i,
+            NaiveDate::from_ymd_opt(2022, 2, 1).unwrap(),
+        )
+        .await;
+        insert_scrutin_label(&pool, scrutin_id, theme_id, 0.500, 1.000, 1.000, author_id).await;
+        insert_estimate_at(&pool, scrutin_id, "v1", 0.400, 0.0).await;
+        insert_vote(&pool, scrutin_id, person_id, "pour", None).await;
+    }
+
+    recompute_scores::recompute(&pool).await.unwrap();
+
+    let row = sqlx::query!(
+        "SELECT contributions, ecartes_desaccord FROM person_theme_score WHERE person_id = $1 AND theme_id = $2",
+        person_id,
+        theme_id,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(row.contributions, 3);
+    assert_eq!(row.ecartes_desaccord, 2);
+}
+
+/// F2 : le filtre F1 ne s'applique jamais sur un thème dont l'axe ne se lit pas gauche-droite. Le
+/// calcul reste inchangé sur ces thèmes -- seul l'affichage public les masque (backend, F2), pas
+/// ce job.
+#[sqlx::test(migrations = "../db/migrations")]
+async fn a_non_left_right_theme_is_not_filtered_by_f1(pool: PgPool) {
+    let theme_id = insert_theme(&pool, "institutions-democratie").await;
+    set_axe_gauche_droite(&pool, theme_id, false).await;
+    let author_id = insert_admin_user(&pool).await;
+    let person_id = insert_person(&pool, "PA1").await;
+    insert_group_axis(&pool, "v1").await;
+    set_parametres(&pool, 1, 1).await;
+
+    let scrutin_id = insert_scrutin(
+        &pool,
+        "SC1",
+        1,
+        NaiveDate::from_ymd_opt(2022, 1, 1).unwrap(),
+    )
+    .await;
+    insert_scrutin_label(&pool, scrutin_id, theme_id, -0.600, 1.000, 1.000, author_id).await;
+    // Désaccord de signe -- mais le thème n'est pas gauche-droite, donc jamais filtré par F1.
+    insert_estimate_at(&pool, scrutin_id, "v1", 0.300, 0.0).await;
+    insert_vote(&pool, scrutin_id, person_id, "contre", None).await;
+
+    recompute_scores::recompute(&pool).await.unwrap();
+
+    let row = sqlx::query!(
+        "SELECT poids::float8 AS \"poids!\", exclusion::text AS \"exclusion\"
+         FROM score_contribution WHERE person_id = $1 AND theme_id = $2",
+        person_id,
+        theme_id,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(
+        row.poids > 0.0,
+        "un thème non gauche-droite n'est jamais filtré par F1"
+    );
+    assert!(row.exclusion.is_none());
+}
+
+/// Le filtre s'applique aussi aux scores de groupe et de mandat -- « une condition supplémentaire
+/// dans la jointure SQL » plutôt qu'un exclusion tracé, faute de page d'explication pour un groupe.
+#[sqlx::test(migrations = "../db/migrations")]
+async fn a_disagreeing_scrutin_is_excluded_from_groupe_and_mandat_scores(pool: PgPool) {
+    let theme_id = insert_theme(&pool, "securite").await;
+    let author_id = insert_admin_user(&pool).await;
+    let person_id = insert_person(&pool, "PA1").await;
+    let organe_id = insert_organe(&pool, "PO1", false).await;
+    insert_group_axis(&pool, "v1").await;
+    set_parametres(&pool, 1, 1).await;
+    insert_mandat(
+        &pool,
+        "MDT1",
+        person_id,
+        organe_id,
+        NaiveDate::from_ymd_opt(2022, 1, 1).unwrap(),
+        None,
+    )
+    .await;
+
+    // Un scrutin en accord (compte) et un scrutin en désaccord (ne doit pas compter).
+    let agree = insert_scrutin(
+        &pool,
+        "SC-AGREE",
+        1,
+        NaiveDate::from_ymd_opt(2022, 2, 1).unwrap(),
+    )
+    .await;
+    insert_scrutin_label(&pool, agree, theme_id, 0.500, 1.000, 1.000, author_id).await;
+    insert_estimate_at(&pool, agree, "v1", 0.400, 0.0).await;
+    insert_scrutin_groupe(&pool, agree, 1, organe_id, 10, 0).await;
+
+    let disagree = insert_scrutin(
+        &pool,
+        "SC-DISAGREE",
+        2,
+        NaiveDate::from_ymd_opt(2022, 3, 1).unwrap(),
+    )
+    .await;
+    insert_scrutin_label(&pool, disagree, theme_id, 0.500, 1.000, 1.000, author_id).await;
+    insert_estimate_at(&pool, disagree, "v1", -0.400, 0.0).await;
+    insert_scrutin_groupe(&pool, disagree, 1, organe_id, 20, 0).await;
+
+    recompute_scores::recompute(&pool).await.unwrap();
+
+    let groupe_row = sqlx::query!(
+        "SELECT contributions FROM groupe_theme_score WHERE organe_id = $1 AND theme_id = $2",
+        organe_id,
+        theme_id,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        groupe_row.contributions, 10,
+        "seul le scrutin en accord (10 votants) doit compter, pas le scrutin en désaccord (20)"
+    );
+
+    let mandat_id: i64 = sqlx::query_scalar!("SELECT id FROM mandat WHERE an_uid = 'MDT1'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let mandat_row = sqlx::query!(
+        "SELECT contributions FROM mandat_theme_score WHERE mandat_id = $1 AND theme_id = $2",
+        mandat_id,
+        theme_id,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(mandat_row.contributions, 10);
 }
 
 /// Empreinte du run courant sur les trois tables de score, indépendante de l'ordre des lignes ou du

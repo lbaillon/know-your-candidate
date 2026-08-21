@@ -279,12 +279,14 @@ async def insert_person_theme_score(
     contributions: int = 5,
     abstentions: int = 0,
     relues: int = 0,
+    ecartes_desaccord: int = 0,
 ) -> None:
     await conn.execute(
         """
         INSERT INTO person_theme_score
-            (run_id, person_id, theme_id, score, incertitude, contributions, abstentions, relues)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            (run_id, person_id, theme_id, score, incertitude, contributions, abstentions, relues,
+             ecartes_desaccord)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         """,
         run_id,
         person_id,
@@ -294,6 +296,7 @@ async def insert_person_theme_score(
         contributions,
         abstentions,
         relues,
+        ecartes_desaccord,
     )
 
 

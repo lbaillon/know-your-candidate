@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO scrutin_axis_estimate\n            (scrutin_id, strategy, axis_version, position_pour, separation, couverture, votants_couverts, bipolarite)\n        VALUES ($1, 'group_alignment', $2, $3::float8::numeric, 0.900, 0.950, 400, $4::float8::numeric)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Float8",
+        "Float8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e53b47ca2b65be78329bcf3136d7d6d97759ad0157ccd1c1f1900e12ca5ef7a9"
+}

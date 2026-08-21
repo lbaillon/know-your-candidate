@@ -23,6 +23,11 @@ class PersonOrientation(BaseModel):
     relues: int | None
     contributions: int
     abstentions: int
+    # F1, docs/plans/phase-4.1-partis-scores.md : nombre de contributions écartées parce que la
+    # catégorisation humaine et la mesure automatique d'axe se contredisent en signe. `None` sous
+    # le seuil (pas de ligne person_theme_score à lire), pas zéro par défaut -- distinction déjà
+    # établie pour `relues`.
+    ecartes_desaccord: int | None
 
     @property
     def seuil_atteint(self) -> bool:
@@ -33,6 +38,10 @@ class ScoreContributionDetail(BaseModel):
     """Une ligne de la page d'explication (D4, « L'explication est le produit ») : le scrutin
     contributeur, la position votée, et le poids qu'elle a eu dans le calcul. `apport` est `None`
     pour une abstention (D4.10) — elle est listée, elle n'entre jamais dans la moyenne.
+
+    `exclusion` (F1) distingue pourquoi une contribution ne pèse pas : `'abstention'`,
+    `'desaccord_mesure'` (catégorisation et mesure automatique se contredisent en signe), ou
+    `None` pour une contribution qui pèse normalement.
     """
 
     scrutin_id: int
@@ -44,6 +53,7 @@ class ScoreContributionDetail(BaseModel):
     position: str
     apport: float | None
     poids: float
+    exclusion: str | None
 
 
 class MandatOrientation(BaseModel):

@@ -15,6 +15,7 @@ from kyc_api.labels import (
     categorisation_method_label,
     categorisation_position_label,
     cohesion_label,
+    ecartes_desaccord_label,
     mise_au_point_label,
     orientation_insuffisant_label,
     orientation_label,
@@ -58,3 +59,4 @@ _env_globals["cohesion_label"] = cohesion_label
 _env_globals["NO_ORIENTATIONS_NEVER_SAT_LABEL"] = NO_ORIENTATIONS_NEVER_SAT_LABEL
 _env_globals["NO_ORIENTATIONS_UNCATEGORIZED_LABEL"] = NO_ORIENTATIONS_UNCATEGORIZED_LABEL
 _env_globals["themes_masques_label"] = themes_masques_label
+_env_globals["ecartes_desaccord_label"] = ecartes_desaccord_label

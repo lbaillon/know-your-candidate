@@ -266,3 +266,64 @@ fn cohesion_of_an_empty_or_fully_abstaining_set_is_none() {
         None
     );
 }
+
+// --- desaccord_mesure (F1, docs/plans/phase-4.1-partis-scores.md) ------------------------------
+
+#[test]
+fn desaccord_mesure_is_false_off_a_left_right_axis() {
+    // institutions-democratie, agriculture, europe (F2) : la mesure ne peut rien arbitrer.
+    assert!(!scoring::desaccord_mesure(false, -0.6, 0.3));
+}
+
+#[test]
+fn desaccord_mesure_is_false_when_the_estimate_is_exactly_zero() {
+    assert!(!scoring::desaccord_mesure(true, -0.6, 0.0));
+}
+
+#[test]
+fn desaccord_mesure_is_true_on_opposite_signs_on_a_left_right_axis() {
+    assert!(scoring::desaccord_mesure(true, -0.6, 0.3));
+    assert!(scoring::desaccord_mesure(true, 0.6, -0.3));
+}
+
+#[test]
+fn desaccord_mesure_is_false_on_matching_signs() {
+    assert!(!scoring::desaccord_mesure(true, -0.6, -0.3));
+    assert!(!scoring::desaccord_mesure(true, 0.6, 0.3));
+}
+
+/// Cas défensif, impossible en pratique (un `position_pour` de catégorisation nul est interdit à
+/// la saisie) mais le code ne doit pas s'y fier : un produit nul n'est jamais strictement négatif,
+/// donc jamais écarté.
+#[test]
+fn desaccord_mesure_defensively_retains_a_zero_label_position() {
+    assert!(!scoring::desaccord_mesure(true, 0.0, 0.5));
+}
+
+/// Le cas qui a motivé la phase 4.1 (F1) : trois votes contre sur des textes à `position_pour`
+/// négatif (« contrainte réglementaire ») dont la mesure automatique d'axe les classe pourtant du
+/// côté positif — un désaccord de signe entre les deux lectures indépendantes. Sans le correctif,
+/// ces trois votes contre produiraient mécaniquement un score positif franc (+0.6) : le mauvais
+/// pôle, sur le thème le plus identitaire du cas réel qui a motivé cette phase (Mélenchon /
+/// environnement). Avec le correctif, les trois contributions sont écartées et l'agrégat rend
+/// `None` (« données insuffisantes »), jamais un score inversé.
+#[test]
+fn melenchon_environnement_case_gives_no_aggregate_not_an_inverted_score() {
+    let position_pour = -0.6;
+    let estimate_position_pour = 0.3;
+
+    let contributions: Vec<Contribution> = (0..3)
+        .map(|_| {
+            let apport = scoring::apport(Position::Contre, position_pour);
+            let ecartee = scoring::desaccord_mesure(true, position_pour, estimate_position_pour);
+            let poids = if ecartee {
+                0.0
+            } else {
+                scoring::poids(1.0, 1.0, 0.0)
+            };
+            Contribution { apport, poids }
+        })
+        .collect();
+
+    assert_eq!(scoring::aggregate(&contributions), None::<Aggregate>);
+}

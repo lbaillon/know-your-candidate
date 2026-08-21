@@ -12,19 +12,39 @@
 
     <h2 id="scrutins-titre">Notamment parce que :</h2>
     <ul class="contribution-liste" aria-labelledby="scrutins-titre">
-      {% for c in contributions %}
+      {% for c in contributions if not c.exclusion %}
         <li class="contribution-liste__item">
           <a href="/scrutin/{{ c.legislature }}/{{ c.numero }}">{{ c.titre }}</a>
           <p class="contribution-liste__meta">
             {{ c.date_scrutin.strftime("%d/%m/%Y") }} — {{ vote_position_label(c.position) }}
-            {%- if c.apport is none %} <em>(n'entre pas dans le calcul)</em>
-            {%- else %} — apport {{ '%+.2f' % c.apport }}, poids {{ '%.3f' % c.poids }}
-            {%- endif -%}
+            — apport {{ '%+.2f' % c.apport }}, poids {{ '%.3f' % c.poids }}
           </p>
         </li>
       {% else %}
-        <li class="empty-state">Aucun scrutin contributeur.</li>
+        <li class="empty-state">Aucun scrutin compté dans le calcul.</li>
       {% endfor %}
     </ul>
+
+    {% set ecartees = contributions | selectattr("exclusion") | list %}
+    {% if ecartees %}
+      {# F1, docs/plans/phase-4.1-partis-scores.md : les scrutins écartés restent visibles, avec
+         leur raison -- « ce vote ne compte pas », jamais « ce vote n'existe pas ». #}
+      <h2 id="ecartes-titre">Écartés du calcul</h2>
+      <ul class="contribution-liste contribution-liste--ecartees" aria-labelledby="ecartes-titre">
+        {% for c in ecartees %}
+          <li class="contribution-liste__item">
+            <a href="/scrutin/{{ c.legislature }}/{{ c.numero }}">{{ c.titre }}</a>
+            <p class="contribution-liste__meta">
+              {{ c.date_scrutin.strftime("%d/%m/%Y") }} — {{ vote_position_label(c.position) }} —
+              {% if c.exclusion == "abstention" %}
+                n'entre pas dans le calcul
+              {% elif c.exclusion == "desaccord_mesure" %}
+                écarté : notre mesure automatique contredit la catégorisation
+              {% endif %}
+            </p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
   </article>
 {% endblock %}

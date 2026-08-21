@@ -1,0 +1,84 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH sg_agg AS (\n            SELECT scrutin_id, organe_id, sum(pour) AS pour, sum(contre) AS contre\n            FROM scrutin_groupe\n            WHERE organe_id IS NOT NULL\n            GROUP BY scrutin_id, organe_id\n        )\n        SELECT sg.organe_id AS \"organe_id!\", sl.theme_id,\n               sg.pour AS \"pour!\", sg.contre AS \"contre!\",\n               sl.position_pour::float8 AS \"position_pour!\",\n               sl.poids::float8 AS \"poids_theme!\",\n               sl.confiance::float8 AS \"confiance!\",\n               sae.bipolarite::float8 AS \"bipolarite!\"\n        FROM sg_agg sg\n        JOIN organe o ON o.id = sg.organe_id AND NOT o.is_non_inscrit\n        JOIN scrutin_label sl ON sl.scrutin_id = sg.scrutin_id AND sl.theme_id = ANY($2::smallint[])\n                              AND sl.position_pour IS NOT NULL\n        JOIN theme t ON t.id = sl.theme_id\n        JOIN scrutin_axis_estimate sae\n            ON sae.scrutin_id = sg.scrutin_id AND sae.strategy = $3\n           AND sae.axis_version = $1 AND sae.bipolarite IS NOT NULL\n           -- F1, docs/plans/phase-4.1-partis-scores.md : un scrutin où la catégorisation et la\n           -- mesure automatique se contredisent en signe ne compte pas pour un groupe non plus —\n           -- « une condition supplémentaire dans la jointure SQL », pas un exclusion tracé comme\n           -- côté personne (les groupes n'ont pas de page d'explication scrutin par scrutin).\n           -- Jamais appliqué hors d'un axe gauche-droite (F2), ni sur une mesure exactement nulle.\n           AND (\n               NOT t.axe_gauche_droite\n               OR sae.position_pour = 0\n               OR sign(sl.position_pour) = sign(sae.position_pour)\n           )\n        ORDER BY sg.organe_id, sl.theme_id, sg.scrutin_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "organe_id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "scrutin_groupe",
+            "name": "organe_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "theme_id",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "scrutin_label",
+            "name": "theme_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "pour!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "contre!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "position_pour!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "poids_theme!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "confiance!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "bipolarite!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int2Array",
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "ec5c173417fb6b493d529af74e810e8161ec710a2788285ff53d4270331ba7bf"
+}

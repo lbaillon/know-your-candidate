@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO person_theme_score\n                (run_id, person_id, theme_id, score, incertitude, contributions, abstentions, relues, ecartes_desaccord)\n            SELECT $1, person_id, theme_id, score::numeric, incertitude::numeric, contributions, abstentions, relues, ecartes_desaccord\n            FROM UNNEST($2::bigint[], $3::smallint[], $4::float8[], $5::float8[], $6::integer[], $7::integer[], $8::integer[], $9::integer[])\n                AS t(person_id, theme_id, score, incertitude, contributions, abstentions, relues, ecartes_desaccord)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8Array",
+        "Int2Array",
+        "Float8Array",
+        "Float8Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e8d84911fb0f974cc4d0dc0a884d94620677bde0e02acc48ff23fbcf592fb7fa"
+}

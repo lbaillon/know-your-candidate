@@ -146,6 +146,20 @@ def orientation_preuve_label(*, contributions: int, relues: int) -> str:
     return f"{scrutin_txt}, dont {relu_txt} par un humain"
 
 
+def ecartes_desaccord_label(count: int | None) -> str | None:
+    """F1, docs/plans/phase-4.1-partis-scores.md : la phrase dit *ce qui s'est passé*, pas *qui a
+    tort* — on ne sait pas laquelle des deux lectures indépendantes (catégorisation humaine,
+    mesure automatique d'axe) se trompe, seulement qu'elles ne concordent pas sur ces scrutins.
+    `None` si aucune contribution n'a été écartée pour ce motif, pour ne pas afficher une phrase
+    vide.
+    """
+    if not count:
+        return None
+    scrutin_txt = f"{count} scrutin{'s' if count != 1 else ''}"
+    suffixe = "s" if count != 1 else ""
+    return f"{scrutin_txt} écarté{suffixe} : notre mesure automatique contredit la catégorisation"
+
+
 def orientation_insuffisant_label(*, contributions: int) -> str:
     """Sous le seuil de contributions (D4.2), on écrit « données insuffisantes » accompagné du
     compte réel — jamais un zéro nu, jamais une case vide.

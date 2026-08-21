@@ -124,3 +124,60 @@ async def test_below_threshold_theme_still_shows_its_contributions(
     assert response.status_code == 200
     assert "données insuffisantes" in response.text
     assert "scrutin isolé" in response.text
+
+
+async def test_a_disagreement_excluded_contribution_appears_with_its_reason(
+    client: AsyncClient, db_conn: asyncpg.Connection
+) -> None:
+    """F1, docs/plans/phase-4.1-partis-scores.md : un scrutin écarté par désaccord de mesure
+    reste visible, dans une section distincte, avec sa raison — jamais un silence.
+    """
+    theme_id = await factories.insert_theme(db_conn, slug="environnement")
+    person_id = await factories.insert_person(db_conn, an_uid="PA1")
+    await factories.insert_slug(db_conn, person_id=person_id, slug="candidat-cinq")
+    run_id = await factories.insert_score_run(db_conn, eligible_theme_ids=[theme_id])
+    counted = await factories.insert_scrutin(db_conn, an_uid="SC-COUNTED", titre="scrutin compté")
+    await factories.insert_score_contribution(
+        db_conn,
+        run_id=run_id,
+        person_id=person_id,
+        theme_id=theme_id,
+        scrutin_id=counted,
+        position="pour",
+        apport=0.5,
+        poids=1.0,
+    )
+    excluded = await factories.insert_scrutin(db_conn, an_uid="SC-EXCLUDED", titre="scrutin écarté")
+    await factories.insert_score_contribution(
+        db_conn,
+        run_id=run_id,
+        person_id=person_id,
+        theme_id=theme_id,
+        scrutin_id=excluded,
+        position="contre",
+        apport=0.6,
+        poids=0.0,
+        exclusion="desaccord_mesure",
+    )
+    await factories.insert_person_theme_score(
+        db_conn,
+        run_id=run_id,
+        person_id=person_id,
+        theme_id=theme_id,
+        score=0.5,
+        contributions=1,
+        ecartes_desaccord=1,
+    )
+    await factories.refresh_score_views(db_conn)
+
+    response = await client.get("/personne/candidat-cinq/theme/environnement")
+
+    assert response.status_code == 200
+    assert (
+        "1 scrutin écarté : notre mesure automatique contredit la catégorisation" in response.text
+    )
+    i_ecartes = response.text.find("Écartés du calcul")
+    assert i_ecartes != -1, "la section « Écartés du calcul » doit apparaître"
+    assert "scrutin écarté" in response.text[i_ecartes:]
+    assert "scrutin compté" not in response.text[i_ecartes:]
+    assert "scrutin compté" in response.text[:i_ecartes]
