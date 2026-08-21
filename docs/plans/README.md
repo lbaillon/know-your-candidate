@@ -15,7 +15,7 @@ moindre ligne de code.** C'est le seul processus imposé par le projet.
 | [3](phase-3-categorisation.md) | Catégorisation : heuristique, back-office, export/import | ✔️ terminé |
 | [3.0](phase-3.0-feedback.md) | Retours d'implémentation de la phase 3 (F1 à F9) | ✅ consigné |
 | [4](phase-4-partis-scores.md) | Scores par thème, positions de groupe par période, explications | ✔️ terminé |
-| [4.1](phase-4.1-partis-scores.md) | Corrections des scores relevées à la revue de la phase 4 | 📝 à relire |
+| [4.1](phase-4.1-partis-scores.md) | Corrections des scores relevées à la revue de la phase 4 | ✅ validé |
 | [5](phase-5-deploiement.md) | Déploiement, observabilité Logfire, sauvegardes | 📝 à relire |
 | [6](phase-6-backlog-v2.md) | Backlog v2 : enquêtes, autres sources, comparaisons | 💭 idées |
 

@@ -1,6 +1,6 @@
 # Phase 4.1 — Corrections des scores
 
-**Statut : 📝 à relire** · Dépend de : phase 4 · Bloque : phase 5
+**Statut : ✅ validé** · Décision arbitrée le 19/08/2026 · Dépend de : phase 4 · Bloque : phase 5
 
 ## Objectif
 
@@ -177,38 +177,203 @@ cohésif » là où il faudrait lire « aussi divisé qu'un groupe peut l'être 
 ou publier `2 × cohesion − 1`. La première option est préférable : elle ne touche ni au schéma ni au
 calcul, et elle explique au lieu de transformer.
 
-## Décision à trancher avant d'implémenter
+## Décision arbitrée
 
-F1 admet plusieurs réponses, et le choix n'est pas technique.
+F1 admettait quatre réponses. **L'option A est retenue** (19/08/2026) : une contribution issue d'un
+scrutin où les deux lectures se contredisent **ne compte pas**. Les trois autres ont été écartées, et
+leurs raisons sont conservées ici parce qu'elles reviendront :
 
-| Option | Ce qu'elle fait | Ce qu'elle coûte |
+| Option | Ce qu'elle fait | Pourquoi elle n'est pas retenue |
 | --- | --- | --- |
-| **A — écarter les contributions contredites** (proposée) | On ne score que là où les deux lectures concordent ; les écartées restent visibles dans l'explication avec leur raison | 38 % du poids disparaît ; des orientations tombent sous le seuil |
-| **B — les pondérer sans les écarter** | Un facteur (0,25 par exemple) au lieu de zéro | Atténue le signe faux sans le corriger : Mélenchon resterait du mauvais côté, en plus pâle |
-| **C — ne rien changer au calcul, afficher le désaccord** | « Sur 4 de ces 5 scrutins, notre mesure automatique contredit la catégorisation » | Transparent, mais le projet continue d'affirmer publiquement quelque chose qu'il sait douteux |
-| **D — ne pas publier de score par personne** avant relecture humaine (retour sur D4.1) | Coupe le problème à la racine | L'application perd sa promesse principale pour une durée indéterminée |
+| **A — écarter les contributions contredites** | On ne score que là où les deux lectures concordent ; les écartées restent visibles dans l'explication avec leur raison | **Retenue.** Seule option qui cesse d'affirmer ce que nos données contredisent sans renoncer à publier, et la seule qui s'explique en une phrase |
+| B — les pondérer sans les écarter | Un facteur (0,25) au lieu de zéro | Atténue le signe faux sans le corriger : Mélenchon resterait du mauvais côté, en plus pâle. Un mensonge pâle reste un mensonge |
+| C — ne rien changer, afficher le désaccord | « Sur 4 de ces 5 scrutins, notre mesure contredit la catégorisation » | Transparent, mais le projet continue d'affirmer publiquement ce qu'il sait douteux. La transparence ne rachète pas l'affirmation |
+| D — ne pas publier de score par personne avant relecture | Coupe le problème à la racine | L'application perdrait sa promesse principale pour une durée indéterminée. Reste la meilleure réponse *si* la 4.1 ne suffit pas — à réexaminer à la vérification 6 |
 
-Recommandation : **A**, plus F2. C'est la seule option qui cesse d'affirmer ce que nos données
-contredisent, sans renoncer à publier. Elle est aussi la plus facile à défendre en une phrase, ce qui
-est le vrai test sur ce projet.
+**Ce que le correctif coûte, et qu'il faut assumer** : entre un tiers et la moitié du poids disparaît
+sur les thèmes les mieux fournis, des personnes repassent sous `contributions_min` et perdent une
+orientation. C'est le prix d'un chiffre défendable.
 
-Ce que ni A ni aucune autre option ne règle : un vote contre pour insuffisance reste indétectable
-quand nos deux lectures **concordent** à tort. C'est une limite structurelle du corpus binaire, elle
-appartient à [methodology.md § 7](../methodology.md) § 7.2, et la seule vraie réponse est la relecture
-humaine — puis, plus tard, l'ingestion du contenu des textes ([phase 6](phase-6-backlog-v2.md)).
+**Ce qu'il ne règle pas** : un vote contre pour insuffisance reste indétectable quand nos deux
+lectures **concordent** à tort. C'est une limite structurelle du corpus binaire, elle appartient à
+[methodology.md § 7.2](../methodology.md), et les seules vraies réponses sont la relecture humaine
+puis l'ingestion du contenu des textes ([phase 6](phase-6-backlog-v2.md)). Le correctif réduit la
+surface du problème, il ne l'élimine pas — et le plan ne doit pas laisser croire le contraire.
+
+## Plan d'exécution
+
+Autoportant. Les décisions ci-dessus ne sont pas à rediscuter ; si l'une s'avère fausse au contact du
+code, le dire et proposer une révision plutôt que contourner.
+
+### Migration `0010_score_accord.sql`
+
+```sql
+-- Phase 4.1 — F1 et F2 : une contribution dont les deux lectures se contredisent ne compte pas, et
+-- un thème dont l'axe ne se lit pas gauche-droite ne produit pas d'orientation publique.
+--
+-- Cette migration est immuable une fois mergée sur main (voir CLAUDE.md).
+
+-- 1. Quels axes la mesure peut-elle arbitrer ? (F2) -----------------------------------------------
+--
+-- L'estimation d'axe situe un scrutin sur l'axe gauche-droite des groupes. Elle peut donc contredire
+-- utilement une catégorisation sur `securite` ou `social-fiscalite` ; elle ne dit rien sur l'Europe
+-- (intégration contre souveraineté), l'agriculture ou les institutions, dont les axes sont
+-- orthogonaux à celui-là. La réserve était écrite dans db/seeds/themes.toml depuis la phase 3 ;
+-- elle devient une colonne, parce qu'elle commande maintenant du calcul et de l'affichage.
+--
+-- `DEFAULT true` puis correction explicite : un thème ajouté plus tard sans y penser serait traité
+-- comme gauche-droite, donc filtré par F1 — le comportement prudent. Le seed, lui, rend le champ
+-- obligatoire : ajouter un thème force à répondre à la question.
+
+ALTER TABLE theme ADD COLUMN axe_gauche_droite boolean NOT NULL DEFAULT true;
+
+UPDATE theme SET axe_gauche_droite = false
+WHERE slug IN ('institutions-democratie', 'agriculture', 'europe', 'autre');
+
+-- 2. Pourquoi une contribution ne pèse pas (F1) ----------------------------------------------------
+--
+-- Une contribution écartée reste écrite : elle est la trace de ce qui a été regardé puis mis de côté,
+-- et l'explication l'affiche avec sa raison. C'est la différence entre « ce vote ne compte pas » et
+-- « ce vote n'existe pas », que le projet ne confond jamais.
+
+CREATE TYPE contribution_exclusion AS ENUM ('abstention', 'desaccord_mesure');
+
+ALTER TABLE score_contribution ADD COLUMN exclusion contribution_exclusion;
+
+-- Toute exclusion annule le poids. L'inverse n'est pas vrai : un poids nul peut aussi venir d'une
+-- bipolarité de 1 (D4.9), qui n'est pas une exclusion mais une pondération qui tombe à zéro.
+ALTER TABLE score_contribution
+    ADD CONSTRAINT score_contribution_exclusion_sans_poids
+        CHECK (exclusion IS NULL OR poids = 0);
+
+-- PIÈGE À NE PAS REPRODUIRE : écrire cette contrainte
+--     CHECK ((position = 'abstention') = (exclusion = 'abstention'))
+-- laisserait passer une abstention sans exclusion, parce que `exclusion = 'abstention'` vaut NULL
+-- quand la colonne est NULL, que la comparaison entière vaut alors NULL, et qu'un CHECK à NULL
+-- passe. `IS NOT DISTINCT FROM` compare en traitant NULL comme une valeur.
+ALTER TABLE score_contribution
+    ADD CONSTRAINT score_contribution_abstention_toujours_exclue
+        CHECK ((position = 'abstention') = (exclusion IS NOT DISTINCT FROM 'abstention'));
+
+-- 3. Ce que l'orientation doit pouvoir dire ---------------------------------------------------------
+
+ALTER TABLE person_theme_score
+    ADD COLUMN ecartes_desaccord integer NOT NULL DEFAULT 0 CHECK (ecartes_desaccord >= 0);
+```
+
+Le compteur n'est ajouté qu'à `person_theme_score` : c'est la seule surface où l'on explique un
+chiffre scrutin par scrutin. Les scores de groupe et de mandat appliquent **le même filtre** — sans
+quoi la position d'une personne et celle de son groupe ne porteraient plus sur le même corpus et ne
+seraient plus comparables — mais leur nombre de contributions reflète déjà le retrait.
+
+### Le filtre, écrit une fois
+
+Pour une contribution `(personne, thème, scrutin)` :
+
+```
+mesure_utilisable = theme.axe_gauche_droite
+                    AND estimate.position_pour IS NOT NULL
+                    AND estimate.position_pour <> 0
+
+ecartee = mesure_utilisable
+          AND sign(label.position_pour) <> sign(estimate.position_pour)
+```
+
+Trois cas limites, tous décidés :
+
+- **`estimate.position_pour = 0`** (exactement) : la mesure ne tranche rien, elle ne peut donc pas
+  contredire. La contribution est **retenue**. Même règle que `scripts/disagreements.sql`, qui exclut
+  déjà les positions nulles des deux côtés — les deux doivent rester cohérents ;
+- **thème dont l'axe n'est pas gauche-droite** : aucune contribution n'est écartée par ce motif. Le
+  calcul continue comme avant ; c'est l'**affichage** qui change (F2) ;
+- **`label.position_pour = 0`** : déjà impossible en pratique (le prompt l'interdit) mais le code ne
+  doit pas s'y fier — signe nul, donc pas de contradiction possible, contribution retenue.
+
+Le filtre s'applique aux **quatre** calculs : personne, groupe, mandat, et l'écriture des
+contributions. Pour les trois derniers, il se traduit par une condition supplémentaire dans la
+jointure SQL ; pour le premier, par un `exclusion = 'desaccord_mesure'` et un poids nul.
+
+### Le seed des thèmes
+
+`db/seeds/themes.toml` gagne un champ **obligatoire** `axe_gauche_droite` sur chaque entrée, et
+`seed_themes` refuse un fichier où il manque — c'est ce qui force la question à être posée pour tout
+thème futur. Valeurs à écrire, cohérentes avec la migration : `true` pour `social-fiscalite`,
+`environnement`, `sante`, `education`, `securite`, `immigration` ; `false` pour
+`institutions-democratie`, `agriculture`, `europe`, `autre`.
+
+La réserve déjà présente en tête du fichier depuis la phase 3 est à compléter d'une phrase : ce champ
+ne dit pas qu'un thème est moins légitime, il dit que **notre mesure automatique ne sait pas
+l'arbitrer**, et qu'il n'est donc ni filtré par F1 ni publié tant qu'aucune relecture humaine ne lui
+donne un fondement.
+
+### Affichage
+
+- **À côté de chaque orientation concernée** : « · 4 scrutins écartés : notre mesure automatique
+  contredit la catégorisation ». La phrase dit *ce qui s'est passé*, pas *qui a tort* — on ne sait pas
+  laquelle des deux lectures se trompe, seulement qu'elles ne concordent pas.
+- **Sur la page d'explication** : les scrutins écartés sont listés **avec les autres**, dans une
+  section distincte intitulée « Écartés du calcul », chacun avec sa raison (abstention, ou désaccord).
+  Ils ne disparaissent pas : c'est la preuve de ce qui a été regardé.
+- **Thèmes non gauche-droite** : ils n'apparaissent plus dans le bloc « Orientations », ni dans l'API
+  publique, ni sur la page d'un groupe. Ils restent calculés, consultables dans le back-office, et
+  redeviendront publiables après relecture humaine. Une phrase le dit en bas du bloc : « Trois thèmes
+  sont calculés mais non publiés : notre mesure de contrôle ne sait pas les valider. »
+- **[methodology.md](../methodology.md) § 6** gagne le paragraphe correspondant, dans le commit qui
+  livre le filtre : le document de référence ne doit pas décrire une formule que le code ne calcule
+  plus.
+
+### F3 — streamer les votes
+
+`compute_person_scores` passe de `fetch_all` à un flux (`.fetch(pool)` + `try_next()`), ce qui ne
+demande aucune restructuration : la boucle consomme déjà les lignes triées par
+`(person_id, theme_id)` et n'accumule qu'un groupe à la fois.
+
+**Deux pièges à connaître avant d'écrire** :
+
+1. le flux **retient une connexion du pool** pendant toute sa durée, et la boucle écrit par lots sur
+   ce même pool. Avec un pool à une seule connexion, cela s'interbloque. Vérifier la taille configurée
+   et, au moindre doute, acquérir explicitement une seconde connexion pour les écritures ;
+2. `try_next()` vient de `futures_util::TryStreamExt`, qui n'est pas encore une dépendance du worker.
+   L'ajouter si nécessaire — une dépendance pour supprimer un pic mémoire est un échange raisonnable,
+   mais qu'il faut faire sciemment.
+
+### F4 — le libellé de cohésion
+
+Une phrase à compléter dans `kyc_api.labels.cohesion_label` : la borne basse. Ni le schéma ni le
+calcul ne bougent.
+
+### Tests à écrire avant le code
+
+- **`melenchon_environnement_case`** (`worker/tests/scoring.rs` ou intégration) : trois votes contre
+  sur des textes à `position_pour` négatif dont la mesure est positive → aucune orientation, pas une
+  orientation inversée. C'est le cas qui a motivé cette phase, il porte son nom ;
+- une contribution écartée est **écrite** avec `exclusion = 'desaccord_mesure'` et `poids = 0` ;
+- le compteur `ecartes_desaccord` est exact ;
+- un thème `axe_gauche_droite = false` n'est **pas** filtré par F1 (le calcul est inchangé) mais
+  **n'apparaît pas** dans la lecture publique ;
+- une mesure exactement nulle n'écarte rien ;
+- l'idempotence tient toujours : deux exécutions, mêmes empreintes ;
+- côté pages : le compteur d'écartés s'affiche, la section « Écartés du calcul » liste les scrutins
+  avec leur raison, et l'API ne rend aucun thème non publié.
 
 ## Ordre des commits
 
 1. **F3** — streamer les votes. Indépendant du reste, aucun effet sur les valeurs : à faire d'abord
-   pour que les empreintes d'idempotence servent de garde-fou aux commits suivants.
+   pour que les empreintes d'idempotence servent de garde-fou aux commits suivants. **Relever
+   l'empreinte `md5` de `person_theme_score` et de `mandat_theme_score` avant et après** : elles
+   doivent être identiques, c'est ce qui prouve que le passage au flux n'a rien changé.
 2. **F4** — le libellé de cohésion.
-3. **F2** — `theme.axe_gauche_droite` (migration + seed), et le filtre d'affichage public.
-4. **F1** — le filtre d'accord dans `recompute_scores`, les tests écrits avant, le compteur
-   d'écartés dans l'explication et à côté de l'orientation.
-5. **Passe finale** — remesurer et consigner : combien d'orientations subsistent, combien de personnes
-   en perdent une, et le nouveau tableau des candidat·es. Mettre à jour
-   [phase-4-partis-scores.md](phase-4-partis-scores.md) (D4.9 gagne un voisin) et
-   [methodology.md](../methodology.md) § 6.
+3. **Migration `0010`** seule, avec ses tests de contraintes — dont celui qui vérifie qu'une
+   abstention sans exclusion est bien refusée (le piège `IS NOT DISTINCT FROM`).
+4. **F2** — `themes.toml` et `seed_themes` (champ obligatoire), puis le filtre d'affichage public et
+   la phrase de bas de bloc.
+5. **F1** — le filtre d'accord dans les quatre calculs, les tests écrits avant, le compteur
+   d'écartés, la section « Écartés du calcul » sur la page d'explication, et la mise à jour de
+   [methodology.md](../methodology.md) § 6 **dans ce commit**.
+6. **Passe finale** — remesurer et consigner : combien d'orientations subsistent, combien de personnes
+   en perdent une, le poids écarté par thème, et le nouveau tableau des candidat·es. Mettre à jour
+   [phase-4-partis-scores.md](phase-4-partis-scores.md) — D4.9 gagne un voisin, et les mesures
+   consignées de la phase 4 sont désormais périmées : le dire plutôt que les laisser.
 
 ## Vérifications avant de déclarer la phase 4.1 terminée
 
@@ -221,5 +386,8 @@ humaine — puis, plus tard, l'ingestion du contenu des textes ([phase 6](phase-
 5. Le nombre de contributions écartées est visible à côté de chaque orientation concernée, et la page
    d'explication liste les scrutins écartés **avec leur raison**.
 6. Les trois candidat·es ayant des scores sont relus à la main une seconde fois : les orientations
-   restantes sont-elles défendables ? Consigner les réponses, désaccords compris.
+   restantes sont-elles défendables ? Consigner les réponses, désaccords compris. **C'est ici que
+   l'option D se réexamine** : si une orientation reste indéfendable après le correctif, alors le
+   filtre ne suffit pas, et la bonne réponse devient de ne rien publier avant relecture humaine. Ne
+   pas trancher cette question à l'instinct — la poser explicitement avec les cas trouvés.
 7. Les mesures sont consignées : poids écarté par thème, orientations perdues, personnes affectées.
